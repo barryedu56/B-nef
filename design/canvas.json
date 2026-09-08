@@ -1,0 +1,23 @@
+{
+  "pages": [
+    { "id": "mobile", "name": "Vue d'ensemble + App mobile" },
+    { "id": "web", "name": "App web" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 940, "h": 780, "page": "mobile", "title": "Vue d'ensemble" },
+    { "file": "Activites.dc.html", "x": 1060, "y": 0, "w": 390, "h": 760, "page": "mobile", "title": "Mobile · Mes activités" },
+    { "file": "TableauBord.dc.html", "x": 1550, "y": 0, "w": 390, "h": 1080, "page": "mobile", "title": "Mobile · Tableau de bord activité" },
+    { "file": "Operation.dc.html", "x": 2040, "y": 0, "w": 390, "h": 880, "page": "mobile", "title": "Mobile · Entrée / sortie d'argent" },
+    { "file": "Vente.dc.html", "x": 2530, "y": 0, "w": 390, "h": 860, "page": "mobile", "title": "Mobile · Nouvelle vente" },
+    { "file": "Produits.dc.html", "x": 1060, "y": 1280, "w": 390, "h": 700, "page": "mobile", "title": "Mobile · Produits & stock" },
+    { "file": "VueGlobale.dc.html", "x": 1550, "y": 1280, "w": 390, "h": 980, "page": "mobile", "title": "Mobile · Vue globale" },
+    { "file": "Reglages.dc.html", "x": 2040, "y": 1280, "w": 390, "h": 860, "page": "mobile", "title": "Mobile · Activité & modules" },
+    { "file": "WebTableauBord.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1120, "page": "web", "title": "Web · Tableau de bord" },
+    { "file": "WebRapport.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "page": "web", "title": "Web · Compte de résultat" }
+  ],
+  "annotations": [
+    { "id": "note-lofi", "x": 0, "y": -150, "w": 940, "text": "Maquettes low-fi : on valide ici la STRUCTURE et le PARCOURS, pas encore le style visuel (couleurs, typo, logo, illustrations viennent après). Montants en FCFA, données d'exemple.", "page": "mobile" },
+    { "id": "note-web", "x": 0, "y": -130, "w": 900, "text": "App web = poste d'analyse : mêmes données que le mobile, vues détaillées, tableaux filtrables et export PDF pour la banque ou le comptable.", "page": "web" }
+  ],
+  "launch": { "view": "canvas", "page": "mobile" }
+}

@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;background:#fff;color:#1c1c1a;-webkit-font-smoothing:antialiased}
+    h1,h2,h3,p{margin:0}
+    a{color:#4f46e5;text-decoration:none}a:hover{color:#3730a3}
+    .m{font-family:'IBM Plex Mono',ui-monospace,monospace}
+  </style>
+</helmet>
+
+<div style="width:390px;min-height:940px;display:flex;flex-direction:column;background:#fff">
+
+  <div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 14px;border-bottom:1px solid #e6e6e3;flex-shrink:0">
+    <span style="color:#6f6f68;display:flex"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+    <span style="font-weight:700;font-size:17px;flex:1">Boutique du marché</span>
+  </div>
+
+  <div style="padding:16px;display:flex;flex-direction:column;gap:18px">
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#9a9a92">Informations</span>
+      <div style="border:1px solid #e6e6e3;border-radius:12px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;padding:12px 14px;font-size:13.5px"><span style="color:#6f6f68">Nom</span><span style="font-weight:600">Boutique du marché</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 14px;font-size:13.5px;border-top:1px solid #f0f0ee"><span style="color:#6f6f68">Type</span><span style="font-weight:600">Commerce</span></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 14px;font-size:13.5px;border-top:1px solid #f0f0ee"><span style="color:#6f6f68">Devise</span><span style="font-weight:600">FCFA (XOF)</span></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#9a9a92">Modules</span>
+
+      <div style="border:1px solid #e6e6e3;border-radius:12px;padding:13px 14px;display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+          <span style="font-size:14px;font-weight:600">Inventaire</span>
+          <span style="font-size:11.5px;color:#6f6f68;line-height:1.4">Suivi du stock, ventes par produit, valeur du stock</span>
+        </div>
+        <span style="width:40px;height:24px;border-radius:999px;background:#4f46e5;position:relative;display:inline-block;flex-shrink:0"><span style="position:absolute;width:20px;height:20px;border-radius:999px;background:#fff;top:2px;right:2px"></span></span>
+      </div>
+
+      <div style="border:1px solid #e6e6e3;border-radius:12px;padding:13px 14px;display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+          <span style="font-size:14px;font-weight:600">Crédits &amp; dettes</span>
+          <span style="font-size:11.5px;color:#6f6f68;line-height:1.4">Clients qui vous doivent, fournisseurs à payer</span>
+        </div>
+        <span style="width:40px;height:24px;border-radius:999px;background:#4f46e5;position:relative;display:inline-block;flex-shrink:0"><span style="position:absolute;width:20px;height:20px;border-radius:999px;background:#fff;top:2px;right:2px"></span></span>
+      </div>
+
+      <div style="border:1px solid #e6e6e3;border-radius:12px;padding:13px 14px;display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+          <span style="font-size:14px;font-weight:600">Budget &amp; prévision</span>
+          <span style="font-size:11.5px;color:#6f6f68;line-height:1.4">Fixer un budget par catégorie et comparer prévu / réalisé</span>
+        </div>
+        <span style="width:40px;height:24px;border-radius:999px;background:#e0e0dc;position:relative;display:inline-block;flex-shrink:0"><span style="position:absolute;width:20px;height:20px;border-radius:999px;background:#fff;top:2px;left:2px"></span></span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#9a9a92">Paramètres</span>
+      <div style="border:1px solid #e6e6e3;border-radius:12px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 14px;font-size:13.5px"><span>Catégories</span><span style="color:#9a9a92;font-size:12.5px">8 &nbsp;›</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 14px;font-size:13.5px;border-top:1px solid #f0f0ee"><span>Moyens de paiement</span><span style="color:#9a9a92;font-size:12.5px">Espèces, OM, Wave, Banque &nbsp;›</span></div>
+      </div>
+    </div>
+
+    <a style="font-size:13px;color:#b91c1c;font-weight:600">Archiver cette activité</a>
+
+  </div>
+
+  <div style="margin-top:auto;display:flex;border-top:1px solid #e6e6e3;background:#fff;flex-shrink:0">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0;color:#9a9a92;font-size:11px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Activités
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0;color:#9a9a92;font-size:11px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>Vue globale
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0;color:#4f46e5;font-size:11px;font-weight:600">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.4"/><circle cx="9" cy="17" r="2.4"/></svg>Réglages
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

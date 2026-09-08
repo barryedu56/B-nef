@@ -1,0 +1,11 @@
+{
+  "pages": [
+    { "id": "b-affine", "name": "B affiné" },
+    { "id": "premieres-pistes", "name": "Premières pistes" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1160, "h": 780, "page": "b-affine" },
+    { "file": "PremieresPistes.dc.html", "x": 0, "y": 0, "w": 1160, "h": 760, "page": "premieres-pistes" }
+  ],
+  "launch": { "view": "canvas", "page": "b-affine" }
+}

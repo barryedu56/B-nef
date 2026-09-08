@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;background:#f4f4f2;color:#1c1c1a;-webkit-font-smoothing:antialiased}
+    h1,h2,h3,p{margin:0}
+    a{color:#4f46e5;text-decoration:none}a:hover{color:#3730a3}
+    .m{font-family:'IBM Plex Mono',ui-monospace,monospace}
+    .cr-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;padding:7px 0}
+    .cr-sub{padding-left:18px;color:#6f6f68;font-size:12.5px}
+  </style>
+</helmet>
+
+<div style="width:1440px;min-height:1060px;display:flex;background:#f4f4f2">
+
+  <div style="width:224px;flex-shrink:0;background:#fff;border-right:1px solid #e6e6e3;display:flex;flex-direction:column;padding:20px 14px">
+    <div style="font-weight:700;font-size:15px;padding:6px 10px 18px">Gestion&nbsp;Finance</div>
+    <div style="display:flex;flex-direction:column;gap:2px;font-size:13.5px">
+      <div style="padding:9px 10px;border-radius:8px;color:#4a4a44">Tableau de bord</div>
+      <div style="padding:9px 10px;border-radius:8px;color:#4a4a44">Activités</div>
+      <div style="padding:9px 10px;border-radius:8px;color:#4a4a44">Transactions</div>
+      <div style="padding:9px 10px;border-radius:8px;color:#4a4a44">Inventaire</div>
+      <div style="padding:9px 10px;border-radius:8px;color:#4a4a44">Tiers &amp; dettes</div>
+      <div style="padding:9px 10px;border-radius:8px;background:#eef0fe;color:#3730a3;font-weight:600">Rapports</div>
+      <div style="padding:9px 10px;border-radius:8px;color:#4a4a44">Paramètres</div>
+    </div>
+    <div style="margin-top:auto;display:flex;align-items:center;gap:9px;padding:8px 10px">
+      <span style="width:28px;height:28px;border-radius:999px;background:#ececea"></span>
+      <span style="font-size:12.5px;color:#6f6f68">Amadou B.</span>
+    </div>
+  </div>
+
+  <div style="flex:1;display:flex;flex-direction:column">
+
+    <div style="display:flex;align-items:center;gap:12px;padding:18px 28px;border-bottom:1px solid #e6e6e3;background:#fff">
+      <span style="font-size:19px;font-weight:700;flex:1">Rapports</span>
+      <span style="font-size:12.5px;border:1px solid #d9d9d5;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:6px">Boutique du marché <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9a9a92" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+      <span style="font-size:12.5px;border:1px solid #d9d9d5;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:6px">Mois · Septembre 2026 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9a9a92" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+      <span style="font-size:12.5px;border:none;border-radius:8px;padding:8px 14px;background:#4f46e5;color:#fff;font-weight:600">Exporter en PDF</span>
+    </div>
+
+    <div style="padding:28px;display:flex;gap:24px;align-items:flex-start">
+
+      <div style="flex:1;max-width:760px;background:#fff;border:1px solid #e6e6e3;border-radius:14px;padding:36px 40px">
+        <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:22px">
+          <span style="font-size:17px;font-weight:700">Compte de résultat</span>
+          <span style="font-size:12.5px;color:#6f6f68">Boutique du marché · 1 – 30 septembre 2026 · FCFA</span>
+        </div>
+
+        <div class="cr-row" style="font-weight:600"><span>Chiffre d'affaires</span><span class="m">1 240 000</span></div>
+        <div class="cr-row cr-sub"><span>Ventes au comptant</span><span class="m">1 060 000</span></div>
+        <div class="cr-row cr-sub"><span>Ventes à crédit</span><span class="m">180 000</span></div>
+        <div class="cr-row" style="color:#6f6f68"><span>Coût des marchandises vendues</span><span class="m">− 620 000</span></div>
+
+        <div class="cr-row" style="border-top:2px solid #1c1c1a;margin-top:6px;font-weight:700"><span>Marge brute</span><span class="m">620 000</span></div>
+
+        <div class="cr-row" style="color:#6f6f68;margin-top:10px"><span>Charges d'exploitation</span><span class="m">− 260 000</span></div>
+        <div class="cr-row cr-sub"><span>Loyer</span><span class="m">80 000</span></div>
+        <div class="cr-row cr-sub"><span>Salaires</span><span class="m">120 000</span></div>
+        <div class="cr-row cr-sub"><span>Transport</span><span class="m">35 000</span></div>
+        <div class="cr-row cr-sub"><span>Électricité</span><span class="m">25 000</span></div>
+
+        <div class="cr-row" style="border-top:2px solid #1c1c1a;border-bottom:5px double #1c1c1a;margin-top:6px;font-weight:700;font-size:15px"><span>Bénéfice net</span><span class="m" style="color:#15803d">360 000</span></div>
+
+        <div style="display:flex;gap:28px;margin-top:22px;font-size:12.5px;color:#6f6f68">
+          <span>Marge nette&nbsp;: <strong style="color:#1c1c1a">29 %</strong></span>
+          <span>Nombre de ventes&nbsp;: <strong style="color:#1c1c1a">148</strong></span>
+          <span>Panier moyen&nbsp;: <strong style="color:#1c1c1a" class="m">8 380</strong></span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:26px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:12.5px;font-weight:600">Bénéfice net par mois</span>
+            <div style="height:120px;background:#f4f4f2;border-radius:8px;display:flex;align-items:flex-end;gap:6px;padding:12px">
+              <span style="flex:1;height:48%;background:#cdcdc8;border-radius:2px"></span>
+              <span style="flex:1;height:60%;background:#cdcdc8;border-radius:2px"></span>
+              <span style="flex:1;height:44%;background:#cdcdc8;border-radius:2px"></span>
+              <span style="flex:1;height:70%;background:#cdcdc8;border-radius:2px"></span>
+              <span style="flex:1;height:66%;background:#cdcdc8;border-radius:2px"></span>
+              <span style="flex:1;height:90%;background:#15803d;border-radius:2px"></span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:12.5px;font-weight:600">Structure des coûts</span>
+            <div style="height:120px;background:#f4f4f2;border-radius:8px;display:flex;align-items:center;justify-content:center">
+              <div style="width:88px;height:88px;border-radius:999px;background:conic-gradient(#4f46e5 0 70%,#a9a9f0 70% 85%,#d7d7d2 85% 100%)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:16px">
+        <div style="background:#fff;border:1px solid #e6e6e3;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px">
+          <span style="font-size:13.5px;font-weight:600">Indicateurs</span>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-top:1px solid #f0f0ee"><span style="color:#6f6f68">Rotation du stock</span><span class="m">1,6 / mois</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-top:1px solid #f0f0ee"><span style="color:#6f6f68">Délai de paiement moyen</span><span class="m">11 j</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-top:1px solid #f0f0ee"><span style="color:#6f6f68">Créances en cours</span><span class="m">240 000</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-top:1px solid #f0f0ee"><span style="color:#6f6f68">Trésorerie fin de mois</span><span class="m">1 150 000</span></div>
+        </div>
+        <div style="background:#fff;border:1px dashed #c7c7c2;border-radius:12px;padding:18px;font-size:12px;color:#6f6f68;line-height:1.6">
+          Le rapport peut être filtré par activité ou consolidé sur toutes les activités, sur un mois, un trimestre ou une année, puis exporté en PDF.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
