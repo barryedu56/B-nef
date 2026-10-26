@@ -20,6 +20,7 @@ tout est expliqué avec des mots simples et un exemple chiffré.
 11. [Écran : Rapports / Compte de résultat (web)](#11-écran--rapports--compte-de-résultat-web)
 12. [Écran : Paramètres](#12-écran--paramètres)
 13. [Questions fréquentes](#13-questions-fréquentes)
+14. [Écran : Mon argent (caisses)](#14-écran--mon-argent-caisses)
 
 ---
 
@@ -62,7 +63,7 @@ semaine / mois / année — contrairement à ceux du dessus, ce sont des soldes
 
 | Mot | Ce que ça veut dire |
 |---|---|
-| **Caisse** | L'argent réellement disponible pour cette activité, **depuis le début** (solde de départ + tout ce qui est vraiment entré − tout ce qui est vraiment sorti). Une vente à crédit pas encore payée n'y est pas encore comptée. |
+| **Caisse** | L'argent réellement disponible pour cette activité, **depuis le début** (argent de départ + tout ce qui est vraiment entré − tout ce qui est vraiment sorti). Une vente à crédit pas encore payée n'y est pas encore comptée. Sur la vue globale : la somme de toutes tes caisses (voir [Mon argent](#14-écran--mon-argent-caisses)). |
 | **Valeur du stock** *(si module Inventaire)* | Ce que vaut, au prix d'achat, tout ce qu'il te reste en stock aujourd'hui. |
 | **Patrimoine** *(vue globale)* | `Caisse + Valeur du stock + Créances − Dettes`. Tout ce que tu possèdes, toutes activités confondues. |
 
@@ -424,3 +425,42 @@ C'est le seul moyen actuel de récupérer ton compte si tu oublies ton mot de
 passe (un code à 6 chiffres t'est envoyé). Sans e-mail enregistré, il faut
 passer par l'administrateur de l'application pour réinitialiser un mot de
 passe.
+
+---
+
+## 14. Écran : Mon argent (caisses)
+
+Onglet **Argent** sur mobile, **Mon argent** dans le menu web. Il répond à
+« combien j'ai réellement, et où ? ».
+
+**Les caisses.** Chaque moyen de paiement (Espèces, Orange Money, Wave,
+Banque…) est une caisse avec son propre solde. Chaque vente, dépense, achat
+ou règlement payé va dans la caisse choisie comme moyen de paiement — sans
+choix, dans **Espèces**. Tu peux ajouter ou renommer tes caisses dans
+Paramètres → Moyens de paiement.
+
+**Tout ton argent aujourd'hui** = la somme de toutes tes caisses, convertie
+dans ta devise principale au taux du jour.
+
+| Action | Quand l'utiliser | Effet |
+|---|---|---|
+| **Transférer** | Déposer des espèces à la banque, virer de l'Orange Money, ou passer de l'argent de la boutique à la maison | L'argent change de caisse et/ou d'activité. **Ni gain ni dépense.** |
+| **Apport** | Tu remets de l'argent de ta poche dans l'activité | La caisse monte. **Ce n'est pas une vente** : le bénéfice ne change pas. |
+| **Retrait** | Tu prends de l'argent pour toi (salaire, famille) | La caisse baisse. **Ce n'est pas une dépense de l'activité** : le bénéfice ne change pas. |
+| **Vérifier** | De temps en temps (idéalement chaque soir pour les espèces) | Tu comptes l'argent réel ; Bénef compare au solde attendu. S'il y a un écart, le solde est corrigé et l'écart compte comme une charge (manque) ou un gain (surplus) — ligne « Écart de caisse ». |
+
+**Un solde négatif ?** C'est impossible dans la vraie vie : une opération a
+sûrement été enregistrée avec la mauvaise caisse (ex. un achat payé par
+Orange Money saisi en Espèces). Ouvre la caisse pour voir ses mouvements.
+
+**Argent de départ.** À la création d'une activité, l'argent que tu as déjà
+est enregistré comme un *Apport* dans la caisse que tu choisis : il compte
+dans ta caisse, pas dans ton bénéfice. Erreur de montant ? Annule l'apport
+« Somme de départ » et saisis-en un nouveau.
+
+**Stock déjà en ta possession.** À la création d'un produit, active
+« J'ai déjà ce produit en stock » et indique la quantité, le coût d'achat de
+chaque unité et le prix de vente. Ce stock est compté à son coût (pour un
+bénéfice juste quand tu le vendras) **sans toucher ta caisse**, puisqu'il a
+été payé avant Bénef.
+
