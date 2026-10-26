@@ -28,6 +28,13 @@ def _round2(value: Decimal) -> Decimal:
     return value.quantize(_CENTS, rounding=ROUND_HALF_UP)
 
 
+def _check_amount_paid_now(amount_paid_now, total: Decimal) -> None:
+    if amount_paid_now and Decimal(amount_paid_now) > total:
+        raise ValueError(
+            f"L'acompte ({amount_paid_now}) dépasse le montant total ({total})."
+        )
+
+
 @db_transaction.atomic
 def restock(
     *,
@@ -70,6 +77,11 @@ def restock(
     quantity = Decimal(quantity)
     unit_cost = Decimal(unit_cost)
     extra_fees = Decimal(extra_fees or 0)
+    if quantity <= 0:
+        raise ValueError("La quantité doit être positive.")
+    # Verrou : deux réappros simultanés liraient le même ancien stock / coût
+    # moyen et le second écraserait le premier.
+    product = Product.objects.select_for_update().select_related("activity").get(pk=product.pk)
     activity = product.activity
     act_currency = activity.currency_id
     cost_currency = (cost_currency or act_currency).upper()
@@ -104,6 +116,7 @@ def restock(
     product.save(update_fields=update_fields)
 
     total_cost = quantity * unit_cost + extra_fees
+    _check_amount_paid_now(amount_paid_now, total_cost)
     fees_note = f" (dont {extra_fees} {cost_currency} de frais)" if extra_fees > 0 else ""
     txn = create_transaction(
         activity=activity,
@@ -177,22 +190,35 @@ def register_sale(
     global_discount = Decimal(global_discount or 0)
 
     resolved = []
+    locked: dict[int, Product] = {}
     subtotal = Z
     for raw in lines:
         product = raw["product"]
-        if not isinstance(product, Product):
-            product = Product.objects.select_for_update().get(pk=product, activity=activity)
-        else:
-            product = Product.objects.select_for_update().get(pk=product.pk)
+        pk = product.pk if isinstance(product, Product) else product
+        if pk not in locked:
+            locked[pk] = Product.objects.select_for_update().get(pk=pk, activity=activity)
+        product = locked[pk]
         qty = Decimal(raw["quantity"])
         raw_unit_price = raw.get("unit_price")
         unit_price = Decimal(raw_unit_price) if raw_unit_price is not None else product.sale_price
         raw_discount = raw.get("discount")
         discount = Decimal(raw_discount) if raw_discount is not None else Z
+        if qty <= 0:
+            raise ValueError(f"La quantité de « {product.name} » doit être positive.")
+        # Plusieurs lignes peuvent viser le même produit : on cumule.
+        already = sum((r[1] for r in resolved if r[0].pk == product.pk), Z)
+        if already + qty > product.stock_quantity:
+            raise ValueError(
+                f"Stock insuffisant pour « {product.name} » : il ne reste que "
+                f"{product.stock_quantity} {product.unit}."
+            )
         resolved.append((product, qty, unit_price, discount))
         subtotal += qty * unit_price - discount
 
     total = subtotal - global_discount
+    if total <= 0:
+        raise ValueError("Le total de la vente doit être positif.")
+    _check_amount_paid_now(amount_paid_now, total)
 
     txn = create_transaction(
         activity=activity,
@@ -257,18 +283,45 @@ def register_sale(
 def adjust_stock(
     *, product: Product, new_quantity: Decimal, occurred_on=None, note: str = ""
 ) -> StockMovement:
-    """Fixe le stock à une valeur constatée (inventaire, perte, casse)."""
+    """Fixe le stock à une valeur constatée (inventaire, perte, casse).
+
+    L'écart est valorisé au coût moyen pondéré et enregistré comme une
+    opération `adjustment` : une perte (stock constaté < stock théorique)
+    est une charge, un surplus un gain — sinon une casse ferait juste
+    disparaître de la valeur du stock sans jamais apparaître dans le
+    résultat. Aucun argent ne change de main : la caisse n'est pas touchée
+    (voir apps/reports/services.py::_summary).
+    """
     occurred_on = occurred_on or timezone.localdate()
     new_quantity = Decimal(new_quantity)
+    if new_quantity < 0:
+        raise ValueError("Le stock constaté ne peut pas être négatif.")
+    product = Product.objects.select_for_update().select_related("activity").get(pk=product.pk)
     delta = new_quantity - product.stock_quantity
     product.stock_quantity = new_quantity
     product.save(update_fields=["stock_quantity", "updated_at"])
+
+    txn = None
+    value = _round2(abs(delta) * product.purchase_price)
+    if value > 0:
+        txn = create_transaction(
+            activity=product.activity,
+            direction=Transaction.Direction.OUT if delta < 0 else Transaction.Direction.IN,
+            amount=value,
+            currency=product.activity.currency_id,
+            occurred_on=occurred_on,
+            kind=Transaction.Kind.ADJUSTMENT,
+            is_credit=False,
+            note=note or f"{'Perte' if delta < 0 else 'Surplus'} de stock — {product.name}",
+        )
+
     return StockMovement.objects.create(
         product=product,
         type=StockMovement.Type.ADJUST,
         quantity=delta,
         unit_cost=product.purchase_price,
         stock_after=new_quantity,
+        transaction=txn,
         occurred_on=occurred_on,
         note=note or "Ajustement de stock",
     )
@@ -291,6 +344,7 @@ def consume_for_personal_use(
     quantity = Decimal(quantity)
     if quantity <= 0:
         raise ValueError("La quantité doit être positive.")
+    product = Product.objects.select_for_update().select_related("activity").get(pk=product.pk)
     if quantity > product.stock_quantity:
         raise ValueError(
             f"Stock insuffisant : il ne reste que {product.stock_quantity} {product.unit}."

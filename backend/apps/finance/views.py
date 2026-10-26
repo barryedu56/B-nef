@@ -130,19 +130,22 @@ class SaleView(_OwnedLookupMixin, APIView):
             }
             for line in v["lines"]
         ]
-        txn = register_sale(
-            activity=activity,
-            lines=lines,
-            occurred_on=v.get("occurred_on"),
-            payment_method=self._optional(PaymentMethod, v.get("payment_method"), request),
-            party=self._optional(Party, v.get("party"), request),
-            is_credit=v.get("is_credit", False),
-            amount_paid_now=v.get("amount_paid_now"),
-            global_discount=v.get("global_discount") or 0,
-            sale_currency=v.get("sale_currency"),
-            note=v.get("note", ""),
-            user=request.user,
-        )
+        try:
+            txn = register_sale(
+                activity=activity,
+                lines=lines,
+                occurred_on=v.get("occurred_on"),
+                payment_method=self._optional(PaymentMethod, v.get("payment_method"), request),
+                party=self._optional(Party, v.get("party"), request),
+                is_credit=v.get("is_credit", False),
+                amount_paid_now=v.get("amount_paid_now"),
+                global_discount=v.get("global_discount") or 0,
+                sale_currency=v.get("sale_currency"),
+                note=v.get("note", ""),
+                user=request.user,
+            )
+        except (ValueError, VoidError) as exc:
+            raise ValidationError({"detail": str(exc)}) from exc
         return Response(TransactionSerializer(txn).data, status=status.HTTP_201_CREATED)
 
 
@@ -156,21 +159,26 @@ class PurchaseView(_OwnedLookupMixin, APIView):
         product = get_object_or_404(
             Product, pk=v["product"], activity__owner=request.user
         )
-        movement = restock(
-            product=product,
-            quantity=v["quantity"],
-            unit_cost=v["unit_cost"],
-            extra_fees=v.get("extra_fees") or 0,
-            cost_currency=v.get("cost_currency"),
-            occurred_on=v.get("occurred_on"),
-            payment_method=self._optional(PaymentMethod, v.get("payment_method"), request),
-            party=self._optional(Party, v.get("party"), request),
-            is_credit=v.get("is_credit", False),
-            amount_paid_now=v.get("amount_paid_now"),
-            new_sale_price=v.get("sale_price"),
-            note=v.get("note", ""),
-            user=request.user,
-        )
+        try:
+            movement = restock(
+                product=product,
+                quantity=v["quantity"],
+                unit_cost=v["unit_cost"],
+                extra_fees=v.get("extra_fees") or 0,
+                cost_currency=v.get("cost_currency"),
+                occurred_on=v.get("occurred_on"),
+                payment_method=self._optional(PaymentMethod, v.get("payment_method"), request),
+                party=self._optional(Party, v.get("party"), request),
+                is_credit=v.get("is_credit", False),
+                amount_paid_now=v.get("amount_paid_now"),
+                new_sale_price=v.get("sale_price"),
+                note=v.get("note", ""),
+                user=request.user,
+            )
+        except (ValueError, VoidError) as exc:
+            raise ValidationError({"detail": str(exc)}) from exc
+        # Le service relit le produit sous verrou : c'est cette instance qui est à jour.
+        product = movement.product
         return Response(
             {
                 "transaction": TransactionSerializer(movement.transaction).data,
@@ -193,12 +201,16 @@ class StockAdjustmentView(APIView):
         data.is_valid(raise_exception=True)
         v = data.validated_data
         product = get_object_or_404(Product, pk=v["product"], activity__owner=request.user)
-        movement = adjust_stock(
-            product=product,
-            new_quantity=v["new_quantity"],
-            occurred_on=v.get("occurred_on"),
-            note=v.get("note", ""),
-        )
+        try:
+            movement = adjust_stock(
+                product=product,
+                new_quantity=v["new_quantity"],
+                occurred_on=v.get("occurred_on"),
+                note=v.get("note", ""),
+            )
+        except ValueError as exc:
+            raise ValidationError({"new_quantity": str(exc)}) from exc
+        product = movement.product
         return Response(
             {
                 "movement_id": movement.pk,
@@ -228,6 +240,7 @@ class PersonalUseView(APIView):
             )
         except ValueError as exc:
             raise ValidationError({"quantity": str(exc)}) from exc
+        product = movement.product
         return Response(
             {
                 "transaction": TransactionSerializer(movement.transaction).data,

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from apps.common.phone import clean_guinea_phone
@@ -15,7 +17,7 @@ class PartySerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "balance")
 
     def get_balance(self, obj):
-        return str(party_balance(obj))
+        return str(party_balance(obj).quantize(Decimal("0.01")))
 
     def validate_phone(self, value):
         return clean_guinea_phone(value)

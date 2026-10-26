@@ -62,6 +62,13 @@ def void_transaction(txn: Transaction, user, reason: str = "") -> Transaction:
         _reverse_settlement(txn)
     elif txn.kind == Transaction.Kind.PERSONAL_USE:
         _reverse_personal_use(txn)
+    elif txn.kind == Transaction.Kind.ADJUSTMENT:
+        # Le stock a pu bouger depuis : remettre l'ancienne quantité
+        # écraserait les ventes/réappros suivants.
+        raise VoidError(
+            "Un ajustement de stock ne s'annule pas : fais un nouvel ajustement "
+            "avec la quantité réellement constatée."
+        )
     else:  # SIMPLE — rien d'autre à réparer que le solde du tiers, déjà
         # recalculé dynamiquement puisqu'on filtre les transactions annulées.
         _guard_not_settled(txn)

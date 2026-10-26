@@ -4,6 +4,7 @@ from urllib.parse import quote
 
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -34,7 +35,7 @@ def _period_label(period: str, anchor: date) -> str:
     return f"{_MONTHS_LONG[anchor.month - 1]} {anchor.year}"
 
 _MONEY_FIELDS = (
-    "revenue", "cogs", "gross_margin", "expenses", "net_profit",
+    "revenue", "cogs", "gross_margin", "expenses", "stock_losses", "net_profit",
     "stock_value", "cash_balance", "receivable", "payable",
 )
 
@@ -66,7 +67,7 @@ def _present(summary: services.Summary, display_currency: str) -> dict:
 
 
 def _anchor(request) -> date:
-    return parse_date(request.query_params.get("date") or "") or date.today()
+    return parse_date(request.query_params.get("date") or "") or timezone.localdate()
 
 
 def _display_currency(request, fallback: str, use_user_preference: bool = True) -> str:

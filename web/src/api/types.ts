@@ -162,6 +162,8 @@ export interface Summary {
   cogs: string
   gross_margin: string
   expenses: string
+  // Pertes (ou surplus si négatif) constatées à l'inventaire, déjà incluses dans `expenses`.
+  stock_losses: string
   net_profit: string
   personal_use: string
   stock_value: string
