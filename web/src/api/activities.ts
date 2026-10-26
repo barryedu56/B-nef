@@ -18,6 +18,8 @@ export interface ActivityInput {
   has_debts?: boolean;
   has_budget?: boolean;
   opening_balance?: string;
+  /** Caisse où va la somme de départ (Espèces si vide). */
+  opening_account?: number | null;
 }
 
 export function createActivity(input: ActivityInput) {

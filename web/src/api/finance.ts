@@ -1,5 +1,14 @@
 import { apiRequest } from './client';
-import type { Category, Direction, Paginated, PaymentMethod, Transaction, TransactionKind } from './types';
+import type {
+  AccountsOverview,
+  CashCount,
+  Category,
+  Direction,
+  Paginated,
+  PaymentMethod,
+  Transaction,
+  TransactionKind,
+} from './types';
 
 export async function listCategories(params?: { activity?: number; direction?: Direction }) {
   const data = await apiRequest<Paginated<Category>>('/categories/', { params });
@@ -24,6 +33,8 @@ export interface TransactionListParams {
   direction?: Direction;
   kind?: TransactionKind;
   party?: number;
+  payment_method?: number;
+  cash_only?: boolean;
   page?: number;
   ordering?: string;
   [key: string]: string | number | boolean | undefined | null;
@@ -98,4 +109,31 @@ export function updatePaymentMethod(id: number, patch: { name?: string; is_cash?
 
 export function deletePaymentMethod(id: number) {
   return apiRequest<void>(`/payment-methods/${id}/`, { method: 'DELETE' });
+}
+
+export function fetchAccountsOverview() {
+  return apiRequest<AccountsOverview>('/payment-methods/overview/');
+}
+
+export function countCash(accountId: number, input: { counted: string; activity: number; note?: string }) {
+  return apiRequest<CashCount>(`/payment-methods/${accountId}/count/`, { method: 'POST', body: input });
+}
+
+export function listCashCounts(accountId: number) {
+  return apiRequest<CashCount[]>(`/payment-methods/${accountId}/counts/`);
+}
+
+export interface TransferInput {
+  from_account: number;
+  to_account: number;
+  from_activity: number;
+  to_activity?: number;
+  amount: string;
+  currency?: string;
+  occurred_on?: string;
+  note?: string;
+}
+
+export function createTransfer(input: TransferInput) {
+  return apiRequest<{ out: Transaction; in: Transaction }>('/transfers/', { method: 'POST', body: input });
 }

@@ -24,6 +24,10 @@ export interface ProductInput {
   sale_price?: string;
   low_stock_threshold?: string | null;
   category?: string;
+  /** Stock déjà en ta possession (acheté avant Bénef) et son coût unitaire :
+   * valorisé sans toucher la caisse. Seulement à la création. */
+  initial_quantity?: string;
+  initial_unit_cost?: string;
 }
 
 export function createProduct(input: ProductInput) {

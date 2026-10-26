@@ -40,10 +40,41 @@ export interface Category {
   is_system: boolean
 }
 
+/** Moyen de paiement = caisse (Espèces, Orange Money, Banque…). `balance`
+ * est dans `effective_currency` (devise de la caisse, sinon principale). */
 export interface PaymentMethod {
   id: number
   name: string
   is_cash: boolean
+  currency: string | null
+  effective_currency: string
+  balance: string | null
+}
+
+export interface AccountOverviewRow extends PaymentMethod {
+  last_count: { at: string; difference: string } | null
+}
+
+/** Tout l'argent : total dans la devise principale (taux du jour). */
+export interface AccountsOverview {
+  currency: string
+  total: string
+  unassigned: string
+  accounts: AccountOverviewRow[]
+}
+
+export interface CashCount {
+  id: number
+  payment_method: number
+  activity: number
+  activity_name: string
+  currency: string
+  expected: string
+  counted: string
+  difference: string
+  transaction: number | null
+  note: string
+  created_at: string
 }
 
 export type TransactionKind =
@@ -54,6 +85,10 @@ export type TransactionKind =
   | 'adjustment'
   | 'opening_balance'
   | 'personal_use'
+  | 'contribution'
+  | 'withdrawal'
+  | 'transfer'
+  | 'cash_adjustment'
 
 export interface Transaction {
   id: number
@@ -184,6 +219,8 @@ export interface Summary {
   expenses: string
   // Pertes (ou surplus si négatif) constatées à l'inventaire, déjà incluses dans `expenses`.
   stock_losses: string
+  // Écarts constatés en comptant les caisses, déjà inclus dans `expenses`.
+  cash_differences: string
   net_profit: string
   personal_use: string
   stock_value: string

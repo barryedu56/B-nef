@@ -7,6 +7,7 @@ import {
   Settings,
   Store,
   Users,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
@@ -16,6 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 
 const NAV_ITEMS: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
   { to: '/', label: 'Tableau de bord', icon: LayoutDashboard, end: true },
+  { to: '/money', label: 'Mon argent', icon: Wallet },
   { to: '/activities', label: 'Activités', icon: Store },
   { to: '/transactions', label: 'Transactions', icon: Receipt },
   { to: '/inventory', label: 'Inventaire', icon: Boxes },

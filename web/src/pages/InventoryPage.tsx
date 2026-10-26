@@ -11,6 +11,7 @@ import { Chip } from '@/components/ui/Chip';
 import { Field, Select, TextInput } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState, ErrorBlock, LoadingBlock } from '@/components/ui/QueryState';
+import { Switch } from '@/components/ui/Switch';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { PersonalUseModal } from '@/components/PersonalUseModal';
 import { RestockModal } from '@/components/RestockModal';
@@ -219,12 +220,22 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('pièce');
   const [lowStockThreshold, setLowStockThreshold] = useState('');
+  const [hasStock, setHasStock] = useState(false);
+  const [initialQty, setInitialQty] = useState('');
+  const [initialCost, setInitialCost] = useState('');
+  const [salePrice, setSalePrice] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Donne un nom à ce produit.');
+      return;
+    }
+    const qty = hasStock ? Number(initialQty.replace(',', '.')) : 0;
+    const cost = hasStock ? Number(initialCost.replace(',', '.')) : 0;
+    if (hasStock && (!qty || qty <= 0 || !cost || cost <= 0)) {
+      setError("Indique la quantité que tu as déjà et combien t'a coûté chaque unité.");
       return;
     }
     setError(null);
@@ -234,6 +245,13 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
         name: name.trim(),
         unit: unit.trim() || 'pièce',
         low_stock_threshold: lowStockThreshold || null,
+        ...(hasStock
+          ? {
+              initial_quantity: String(qty),
+              initial_unit_cost: String(cost),
+              ...(salePrice ? { sale_price: salePrice.replace(',', '.') } : {}),
+            }
+          : {}),
       });
       onClose();
     } catch (err) {
@@ -251,10 +269,36 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
         <Field label="Seuil d'alerte de stock (facultatif)">
           <TextInput value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} inputMode="numeric" />
         </Field>
-        <span className="field-hint">
-          Pas de prix ici : le coût d'achat et le prix de vente se règlent au premier réapprovisionnement, une fois
-          que tu connais vraiment ton coût — l'appli te proposera un prix de vente à partir d'une marge.
-        </span>
+        <Switch
+          checked={hasStock}
+          onChange={setHasStock}
+          label="J'ai déjà ce produit en stock"
+          description="Marchandise achetée avant d'utiliser Bénef"
+        />
+        {hasStock ? (
+          <>
+            <div className="form-grid" style={{ gap: 12 }}>
+              <Field label={`Quantité en stock (${unit || 'pièce'})`}>
+                <TextInput value={initialQty} onChange={(e) => setInitialQty(e.target.value)} inputMode="decimal" />
+              </Field>
+              <Field label="Coût d'achat de chaque unité">
+                <AmountInput value={initialCost} onChange={setInitialCost} placeholder="0" />
+              </Field>
+            </div>
+            <Field label="Prix de vente">
+              <AmountInput value={salePrice} onChange={setSalePrice} placeholder="0" />
+            </Field>
+            <span className="field-hint">
+              Ce stock est compté à son coût (pour un bénéfice juste à la vente) sans toucher ta caisse : il a été payé
+              avant Bénef.
+            </span>
+          </>
+        ) : (
+          <span className="field-hint">
+            Sinon, le coût d'achat et le prix de vente se règlent au premier réapprovisionnement — l'appli te
+            proposera un prix de vente à partir d'une marge.
+          </span>
+        )}
         {error ? <span className="error-text">{error}</span> : null}
         <div className="form-actions">
           <Button type="button" variant="secondary" onClick={onClose}>

@@ -14,6 +14,7 @@ import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { InventoryPage } from '@/pages/InventoryPage';
 import { DeleteAccountInfoPage, PrivacyPage } from '@/pages/LegalPages';
 import { LoginPage } from '@/pages/LoginPage';
+import { MoneyPage } from '@/pages/MoneyPage';
 import { PartiesPage } from '@/pages/PartiesPage';
 import { PartyDetailPage } from '@/pages/PartyDetailPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -53,6 +54,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
                 <Route path="/" element={<DashboardPage />} />
+                <Route path="/money" element={<MoneyPage />} />
                 <Route path="/activities" element={<ActivitiesPage />} />
                 <Route path="/activities/:id" element={<ActivityDetailPage />} />
                 <Route path="/transactions" element={<TransactionsPage />} />

@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useActivities, useCreateActivity } from '@/hooks/useActivities';
 import { useGlobalSummary } from '@/hooks/useReports';
+import { usePaymentMethods } from '@/hooks/useTransactions';
 
 const TYPE_ICONS: Partial<Record<Activity['type'], LucideIcon>> = {
   commerce: Store,
@@ -125,6 +126,8 @@ function CreateActivityModal({ onClose }: { onClose: () => void }) {
   const [hasDebts, setHasDebts] = useState(false);
   const [hasBudget, setHasBudget] = useState(false);
   const [openingBalance, setOpeningBalance] = useState('0');
+  const [openingAccountId, setOpeningAccountId] = useState('');
+  const paymentMethods = usePaymentMethods();
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (e: FormEvent) => {
@@ -143,6 +146,7 @@ function CreateActivityModal({ onClose }: { onClose: () => void }) {
         has_debts: hasDebts,
         has_budget: hasBudget,
         opening_balance: openingBalance || '0',
+        opening_account: openingAccountId ? Number(openingAccountId) : null,
       });
       onClose();
       navigate(`/activities/${activity.id}`);
@@ -163,9 +167,18 @@ function CreateActivityModal({ onClose }: { onClose: () => void }) {
         <Field label="Devise">
           <Select options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
         </Field>
-        <Field label="Solde de caisse initial (facultatif)">
+        <Field label="Argent de départ (facultatif)" hint="L'argent que tu as déjà pour cette activité. Il compte dans ta caisse, pas dans ton bénéfice.">
           <AmountInput value={openingBalance} onChange={setOpeningBalance} />
         </Field>
+        {Number(openingBalance.replace(',', '.')) > 0 ? (
+          <Field label="Où se trouve cet argent ?">
+            <Select
+              options={(paymentMethods.data ?? []).map((m) => ({ value: String(m.id), label: m.name }))}
+              value={openingAccountId || String(paymentMethods.data?.[0]?.id ?? '')}
+              onChange={setOpeningAccountId}
+            />
+          </Field>
+        ) : null}
 
         <Switch label="Inventaire" description="Produits, stock, coût moyen pondéré" checked={hasInventory} onChange={setHasInventory} />
         <Switch label="Crédits & dettes" description="Clients qui doivent, fournisseurs à payer" checked={hasDebts} onChange={setHasDebts} />

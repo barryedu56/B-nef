@@ -1,5 +1,9 @@
 import {
   ArrowDownLeft,
+  ArrowLeftRight,
+  Calculator,
+  CircleMinus,
+  CirclePlus,
   ArrowUpRight,
   HandCoins,
   PackagePlus,
@@ -27,6 +31,14 @@ export function kindLabel(kind: TransactionKind | string, direction: Direction) 
       return 'Solde initial';
     case 'personal_use':
       return 'Consommation personnelle';
+    case 'contribution':
+      return 'Apport personnel';
+    case 'withdrawal':
+      return 'Retrait personnel';
+    case 'transfer':
+      return direction === 'in' ? 'Transfert reçu' : 'Transfert envoyé';
+    case 'cash_adjustment':
+      return direction === 'in' ? 'Écart de caisse (surplus)' : 'Écart de caisse (manque)';
     default:
       return direction === 'in' ? 'Entrée' : 'Dépense';
   }
@@ -39,6 +51,10 @@ const ICONS: Partial<Record<TransactionKind, LucideIcon>> = {
   adjustment: Scale,
   opening_balance: Undo2,
   personal_use: Utensils,
+  contribution: CirclePlus,
+  withdrawal: CircleMinus,
+  transfer: ArrowLeftRight,
+  cash_adjustment: Calculator,
 };
 
 /** Icône (verte pour une entrée, rouge pour une sortie) + libellé du type. */
