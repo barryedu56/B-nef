@@ -7,6 +7,8 @@ import type { Period } from '@/api/types';
 import { AmountText } from '@/components/ui/AmountText';
 import { BudgetProgress } from '@/components/BudgetProgress';
 import { Card } from '@/components/ui/Card';
+import { HeroCard, HeroStat } from '@/components/ui/HeroCard';
+import { ProfitChart } from '@/components/ui/ProfitChart';
 import { Chip } from '@/components/ui/Chip';
 import { ErrorView, LoadingView } from '@/components/ui/QueryState';
 import { Screen } from '@/components/ui/Screen';
@@ -58,7 +60,6 @@ export default function GlobalViewScreen() {
 
   const data = summary.data;
   const maxNet = Math.max(1, ...data.by_activity.map((row) => Math.abs(Number(row.net_profit))));
-  const maxSeries = Math.max(1, ...data.timeseries.map((p) => Math.abs(Number(p.net_profit))));
 
   return (
     <Screen onRefresh={() => summary.refetch()} refreshing={summary.isRefetching}>
@@ -80,12 +81,10 @@ export default function GlobalViewScreen() {
           <Text style={styles.warning}>{data.conversion_error ?? 'Conversion indisponible pour le moment — montants en ' + data.source_currency + '.'}</Text>
         ) : null}
 
-        <Card tone="muted" style={styles.heroCard}>
-          <Text style={styles.heroLabel}>
-            Revenu net total · {formatPeriodLabel(period, anchor)}
-          </Text>
-          <AmountText amount={data.net_profit} currency={data.currency} size={28} />
-        </Card>
+        <HeroCard label={`Bénéfice net total · ${formatPeriodLabel(period, anchor)}`} amount={data.net_profit} currency={data.currency}>
+          <HeroStat label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} />
+          <HeroStat label="Dépenses" amount={data.expenses} currency={data.currency} />
+        </HeroCard>
 
         <Card style={styles.patrimoineCard}>
           <Text style={styles.cardTitle}>Patrimoine</Text>
@@ -132,21 +131,8 @@ export default function GlobalViewScreen() {
 
         {data.timeseries.length > 0 ? (
           <Card style={styles.breakdownCard}>
-            <Text style={styles.cardTitle}>Revenu net — {data.timeseries.length} derniers mois</Text>
-            <View style={styles.chart}>
-              {data.timeseries.map((point) => (
-                <View
-                  key={point.month}
-                  style={[
-                    styles.chartBar,
-                    {
-                      height: Math.max(6, (Math.abs(Number(point.net_profit)) / maxSeries) * 96),
-                      backgroundColor: Number(point.net_profit) < 0 ? colors.negative : '#cdcdc8',
-                    },
-                  ]}
-                />
-              ))}
-            </View>
+            <Text style={styles.cardTitle}>Bénéfice net — {data.timeseries.length} derniers mois</Text>
+            <ProfitChart series={data.timeseries} />
           </Card>
         ) : null}
       </View>
@@ -213,8 +199,6 @@ const styles = StyleSheet.create({
   currencyRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   switching: { color: colors.textTertiary },
   warning: { fontSize: fontSize.xs, color: colors.warning },
-  heroCard: { gap: 4 },
-  heroLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
   cardTitle: { fontSize: fontSize.md, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.sm },
   patrimoineCard: { gap: 0 },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
@@ -235,6 +219,4 @@ const styles = StyleSheet.create({
   breakdownName: { fontSize: fontSize.sm, color: colors.textPrimary, flexShrink: 1 },
   barTrack: { height: 7, backgroundColor: '#f0f0ee', borderRadius: radius.pill },
   barFill: { height: 7, borderRadius: radius.pill },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 96, backgroundColor: colors.bg, borderRadius: radius.sm, padding: 10 },
-  chartBar: { flex: 1, borderRadius: 3 },
 });

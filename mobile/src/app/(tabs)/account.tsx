@@ -171,6 +171,13 @@ export default function AccountScreen() {
               <Text style={styles.infoValue}>{user.phone}</Text>
             </View>
           ) : null}
+          <Pressable style={styles.linkRow} onPress={() => router.push('/change-password')}>
+            <View style={styles.linkWithIcon}>
+              <Ionicons name="key-outline" size={17} color={colors.accent} />
+              <Text style={styles.linkLabel}>Changer mon mot de passe</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
         </Card>
 
         <Card style={styles.card}>
@@ -310,6 +317,7 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', justifyContent: 'space-between' },
   infoLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
   infoValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
+  linkWithIcon: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   linkLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
   error: { fontSize: fontSize.sm, color: colors.negative },

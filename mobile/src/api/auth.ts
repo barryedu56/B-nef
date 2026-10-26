@@ -74,3 +74,13 @@ export function confirmPasswordReset(identifier: string, code: string, newPasswo
 export function deleteAccount(password: string) {
   return apiRequest<void>('/auth/delete-account/', { method: 'POST', body: { password } });
 }
+
+/** Change le mot de passe : les autres appareils sont déconnectés, celui-ci
+ * reçoit de nouveaux jetons et reste connecté. */
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const data = await apiRequest<{ access: string; refresh: string }>('/auth/change-password/', {
+    method: 'POST',
+    body: { current_password: currentPassword, new_password: newPassword },
+  });
+  await setTokens(data.access, data.refresh);
+}

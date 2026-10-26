@@ -7,6 +7,10 @@ import type { Period, Transaction } from '@/api/types';
 import { AmountText } from '@/components/ui/AmountText';
 import { BudgetProgress } from '@/components/BudgetProgress';
 import { Card } from '@/components/ui/Card';
+import { TxnIcon } from '@/components/TxnIcon';
+import { HeroCard, HeroStat } from '@/components/ui/HeroCard';
+import { KpiTile } from '@/components/ui/KpiTile';
+import { ProfitChart } from '@/components/ui/ProfitChart';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorView, LoadingView } from '@/components/ui/QueryState';
 import { Screen } from '@/components/ui/Screen';
@@ -51,7 +55,6 @@ export default function ActivityDashboardScreen() {
   const data = summary.data;
   const categoryById = new Map((categories.data ?? []).map((c) => [c.id, c.name]));
   const paymentById = new Map((paymentMethods.data ?? []).map((p) => [p.id, p.name]));
-  const maxSeries = Math.max(1, ...data.timeseries.map((p) => Math.abs(Number(p.net_profit))));
 
   return (
     <Screen edges={['top']} onRefresh={() => { activity.refetch(); summary.refetch(); transactions.refetch(); }} refreshing={summary.isRefetching}>
@@ -82,43 +85,25 @@ export default function ActivityDashboardScreen() {
           </View>
         </View>
 
-        <Card tone="muted" style={styles.heroCard}>
-          <Text style={styles.heroLabel}>Bénéfice net de la période</Text>
-          <AmountText amount={data.net_profit} currency={data.currency} size={26} />
-        </Card>
+        <HeroCard label="Bénéfice net de la période" amount={data.net_profit} currency={data.currency}>
+          <HeroStat label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} />
+          <HeroStat label="Caisse" amount={data.cash_balance} currency={data.currency} />
+        </HeroCard>
 
         <View style={styles.kpiGrid}>
-          <KpiTile label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} sign="neutral" />
-          {act.has_inventory ? <KpiTile label="Coût des ventes" amount={data.cogs} currency={data.currency} sign="negative" /> : null}
-          {act.has_inventory ? <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} sign="neutral" /> : null}
-          <KpiTile label="Charges" amount={data.expenses} currency={data.currency} sign="negative" />
-          {act.has_inventory ? (
-            <KpiTile label="Consommé personnellement" amount={data.personal_use} currency={data.currency} sign="neutral" />
+          {act.has_inventory ? <KpiTile label="Coût des ventes" amount={data.cogs} currency={data.currency} icon="cube-outline" tone="negative" /> : null}
+          {act.has_inventory ? <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} icon="bar-chart-outline" tone="info" /> : null}
+          <KpiTile label="Charges" amount={data.expenses} currency={data.currency} icon="receipt-outline" tone="negative" />
+          {act.has_inventory ? <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} icon="layers-outline" tone="warning" /> : null}
+          {act.has_inventory && Number(data.personal_use) > 0 ? (
+            <KpiTile label="Consommé perso" amount={data.personal_use} currency={data.currency} icon="restaurant-outline" tone="warning" />
           ) : null}
-        </View>
-
-        <View style={styles.kpiGrid}>
-          {act.has_inventory ? <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} sign="neutral" /> : null}
-          <KpiTile label="Caisse" amount={data.cash_balance} currency={data.currency} sign="neutral" />
         </View>
 
         {data.timeseries.length > 0 ? (
           <Card>
             <Text style={styles.cardTitle}>Évolution du bénéfice</Text>
-            <View style={styles.chart}>
-              {data.timeseries.map((point) => (
-                <View
-                  key={point.month}
-                  style={[
-                    styles.chartBar,
-                    {
-                      height: Math.max(6, (Math.abs(Number(point.net_profit)) / maxSeries) * 96),
-                      backgroundColor: Number(point.net_profit) < 0 ? colors.negative : '#cdcdc8',
-                    },
-                  ]}
-                />
-              ))}
-            </View>
+            <ProfitChart series={data.timeseries} />
           </Card>
         ) : null}
 
@@ -175,7 +160,7 @@ function ActivityBudgetsCard({ activityId }: { activityId: number }) {
   const rows = budgets.data ?? [];
   return (
     <Card>
-      <View style={styles.listHeader}>
+      <View style={styles.cardHeaderRow}>
         <Text style={styles.cardTitle}>Budgets</Text>
         <Pressable
           hitSlop={8}
@@ -188,15 +173,6 @@ function ActivityBudgetsCard({ activityId }: { activityId: number }) {
       ) : (
         <Text style={styles.budgetEmpty}>Aucun budget pour cette activité.</Text>
       )}
-    </Card>
-  );
-}
-
-function KpiTile({ label, amount, currency, sign }: { label: string; amount: string; currency: string; sign: 'neutral' | 'negative' }) {
-  return (
-    <Card style={styles.kpiTile}>
-      <Text style={styles.kpiLabel}>{label}</Text>
-      <AmountText amount={amount} currency={currency} size={16} sign={sign === 'negative' && Number(amount) > 0 ? 'negative' : 'neutral'} />
     </Card>
   );
 }
@@ -236,6 +212,7 @@ function TransactionRow({
       style={styles.txnRow}
       disabled={queued}
       onPress={() => router.push({ pathname: '/transaction/[id]', params: { id: String(txn.id) } })}>
+      <TxnIcon kind={txn.kind} direction={txn.direction} muted={txn.is_voided || queued} />
       <View style={styles.txnInfo}>
         <Text style={[styles.txnLabel, txn.is_voided && styles.txnLabelVoided]} numberOfLines={1}>
           {label}
@@ -271,6 +248,7 @@ function kindLabel(txn: Transaction, categoryName?: string) {
 }
 
 const styles = StyleSheet.create({
+  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   budgetLink: { fontSize: fontSize.sm, fontWeight: '600', color: colors.accent },
   budgetEmpty: { fontSize: fontSize.xs, color: colors.textTertiary },
   iconButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
@@ -278,14 +256,8 @@ const styles = StyleSheet.create({
   periodBlock: { gap: spacing.sm },
   periodNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   periodLabel: { fontSize: fontSize.md, fontWeight: '600', color: colors.textPrimary },
-  heroCard: { gap: 4 },
-  heroLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  kpiTile: { flexGrow: 1, flexBasis: '47%', gap: 3 },
-  kpiLabel: { fontSize: 11.5, color: colors.textSecondary },
   cardTitle: { fontSize: fontSize.md, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.sm },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 96, backgroundColor: colors.bg, borderRadius: radius.sm, padding: 10 },
-  chartBar: { flex: 1, borderRadius: 3 },
   actionsRow: { flexDirection: 'row', gap: spacing.sm },
   actionButton: {
     flex: 1,
@@ -304,7 +276,7 @@ const styles = StyleSheet.create({
   txnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingVertical: 11,
     borderTopWidth: 1,
     borderTopColor: colors.border,

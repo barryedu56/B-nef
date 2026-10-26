@@ -7,7 +7,7 @@ import { LoadingView } from '@/components/ui/QueryState';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme';
 
-const TAB_BAR_CONTENT_HEIGHT = 50;
+const TAB_BAR_CONTENT_HEIGHT = 62;
 
 export default function TabsLayout() {
   const { status } = useAuth();
@@ -36,12 +36,12 @@ export default function TabsLayout() {
           borderTopColor: colors.border,
           backgroundColor: colors.card,
           height: TAB_BAR_CONTENT_HEIGHT + bottomInset,
-          paddingTop: 6,
+          paddingTop: 8,
           paddingBottom: bottomInset,
         },
         tabBarItemStyle: { paddingTop: 2 },
         tabBarIconStyle: { marginBottom: -2 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', marginTop: 2 },
       }}>
       <Tabs.Screen
         name="index"

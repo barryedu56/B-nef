@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, shadow, spacing } from '@/theme';
 
 interface CardProps {
   children: ReactNode;
@@ -15,9 +15,9 @@ export function Card({ children, style, tone = 'default', padding = spacing.lg }
 }
 
 function toneStyle(tone: CardProps['tone']): ViewStyle {
-  if (tone === 'muted') return { backgroundColor: colors.bg, borderWidth: 0 };
+  if (tone === 'muted') return { backgroundColor: colors.accentSoft, borderWidth: 0 };
   if (tone === 'dashed') return { borderStyle: 'dashed', borderColor: colors.borderStrong };
-  return { backgroundColor: colors.card, borderColor: colors.border };
+  return { backgroundColor: colors.card, borderColor: colors.border, ...shadow.sm };
 }
 
 const styles = StyleSheet.create({

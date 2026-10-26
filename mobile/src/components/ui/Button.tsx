@@ -1,6 +1,8 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import type { ComponentProps } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
-import { colors, fontSize, radius, spacing, touchable } from '@/theme';
+import { colors, fontSize, radius, shadow, spacing, touchable } from '@/theme';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -12,9 +14,10 @@ interface ButtonProps {
   loading?: boolean;
   fullWidth?: boolean;
   style?: ViewStyle;
+  icon?: ComponentProps<typeof Ionicons>['name'];
 }
 
-export function Button({ label, onPress, variant = 'primary', disabled, loading, fullWidth = true, style }: ButtonProps) {
+export function Button({ label, onPress, variant = 'primary', disabled, loading, fullWidth = true, style, icon }: ButtonProps) {
   const isDisabled = disabled || loading;
   return (
     <Pressable
@@ -31,7 +34,10 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
       {loading ? (
         <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? colors.accent : colors.white} />
       ) : (
-        <Text style={[styles.label, labelStyle(variant)]}>{label}</Text>
+        <View style={styles.content}>
+          {icon ? <Ionicons name={icon} size={18} color={labelStyle(variant).color} /> : null}
+          <Text style={[styles.label, labelStyle(variant)]}>{label}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -40,13 +46,13 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
 function variantStyle(variant: Variant): ViewStyle {
   switch (variant) {
     case 'secondary':
-      return { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.borderStrong };
+      return { backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.borderStrong };
     case 'danger':
-      return { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.negative };
+      return { backgroundColor: colors.card, borderWidth: 1.5, borderColor: '#f1b5b5' };
     case 'ghost':
       return { backgroundColor: 'transparent' };
     default:
-      return { backgroundColor: colors.accent };
+      return { backgroundColor: colors.accent, ...shadow.accent };
   }
 }
 
@@ -66,7 +72,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fullWidth: { width: '100%' },
-  label: { fontSize: fontSize.md, fontWeight: '600' },
+  content: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  label: { fontSize: fontSize.md, fontWeight: '700' },
   disabled: { opacity: 0.5 },
-  pressed: { opacity: 0.85 },
+  pressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
 });

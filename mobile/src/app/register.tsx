@@ -1,8 +1,11 @@
 import { Link, Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
+import { AuthScreen } from '@/components/auth/AuthScreen';
+import { PasswordStrength } from '@/components/auth/PasswordStrength';
+import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { PhoneField } from '@/components/ui/PhoneField';
 import { PickerField } from '@/components/ui/PickerField';
@@ -31,6 +34,8 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   if (status === 'signedIn') return <Redirect href="/(tabs)" />;
+
+  const mismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   const onSubmit = async () => {
     if (!username.trim()) {
@@ -72,73 +77,50 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <Text style={styles.title}>Créer un compte</Text>
-          <Text style={styles.subtitle}>Choisis ta devise principale — tu pourras en changer plus tard.</Text>
-        </View>
-
-        <View style={styles.form}>
-          <TextField
-            label="Nom d'utilisateur"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            placeholder="ex. amadou"
-          />
-          <TextField
-            label="E-mail"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="ex. amadou@exemple.com"
-          />
-          <TextField
-            label="Mot de passe (8 caractères min.)"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-          <TextField
-            label="Confirmer le mot de passe"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-          <PhoneField value={phone} onChangeText={setPhone} />
-          <PickerField label="Devise principale" value={baseCurrency} options={CURRENCY_OPTIONS} onChange={setBaseCurrency} />
-          <Text style={styles.hint}>
-            L'e-mail est obligatoire : c'est le seul moyen de récupérer ton compte si tu oublies ton mot de passe.
-          </Text>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Button label="Créer mon compte" onPress={onSubmit} loading={loading} />
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Déjà un compte ?</Text>
-          <Link href="/login" style={styles.link}>
-            Se connecter
-          </Link>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <AuthScreen title="Créer ton compte" subtitle="Gratuit, en moins d'une minute. Tu pourras tout modifier plus tard.">
+      <View style={styles.form}>
+        <TextField label="Nom d'utilisateur" icon="person-outline" value={username} onChangeText={setUsername} autoCapitalize="none" autoComplete="username" placeholder="ex. amadou" />
+        <TextField
+          label="E-mail"
+          icon="mail-outline"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+          placeholder="toi@exemple.com"
+          hint="Indispensable pour récupérer ton compte si tu oublies ton mot de passe."
+        />
+        <TextField label="Mot de passe" icon="lock-closed-outline" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoComplete="new-password" placeholder="8 caractères minimum" />
+        <PasswordStrength password={password} />
+        <TextField
+          label="Confirmer le mot de passe"
+          icon="lock-closed-outline"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+          autoCapitalize="none"
+          autoComplete="new-password"
+          error={mismatch ? 'Les deux mots de passe ne correspondent pas.' : undefined}
+        />
+        <PhoneField value={phone} onChangeText={setPhone} />
+        <PickerField label="Devise principale" value={baseCurrency} options={CURRENCY_OPTIONS} onChange={setBaseCurrency} />
+        {error ? <Alert message={error} /> : null}
+        <Button label="Créer mon compte" onPress={onSubmit} loading={loading} />
+      </View>
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Déjà un compte ?</Text>
+        <Link href="/login" style={styles.link}>
+          Se connecter
+        </Link>
+      </View>
+    </AuthScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.bg },
-  wrap: { flexGrow: 1, justifyContent: 'center', padding: spacing.xxl, gap: spacing.xxl },
-  header: { gap: spacing.xs },
-  title: { fontSize: fontSize.xxxl, fontWeight: '700', color: colors.textPrimary },
-  subtitle: { fontSize: fontSize.md, color: colors.textSecondary },
-  form: { gap: spacing.md },
-  hint: { fontSize: fontSize.xs, color: colors.textTertiary, marginTop: -spacing.sm },
-  error: { fontSize: fontSize.sm, color: colors.negative },
+  form: { gap: spacing.lg },
   footer: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
   footerText: { fontSize: fontSize.sm, color: colors.textSecondary },
-  link: { fontSize: fontSize.sm, color: colors.accent, fontWeight: '600' },
+  link: { fontSize: fontSize.sm, color: colors.accent, fontWeight: '700' },
 });

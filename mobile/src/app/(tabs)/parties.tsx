@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Party, PartyKind } from '@/api/types';
 import { AmountText } from '@/components/ui/AmountText';
 import { Button } from '@/components/ui/Button';
+import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorView, LoadingView } from '@/components/ui/QueryState';
@@ -88,6 +89,7 @@ function PartyRow({ party, currency }: { party: Party; currency: string }) {
       disabled={party.id < 0}
       onPress={() => router.push({ pathname: '/parties/[id]', params: { id: String(party.id) } })}>
       <Card style={styles.partyCard}>
+        <Avatar name={party.name} size={40} />
         <View style={styles.partyInfo}>
           <Text style={styles.partyName}>{party.name}</Text>
           <Text style={styles.partyMeta}>{party.phone || 'Pas de téléphone'}</Text>
@@ -106,8 +108,8 @@ const styles = StyleSheet.create({
   totalTile: { flex: 1, gap: 3 },
   totalLabel: { fontSize: 11.5, color: colors.textSecondary },
   list: { gap: spacing.sm },
-  partyCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  partyCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   partyInfo: { flex: 1, gap: 2 },
-  partyName: { fontSize: fontSize.md, fontWeight: '600', color: colors.textPrimary },
+  partyName: { fontSize: fontSize.md, fontWeight: '700', color: colors.textPrimary },
   partyMeta: { fontSize: 11.5, color: colors.textTertiary },
 });
