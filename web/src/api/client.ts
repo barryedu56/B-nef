@@ -63,7 +63,9 @@ interface RequestOptions {
 
 function buildUrl(path: string, params?: Params) {
   const base = path.startsWith('http') ? path : `${API_URL}${path}`
-  const url = new URL(base)
+  // Base = l'origine de la page : VITE_API_URL peut être relatif (« /api »)
+  // quand le front et l'API sont servis par le même domaine (voir deploy/).
+  const url = new URL(base, window.location.origin)
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== '') {

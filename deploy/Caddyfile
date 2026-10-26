@@ -1,0 +1,28 @@
+# Un seul domaine : l'app web à la racine, l'API sous /api.
+# Le certificat HTTPS est obtenu et renouvelé automatiquement.
+{$BENEF_DOMAIN} {
+	encode gzip zstd
+
+	@backend path /api/* /admin/* /api-auth/* /static/*
+	handle @backend {
+		reverse_proxy backend:8000
+	}
+
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+	}
+
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}

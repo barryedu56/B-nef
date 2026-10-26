@@ -28,9 +28,10 @@ ménage, freelance…) : chacun fait « l'inventaire » de ce qu'il fait et conn
 | Dossier | Contenu | État |
 |---|---|---|
 | [`design/`](design/) | Maquettes low-fi (canvas) | ✅ validées |
-| [`backend/`](backend/) | API Django + DRF + MySQL (WAMP) | ✅ fondations + tests OK |
+| [`backend/`](backend/) | API Django + DRF — PostgreSQL en production, MySQL (WAMP) ou SQLite en local | ✅ tests automatiques (`python manage.py test apps`) |
 | [`mobile/`](mobile/) | App React Native (Expo) | ✅ écrans principaux + typecheck/export OK |
 | [`web/`](web/) | App React / Vite (poste d'analyse) | ✅ pages principales + typecheck/build OK |
+| [`deploy/`](deploy/) | Docker Compose de production (PostgreSQL, HTTPS, sauvegardes) | voir [DEPLOIEMENT.md](DEPLOIEMENT.md) |
 
 Voir [`backend/README.md`](backend/README.md), [`mobile/README.md`](mobile/README.md) et [`web/README.md`](web/README.md) pour l'installation.
 

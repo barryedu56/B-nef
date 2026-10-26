@@ -67,6 +67,8 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Sert /static/ (admin Django) directement depuis gunicorn en production.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -99,12 +101,29 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 # --- Base de données -----------------------------------------------------
-# DB_ENGINE = "sqlite" pour un démarrage rapide sans MySQL.
-if env("DB_ENGINE", "mysql") == "sqlite":
+# DB_ENGINE = "sqlite" pour un démarrage rapide sans MySQL, "postgres" sur le
+# serveur de production (voir DEPLOIEMENT.md), "mysql" pour WAMP en local.
+DB_ENGINE = env("DB_ENGINE", "mysql")
+if DB_ENGINE == "sqlite":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+elif DB_ENGINE == "postgres":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": env("DB_NAME", "benef"),
+            "USER": env("DB_USER", "benef"),
+            "PASSWORD": env("DB_PASSWORD", ""),
+            "HOST": env("DB_HOST", "127.0.0.1"),
+            "PORT": env("DB_PORT", "5432"),
+            # Garde la connexion ouverte entre deux requêtes (gunicorn) au
+            # lieu d'en rouvrir une à chaque appel de l'app.
+            "CONN_MAX_AGE": int(env("DB_CONN_MAX_AGE", "60")),
+            "CONN_HEALTH_CHECKS": True,
         }
     }
 else:
@@ -146,6 +165,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 
 # Fichiers utilisateur (photos de profil, etc.). Servis par Django lui-même
 # en dev (voir config/urls.py) ; en prod, un vrai serveur de fichiers/CDN

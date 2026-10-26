@@ -15,7 +15,7 @@ export function fetchGlobalSummary(params: { period: Period; currency?: string; 
 /** Télécharge le vrai fichier PDF du rapport (pas `apiRequest` : réponse
  * binaire, pas JSON) et déclenche l'enregistrement dans le navigateur. */
 export async function downloadReportPdf(params: { activity?: number; period: Period; date?: string }) {
-  const url = new URL(`${API_URL}/reports/pdf/`);
+  const url = new URL(`${API_URL}/reports/pdf/`, window.location.origin);
   if (params.activity !== undefined) url.searchParams.set('activity', String(params.activity));
   url.searchParams.set('period', params.period);
   if (params.date) url.searchParams.set('date', params.date);
