@@ -175,6 +175,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
+    "EXCEPTION_HANDLER": "apps.common.exceptions.exception_handler",
     # Limitation de débit sur les endpoints sensibles uniquement (voir
     # apps/common/throttling.py) — pas de throttle générique sur toute
     # l'API pour ne pas gêner un usage normal (React Query, etc.).

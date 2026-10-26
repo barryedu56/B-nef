@@ -14,6 +14,11 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ("id", "activity", "name", "direction", "is_system")
         read_only_fields = ("id", "is_system")
 
+    def validate_activity(self, activity):
+        if activity is not None and activity.owner_id != self.context["request"].user.id:
+            raise serializers.ValidationError("Activité inconnue.")
+        return activity
+
     def create(self, validated_data):
         validated_data["owner"] = self.context["request"].user
         return super().create(validated_data)
@@ -30,7 +35,27 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class TransactionSerializer(serializers.ModelSerializer):
+class _OwnedRelationsMixin:
+    """Le tiers, la catégorie et le moyen de paiement doivent appartenir à
+    l'utilisateur — sinon on pourrait rattacher une opération au client d'un
+    autre compte et fausser son solde."""
+
+    def _own(self, obj):
+        if obj is not None and obj.owner_id != self.context["request"].user.id:
+            raise serializers.ValidationError("Élément inconnu.")
+        return obj
+
+    def validate_party(self, party):
+        return self._own(party)
+
+    def validate_category(self, category):
+        return self._own(category)
+
+    def validate_payment_method(self, payment_method):
+        return self._own(payment_method)
+
+
+class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
     """Lecture et création. Une fois créée, les champs financiers (montant,
     devise, sens, date, à-crédit) ne se modifient plus — voir
     `TransactionUpdateSerializer` pour ce qui reste modifiable après coup."""
@@ -63,6 +88,27 @@ class TransactionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Le montant doit être positif.")
         return value
 
+    # Les autres types (vente, achat, règlement, ajustement, consommation
+    # perso) ont leurs propres endpoints qui mettent aussi à jour le stock /
+    # le crédit d'origine : les créer ici donnerait une opération orpheline.
+    _CREATABLE_KINDS = (Transaction.Kind.SIMPLE, Transaction.Kind.OPENING_BALANCE)
+
+    def validate_kind(self, value):
+        if value not in self._CREATABLE_KINDS:
+            raise serializers.ValidationError(
+                "Ce type d'opération se crée via son propre écran (vente, réappro, règlement…)."
+            )
+        return value
+
+    def validate(self, attrs):
+        if attrs.get("kind") == Transaction.Kind.OPENING_BALANCE and not (
+            attrs.get("is_credit") and attrs.get("party")
+        ):
+            raise serializers.ValidationError(
+                {"kind": "Un solde initial doit être à crédit et rattaché à un tiers."}
+            )
+        return attrs
+
     def create(self, validated_data):
         activity = validated_data.pop("activity")
         currency = validated_data.pop("currency")
@@ -77,7 +123,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         )
 
 
-class TransactionUpdateSerializer(serializers.ModelSerializer):
+class TransactionUpdateSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
     """PATCH d'une transaction existante : uniquement les champs qui ne
     changent pas le résultat financier. Pour corriger un montant, une date,
     une quantité ou une devise : annule (`/void/`) et ressaisis."""
