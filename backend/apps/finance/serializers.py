@@ -178,6 +178,10 @@ class SaleInputSerializer(serializers.Serializer):
     )
     sale_currency = serializers.CharField(required=False, allow_null=True)
     note = serializers.CharField(required=False, allow_blank=True, default="")
+    # Saisie faite hors-ligne sur le téléphone puis synchronisée : la vente a
+    # réellement eu lieu, on l'accepte même si le stock enregistré ne suffit
+    # plus (il deviendra négatif et apparaîtra en alerte de stock).
+    recorded_offline = serializers.BooleanField(default=False)
 
     def validate(self, attrs):
         if attrs.get("amount_paid_now") and not attrs.get("is_credit"):
@@ -223,6 +227,10 @@ class PersonalUseInputSerializer(serializers.Serializer):
     quantity = serializers.DecimalField(max_digits=16, decimal_places=3)
     occurred_on = serializers.DateField(required=False)
     note = serializers.CharField(required=False, allow_blank=True, default="")
+    # Saisie faite hors-ligne sur le téléphone puis synchronisée : la vente a
+    # réellement eu lieu, on l'accepte même si le stock enregistré ne suffit
+    # plus (il deviendra négatif et apparaîtra en alerte de stock).
+    recorded_offline = serializers.BooleanField(default=False)
 
     def validate_quantity(self, value):
         if value <= 0:

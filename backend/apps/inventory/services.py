@@ -171,6 +171,7 @@ def register_sale(
     sale_currency: str | None = None,
     note: str = "",
     user=None,
+    allow_negative_stock: bool = False,
 ) -> Transaction:
     """Vente multi-produits.
 
@@ -183,6 +184,10 @@ def register_sale(
     puis un règlement immédiat de `amount_paid_now` est créé dans la foulée —
     la caisse bouge tout de suite pour cette part, et il reste 20 000 de
     créance à régler plus tard.
+
+    `allow_negative_stock` : vente saisie hors-ligne puis synchronisée — elle
+    a réellement eu lieu, on ne la refuse pas pour un stock enregistré
+    insuffisant (il passe en négatif, à corriger par un ajustement).
     """
     occurred_on = occurred_on or timezone.localdate()
     act_currency = activity.currency_id
@@ -207,7 +212,7 @@ def register_sale(
             raise ValueError(f"La quantité de « {product.name} » doit être positive.")
         # Plusieurs lignes peuvent viser le même produit : on cumule.
         already = sum((r[1] for r in resolved if r[0].pk == product.pk), Z)
-        if already + qty > product.stock_quantity:
+        if not allow_negative_stock and already + qty > product.stock_quantity:
             raise ValueError(
                 f"Stock insuffisant pour « {product.name} » : il ne reste que "
                 f"{product.stock_quantity} {product.unit}."
@@ -329,7 +334,8 @@ def adjust_stock(
 
 @db_transaction.atomic
 def consume_for_personal_use(
-    *, product: Product, quantity: Decimal, occurred_on=None, note: str = ""
+    *, product: Product, quantity: Decimal, occurred_on=None, note: str = "",
+    allow_negative_stock: bool = False,
 ) -> StockMovement:
     """Retire du stock une quantité gardée pour soi (pas vendue).
 
@@ -345,7 +351,7 @@ def consume_for_personal_use(
     if quantity <= 0:
         raise ValueError("La quantité doit être positive.")
     product = Product.objects.select_for_update().select_related("activity").get(pk=product.pk)
-    if quantity > product.stock_quantity:
+    if not allow_negative_stock and quantity > product.stock_quantity:
         raise ValueError(
             f"Stock insuffisant : il ne reste que {product.stock_quantity} {product.unit}."
         )

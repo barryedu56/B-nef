@@ -101,3 +101,25 @@ class StockAdjustmentTests(ApiTestCase):
         r = self.client.post(f"/api/transactions/{txn.pk}/void/", {}, format="json")
         self.assertEqual(r.status_code, 400, r.content)
         self.assertEqual(Product.objects.get(pk=self.product.pk).stock_quantity, 7)
+
+
+class OfflineSaleTests(ApiTestCase):
+    def test_vente_hors_ligne_acceptee_meme_si_stock_insuffisant(self):
+        r = self.client.post(
+            "/api/sales/",
+            {"activity": self.shop.pk, "lines": [{"product": self.product.pk, "quantity": "12"}],
+             "recorded_offline": True, "occurred_on": "2026-01-10"},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["occurred_on"], "2026-01-10")
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, -2)
+
+    def test_consommation_hors_ligne_acceptee(self):
+        r = self.client.post(
+            "/api/personal-use/",
+            {"product": self.product.pk, "quantity": "11", "recorded_offline": True},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 201, r.content)

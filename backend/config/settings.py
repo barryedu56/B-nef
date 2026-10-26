@@ -71,6 +71,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Après l'authentification de session (admin / API navigable) ; le JWT
+    # est vérifié par le middleware lui-même.
+    "apps.common.idempotency.IdempotencyMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -204,6 +207,11 @@ CORS_ALLOWED_ORIGINS = env_list(
     "http://localhost:5173,http://localhost:8081,http://localhost:19006",
 )
 CORS_ALLOW_CREDENTIALS = True
+# Idempotency-Key : envoyée par la file d'attente hors-ligne (voir
+# apps/common/idempotency.py) — doit être autorisée pour Expo web / Vite.
+from corsheaders.defaults import default_headers  # noqa: E402
+
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 # Sans ça, le JS du navigateur ne peut PAS lire ce header sur une réponse
 # cross-origin (Vite:5173 -> Django:8000 sont deux origines différentes) —
 # nécessaire pour récupérer le nom de fichier du PDF de rapport téléchargé.

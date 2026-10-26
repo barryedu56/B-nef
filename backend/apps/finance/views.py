@@ -143,6 +143,7 @@ class SaleView(_OwnedLookupMixin, APIView):
                 sale_currency=v.get("sale_currency"),
                 note=v.get("note", ""),
                 user=request.user,
+                allow_negative_stock=v["recorded_offline"],
             )
         except (ValueError, VoidError) as exc:
             raise ValidationError({"detail": str(exc)}) from exc
@@ -237,6 +238,7 @@ class PersonalUseView(APIView):
                 quantity=v["quantity"],
                 occurred_on=v.get("occurred_on"),
                 note=v.get("note", ""),
+                allow_negative_stock=v["recorded_offline"],
             )
         except ValueError as exc:
             raise ValidationError({"quantity": str(exc)}) from exc
