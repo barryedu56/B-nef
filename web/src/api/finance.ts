@@ -83,3 +83,19 @@ export interface SettleInput {
 export function settleTransaction(id: number, input: SettleInput = {}) {
   return apiRequest<Transaction>(`/transactions/${id}/settle/`, { method: 'POST', body: input });
 }
+
+export function updateCategory(id: number, patch: { name: string }) {
+  return apiRequest<Category>(`/categories/${id}/`, { method: 'PATCH', body: patch });
+}
+
+export function deleteCategory(id: number) {
+  return apiRequest<void>(`/categories/${id}/`, { method: 'DELETE' });
+}
+
+export function updatePaymentMethod(id: number, patch: { name?: string; is_cash?: boolean }) {
+  return apiRequest<PaymentMethod>(`/payment-methods/${id}/`, { method: 'PATCH', body: patch });
+}
+
+export function deletePaymentMethod(id: number) {
+  return apiRequest<void>(`/payment-methods/${id}/`, { method: 'DELETE' });
+}

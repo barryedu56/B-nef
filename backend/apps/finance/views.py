@@ -35,6 +35,17 @@ class CategoryViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Category.objects.filter(owner=self.request.user)
 
+    def destroy(self, request, *args, **kwargs):
+        # Supprimer une catégorie déjà utilisée viderait la catégorie de ses
+        # opérations passées (SET_NULL) et supprimerait ses budgets : on
+        # propose de la renommer à la place.
+        category = self.get_object()
+        if category.transactions.exists() or category.budgets.exists():
+            raise ValidationError(
+                {"detail": "Cette catégorie est déjà utilisée (opérations ou budgets) : renomme-la plutôt que de la supprimer."}
+            )
+        return super().destroy(request, *args, **kwargs)
+
 
 class PaymentMethodViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentMethodSerializer
@@ -42,6 +53,14 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return PaymentMethod.objects.filter(owner=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        method = self.get_object()
+        if method.transactions.exists():
+            raise ValidationError(
+                {"detail": "Ce moyen de paiement est déjà utilisé dans des opérations : renomme-le plutôt que de le supprimer."}
+            )
+        return super().destroy(request, *args, **kwargs)
 
 
 class TransactionViewSet(viewsets.ModelViewSet):

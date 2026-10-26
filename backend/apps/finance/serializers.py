@@ -19,6 +19,20 @@ class CategorySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Activité inconnue.")
         return activity
 
+    def validate(self, attrs):
+        if self.instance is not None and "direction" in attrs and attrs["direction"] != self.instance.direction:
+            # Les opérations déjà classées dedans changeraient de sens.
+            raise serializers.ValidationError({"direction": "Le sens d'une catégorie existante ne change pas."})
+        name = attrs.get("name", getattr(self.instance, "name", "")).strip()
+        direction = attrs.get("direction", getattr(self.instance, "direction", None))
+        duplicates = Category.objects.filter(
+            owner=self.context["request"].user, direction=direction, name__iexact=name
+        ).exclude(pk=getattr(self.instance, "pk", None))
+        if duplicates.exists():
+            raise serializers.ValidationError({"name": "Une catégorie porte déjà ce nom."})
+        attrs["name"] = name
+        return attrs
+
     def create(self, validated_data):
         validated_data["owner"] = self.context["request"].user
         return super().create(validated_data)
@@ -29,6 +43,15 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         model = PaymentMethod
         fields = ("id", "name", "is_cash")
         read_only_fields = ("id",)
+
+    def validate_name(self, value):
+        value = value.strip()
+        duplicates = PaymentMethod.objects.filter(
+            owner=self.context["request"].user, name__iexact=value
+        ).exclude(pk=getattr(self.instance, "pk", None))
+        if duplicates.exists():
+            raise serializers.ValidationError("Un moyen de paiement porte déjà ce nom.")
+        return value
 
     def create(self, validated_data):
         validated_data["owner"] = self.context["request"].user

@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { deleteAvatar, updateMe, uploadAvatar } from '@/api/auth';
 import { ApiError } from '@/api/client';
 import { Avatar } from '@/components/ui/Avatar';
+import { CategoriesCard, PaymentMethodsCard } from '@/components/SettingsLists';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Select } from '@/components/ui/Field';
@@ -125,6 +126,9 @@ export function SettingsPage() {
             </div>
           ) : null}
         </Card>
+
+        <CategoriesCard />
+        <PaymentMethodsCard />
 
         <Card style={{ marginTop: 16 }}>
           <span className="card-title">Activités archivées</span>

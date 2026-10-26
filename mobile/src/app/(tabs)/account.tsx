@@ -178,6 +178,14 @@ export default function AccountScreen() {
             <Text style={styles.linkLabel}>Activités archivées</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
+          <Pressable style={styles.linkRow} onPress={() => router.push('/categories')}>
+            <Text style={styles.linkLabel}>Catégories & moyens de paiement</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+          <Pressable style={styles.linkRow} onPress={() => router.push('/budgets')}>
+            <Text style={styles.linkLabel}>Budgets</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
         </Card>
 
         <Card style={styles.card}>

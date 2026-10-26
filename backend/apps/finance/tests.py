@@ -91,3 +91,37 @@ class MissingRateTests(ApiTestCase):
         )
         self.assertEqual(r.status_code, 400, r.content)
         self.assertIn("taux", r.json()["detail"])
+
+
+class CategoryAndPaymentMethodTests(ApiTestCase):
+    def test_creer_renommer_et_supprimer_une_categorie_inutilisee(self):
+        r = self.client.post("/api/categories/", {"name": " Fournitures ", "direction": "out"}, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["name"], "Fournitures")
+        cid = r.json()["id"]
+        self.assertEqual(self.client.patch(f"/api/categories/{cid}/", {"name": "Papeterie"}, format="json").status_code, 200)
+        self.assertEqual(self.client.delete(f"/api/categories/{cid}/").status_code, 204)
+
+    def test_doublon_refuse(self):
+        r = self.client.post("/api/categories/", {"name": "transport", "direction": "out"}, format="json")
+        self.assertEqual(r.status_code, 400)
+        r = self.client.post("/api/payment-methods/", {"name": "orange money"}, format="json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_categorie_utilisee_non_supprimable_et_sens_fige(self):
+        cat = Category.objects.get(owner=self.user, name="Transport")
+        self.client.post("/api/transactions/", {"activity": self.shop.pk, "direction": "out", "amount": "100",
+                                                "currency": "GNF", "occurred_on": "2026-01-15", "category": cat.pk},
+                         format="json")
+        self.assertEqual(self.client.delete(f"/api/categories/{cat.pk}/").status_code, 400)
+        r = self.client.patch(f"/api/categories/{cat.pk}/", {"direction": "in"}, format="json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_moyen_de_paiement_utilise_non_supprimable(self):
+        r = self.client.post("/api/payment-methods/", {"name": "MTN Money"}, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        pm = r.json()["id"]
+        self.client.post("/api/transactions/", {"activity": self.shop.pk, "direction": "in", "amount": "100",
+                                                "currency": "GNF", "occurred_on": "2026-01-15", "payment_method": pm},
+                         format="json")
+        self.assertEqual(self.client.delete(f"/api/payment-methods/{pm}/").status_code, 400)
