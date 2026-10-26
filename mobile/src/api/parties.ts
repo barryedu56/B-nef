@@ -1,5 +1,5 @@
 import { apiRequest } from './client';
-import type { Paginated, Party, PartyKind } from './types';
+import type { Paginated, Party, PartyKind, PartyStatement } from './types';
 
 export async function listParties(params?: { kind?: PartyKind; is_archived?: boolean }) {
   const data = await apiRequest<Paginated<Party>>('/parties/', { params });
@@ -27,4 +27,8 @@ export function fetchPartyTotals() {
 
 export function fetchParty(id: number) {
   return apiRequest<Party>(`/parties/${id}/`);
+}
+
+export function fetchPartyStatement(id: number) {
+  return apiRequest<PartyStatement>(`/parties/${id}/statement/`);
 }

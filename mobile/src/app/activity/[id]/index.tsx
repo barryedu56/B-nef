@@ -95,6 +95,9 @@ export default function ActivityDashboardScreen() {
           {act.has_inventory ? <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} icon="bar-chart-outline" tone="info" /> : null}
           <KpiTile label="Charges" amount={data.expenses} currency={data.currency} icon="receipt-outline" tone="negative" />
           {act.has_inventory ? <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} icon="layers-outline" tone="warning" /> : null}
+          {act.has_inventory ? (
+            <KpiTile label="Achats de marchandise" amount={data.purchases} currency={data.currency} icon="cart-outline" tone="accent" />
+          ) : null}
           {act.has_inventory && Number(data.personal_use) > 0 ? (
             <KpiTile label="Consommé perso" amount={data.personal_use} currency={data.currency} icon="restaurant-outline" tone="warning" />
           ) : null}

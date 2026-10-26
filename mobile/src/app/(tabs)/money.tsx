@@ -41,6 +41,12 @@ export default function MoneyScreen() {
           <QuickAction icon="calculator-outline" label="Vérifier" onPress={() => router.push('/money/count')} />
         </View>
 
+        <Pressable onPress={() => router.push('/money/flow')} style={styles.flowLink} accessibilityRole="button">
+          <Ionicons name="stats-chart-outline" size={18} color={colors.accent} />
+          <Text style={styles.flowText}>Entrées et sorties d'argent du mois</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+        </Pressable>
+
         <Text style={styles.sectionTitle}>Mes caisses</Text>
         {data.accounts.map((account) => (
           <AccountRow key={account.id} account={account} />
@@ -124,6 +130,15 @@ const styles = StyleSheet.create({
   info: { flex: 1, gap: 3 },
   name: { fontSize: fontSize.md, fontWeight: '700', color: colors.textPrimary },
   meta: { fontSize: fontSize.xs, color: colors.textTertiary },
+  flowLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.accentSoft,
+  },
+  flowText: { flex: 1, fontSize: fontSize.sm, fontWeight: '700', color: colors.accentDark },
   manage: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: spacing.sm },
   manageText: { fontSize: fontSize.sm, fontWeight: '700', color: colors.accent },
   help: { fontSize: fontSize.xs, color: colors.textTertiary, lineHeight: 17, textAlign: 'center' },

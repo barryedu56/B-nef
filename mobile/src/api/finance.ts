@@ -2,6 +2,7 @@ import { apiRequest } from './client';
 import type {
   AccountsOverview,
   CashCount,
+  CashFlow,
   Category,
   Direction,
   Paginated,
@@ -132,4 +133,8 @@ export interface TransferInput {
   currency?: string;
   occurred_on?: string;
   note?: string;
+}
+
+export function fetchCashFlow(params: { period: string; date?: string }) {
+  return apiRequest<CashFlow>('/payment-methods/flow/', { params });
 }

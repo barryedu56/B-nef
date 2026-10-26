@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { LoadingView } from '@/components/ui/QueryState';
 import { Screen } from '@/components/ui/Screen';
@@ -77,6 +78,16 @@ export default function ActivitySettingsScreen() {
           />
         </Card>
 
+        <Button
+          label="Assistant de démarrage"
+          icon="rocket-outline"
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/activity/[id]/onboarding', params: { id: String(act.id) } })}
+        />
+        <Text style={styles.assistantHint}>
+          Pour ajouter d'un coup l'argent, la marchandise et les dettes que tu avais avant Bénef.
+        </Text>
+
         <Text onPress={onArchive} style={[styles.archiveLink, archiving && styles.archiveLinkDisabled]}>
           Archiver cette activité
         </Text>
@@ -117,6 +128,7 @@ function ModuleRow({
 }
 
 const styles = StyleSheet.create({
+  assistantHint: { fontSize: fontSize.xs, color: colors.textTertiary, marginTop: -spacing.sm, textAlign: 'center' },
   content: { padding: spacing.lg, gap: spacing.md },
   card: { gap: spacing.md },
   sectionTitle: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.4 },

@@ -44,3 +44,12 @@ export function useUpdateParty(id: number) {
     },
   });
 }
+
+/** Bilan du tiers : acheté / payé, vendu / encaissé, reste dû. */
+export function usePartyStatement(id: number | undefined) {
+  return useQuery({
+    queryKey: ['parties', 'statement', id],
+    queryFn: () => partiesApi.fetchPartyStatement(id as number),
+    enabled: id !== undefined && id > 0,
+  });
+}

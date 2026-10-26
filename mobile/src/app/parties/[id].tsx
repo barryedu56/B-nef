@@ -23,6 +23,7 @@ import { usePartyTransactions } from '@/hooks/useTransactions';
 import { formatRelativeDate } from '@/lib/dates';
 import { formatAmount } from '@/lib/money';
 import { isValidGuineaPhone } from '@/lib/phone';
+import { PartyStatementCard } from '@/components/PartyStatementCard';
 import { colors, fontSize, spacing } from '@/theme';
 
 const KIND_OPTIONS: { value: PartyKind; label: string }[] = [
@@ -138,6 +139,8 @@ export default function PartyDetailScreen() {
             sign="neutral"
           />
         </Card>
+
+        <PartyStatementCard party={p} />
 
         <View>
           <Text style={styles.sectionTitle}>Opérations à régler</Text>

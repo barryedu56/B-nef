@@ -1,5 +1,5 @@
 import { apiRequest } from './client';
-import type { Activity, Paginated } from './types';
+import type { Activity, Paginated, OnboardingInput, OnboardingResult } from './types';
 
 export async function listActivities(params?: { is_archived?: boolean }) {
   const data = await apiRequest<Paginated<Activity>>('/activities/', { params });
@@ -39,3 +39,8 @@ export const ACTIVITY_TYPE_OPTIONS: { value: Activity['type']; label: string }[]
   { value: 'household', label: 'Ménage / dépenses' },
   { value: 'other', label: 'Autre' },
 ];
+
+/** Assistant de démarrage : argent par caisse, stock existant, dettes. */
+export function submitOnboarding(activityId: number, input: OnboardingInput) {
+  return apiRequest<OnboardingResult>(`/activities/${activityId}/onboarding/`, { method: 'POST', body: input });
+}

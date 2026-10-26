@@ -46,3 +46,11 @@ export function useTransfer() {
     },
   });
 }
+
+/** Entrées et sorties d'argent de chaque caisse sur une période. */
+export function useCashFlow(period: string, date: string) {
+  return useQuery({
+    queryKey: ['accounts', 'flow', period, date],
+    queryFn: () => financeApi.fetchCashFlow({ period, date }),
+  });
+}
