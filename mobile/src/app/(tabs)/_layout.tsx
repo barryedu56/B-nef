@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +9,14 @@ import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme';
 
 const TAB_BAR_CONTENT_HEIGHT = 62;
+
+/** Icône d'onglet : couleur du thème selon l'onglet actif (mêmes valeurs
+ * que tabBarActiveTintColor / tabBarInactiveTintColor). */
+function tabIcon(name: ComponentProps<typeof Ionicons>['name']) {
+  return ({ focused, size }: { focused: boolean; size: number }) => (
+    <Ionicons name={name} size={size} color={focused ? colors.accent : colors.textTertiary} />
+  );
+}
 
 export default function TabsLayout() {
   const { status } = useAuth();
@@ -47,28 +56,28 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Activités',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+          tabBarIcon: tabIcon('home-outline'),
         }}
       />
       <Tabs.Screen
         name="global"
         options={{
           title: 'Vue globale',
-          tabBarIcon: ({ color, size }) => <Ionicons name="globe-outline" size={size} color={color} />,
+          tabBarIcon: tabIcon('globe-outline'),
         }}
       />
       <Tabs.Screen
         name="parties"
         options={{
           title: 'Tiers',
-          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
+          tabBarIcon: tabIcon('people-outline'),
         }}
       />
       <Tabs.Screen
         name="account"
         options={{
           title: 'Réglages',
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
+          tabBarIcon: tabIcon('settings-outline'),
         }}
       />
     </Tabs>

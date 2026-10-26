@@ -10,7 +10,7 @@ réglages du compte.
 
 - Node.js 20+ (testé avec Node 24)
 - L'API backend qui tourne (voir `../backend/README.md`)
-- L'app [Expo Go](https://expo.dev/go) sur ton téléphone pour tester sans build native
+- L'app [Expo Go](https://expo.dev/go) **pour SDK 58** sur ton téléphone pour tester sans build native (la version du Play Store doit correspondre au SDK du projet)
 
 ## Installation
 
