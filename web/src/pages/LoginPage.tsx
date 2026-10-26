@@ -67,6 +67,9 @@ export function LoginPage() {
           <span>Pas encore de compte ?</span>
           <Link to="/register">Créer un compte</Link>
         </div>
+        <div className="auth-footer" style={{ fontSize: 12 }}>
+          <Link to="/confidentialite">Confidentialité</Link>
+        </div>
       </div>
     </div>
   );

@@ -69,3 +69,8 @@ export function confirmPasswordReset(identifier: string, code: string, newPasswo
     auth: false,
   });
 }
+
+/** Suppression définitive du compte et de toutes ses données. */
+export function deleteAccount(password: string) {
+  return apiRequest<void>('/auth/delete-account/', { method: 'POST', body: { password } });
+}

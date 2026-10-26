@@ -19,7 +19,7 @@ from .serializers import (
     RegisterSerializer,
     UserSerializer,
 )
-from .services import generate_reset_code, send_reset_email
+from .services import delete_account, generate_reset_code, send_reset_email
 
 User = get_user_model()
 
@@ -130,3 +130,18 @@ class PasswordResetConfirmView(APIView):
         PasswordResetCode.objects.filter(user=user, used_at__isnull=True).delete()
 
         return Response({"detail": "Mot de passe mis à jour."}, status=status.HTTP_200_OK)
+
+
+class DeleteAccountView(APIView):
+    """Suppression définitive du compte, confirmée par le mot de passe."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
+
+    def post(self, request):
+        password = request.data.get("password") or ""
+        if not request.user.check_password(password):
+            raise ValidationError({"password": "Mot de passe incorrect."})
+        delete_account(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)

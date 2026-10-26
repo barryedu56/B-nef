@@ -1,7 +1,11 @@
-"""Réinitialisation de mot de passe par code envoyé par e-mail."""
+"""Réinitialisation de mot de passe par code envoyé par e-mail, et
+suppression définitive d'un compte."""
 import secrets
 
 from django.core.mail import send_mail
+from django.db import transaction as db_transaction
+
+from apps.inventory.models import SaleLine
 
 from .models import PasswordResetCode
 
@@ -27,3 +31,18 @@ def send_reset_email(user, code: str) -> None:
         recipient_list=[user.email],
         fail_silently=False,
     )
+
+
+@db_transaction.atomic
+def delete_account(user) -> None:
+    """Supprime le compte et TOUTES ses données (activités, opérations,
+    stock, tiers, budgets…) — exigence du Play Store et droit de
+    l'utilisateur sur ses données. Irréversible.
+
+    Les lignes de vente protègent leurs produits (PROTECT, pour qu'on ne
+    puisse pas supprimer un produit déjà vendu) : elles partent d'abord.
+    """
+    SaleLine.objects.filter(transaction__activity__owner=user).delete()
+    if user.avatar:
+        user.avatar.delete(save=False)
+    user.delete()

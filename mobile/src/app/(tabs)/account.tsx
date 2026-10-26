@@ -1,11 +1,12 @@
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { deleteAvatar, updateMe, uploadAvatar } from '@/api/auth';
-import { ApiError } from '@/api/client';
+import { deleteAccount, deleteAvatar, updateMe, uploadAvatar } from '@/api/auth';
+import { API_URL, ApiError } from '@/api/client';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -14,7 +15,7 @@ import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
 import { useOutbox } from '@/hooks/useOffline';
 import { SyncBanner } from '@/components/SyncBanner';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing } from '@/theme';
 
 const CURRENCY_OPTIONS = [
   { value: 'GNF', label: 'Franc guinéen (GNF)' },
@@ -217,12 +218,87 @@ export default function AccountScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Button label="Se déconnecter" variant="danger" onPress={confirmSignOut} />
+
+        <Pressable onPress={() => Linking.openURL(`${API_URL.replace(/\/api\/?$/, '')}/confidentialite`)}>
+          <Text style={styles.legalLink}>Politique de confidentialité</Text>
+        </Pressable>
+
+        <DeleteAccountCard onDeleted={() => void signOut()} />
       </View>
     </Screen>
   );
 }
 
+/** Suppression définitive du compte (exigence du Play Store). */
+function DeleteAccountCard({ onDeleted }: { onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      await deleteAccount(password);
+      onDeleted();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Suppression impossible.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirm = () =>
+    Alert.alert(
+      'Supprimer définitivement ?',
+      'Ton compte et TOUTES tes données (activités, opérations, stock, clients, budgets) seront effacés. Impossible de revenir en arrière.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Supprimer', style: 'destructive', onPress: () => void run() },
+      ]
+    );
+
+  return (
+    <Card style={styles.dangerCard}>
+      <Text style={[styles.sectionTitle, { color: colors.negative }]}>Supprimer mon compte</Text>
+      <Text style={styles.hint}>
+        Efface définitivement ton compte et toutes ses données. Exporte tes chiffres avant si tu veux les garder.
+      </Text>
+      {open ? (
+        <>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="Ton mot de passe"
+            placeholderTextColor={colors.textTertiary}
+            style={styles.passwordInput}
+            accessibilityLabel="Mot de passe pour confirmer"
+          />
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <Button label="Supprimer définitivement" variant="danger" onPress={confirm} loading={busy} disabled={!password} />
+          <Button label="Annuler" variant="secondary" onPress={() => setOpen(false)} />
+        </>
+      ) : (
+        <Button label="Supprimer mon compte…" variant="secondary" onPress={() => setOpen(true)} />
+      )}
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
+  dangerCard: { gap: spacing.md, borderColor: colors.negative, marginTop: spacing.lg },
+  legalLink: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', textDecorationLine: 'underline' },
+  passwordInput: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+  },
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
   title: { fontSize: fontSize.xxl, fontWeight: '700', color: colors.textPrimary },
   content: { paddingHorizontal: spacing.lg, gap: spacing.md },

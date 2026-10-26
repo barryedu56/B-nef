@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 
-import { deleteAvatar, updateMe, uploadAvatar } from '@/api/auth';
+import { deleteAccount, deleteAvatar, updateMe, uploadAvatar } from '@/api/auth';
 import { ApiError } from '@/api/client';
 import { Avatar } from '@/components/ui/Avatar';
 import { CategoriesCard, PaymentMethodsCard } from '@/components/SettingsLists';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Select } from '@/components/ui/Field';
+import { Field, Select, TextInput } from '@/components/ui/Field';
 import { EmptyState, ErrorBlock, LoadingBlock } from '@/components/ui/QueryState';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -166,6 +166,8 @@ export function SettingsPage() {
         <Button variant="danger" onClick={signOut} style={{ marginTop: 16 }}>
           Se déconnecter
         </Button>
+
+        <DeleteAccountCard onDeleted={signOut} />
       </div>
     </>
   );
@@ -199,5 +201,59 @@ function ArchivedRow({ activity }: { activity: Activity }) {
         Réactiver
       </Button>
     </div>
+  );
+}
+
+/** Suppression définitive du compte (exigence du Play Store). */
+function DeleteAccountCard({ onDeleted }: { onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onConfirm = async () => {
+    if (!confirm('Supprimer définitivement ton compte et TOUTES tes données ? Cette action est irréversible.')) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await deleteAccount(password);
+      onDeleted();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Suppression impossible.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card style={{ marginTop: 32, borderColor: 'var(--negative)' }}>
+      <span className="card-title" style={{ color: 'var(--negative)' }}>
+        Supprimer mon compte
+      </span>
+      <p className="field-hint" style={{ marginBottom: 12 }}>
+        Efface définitivement ton compte et toutes ses données : activités, opérations, stock, clients et
+        fournisseurs, budgets. Exporte tes chiffres avant si tu veux les garder (Rapports → Export).
+      </p>
+      {open ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 360 }}>
+          <Field label="Confirme avec ton mot de passe">
+            <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+          </Field>
+          {error ? <span className="error-text">{error}</span> : null}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant="danger" onClick={onConfirm} loading={busy} disabled={!password}>
+              Supprimer définitivement
+            </Button>
+            <Button variant="secondary" onClick={() => setOpen(false)}>
+              Annuler
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button variant="secondary" onClick={() => setOpen(true)}>
+          Supprimer mon compte…
+        </Button>
+      )}
+    </Card>
   );
 }

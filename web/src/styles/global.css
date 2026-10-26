@@ -707,3 +707,20 @@ table.table tr.clickable:hover td {
     border: none !important;
   }
 }
+
+/* ---------- Pages légales (confidentialité, suppression de compte) ---------- */
+
+.legal h2 {
+  font-size: 15px;
+  margin: 8px 0 0;
+}
+
+.legal ul,
+.legal ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.legal p {
+  margin: 0;
+}

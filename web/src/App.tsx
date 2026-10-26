@@ -12,6 +12,7 @@ import { BudgetsPage } from '@/pages/BudgetsPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { InventoryPage } from '@/pages/InventoryPage';
+import { DeleteAccountInfoPage, PrivacyPage } from '@/pages/LegalPages';
 import { LoginPage } from '@/pages/LoginPage';
 import { PartiesPage } from '@/pages/PartiesPage';
 import { PartyDetailPage } from '@/pages/PartyDetailPage';
@@ -45,6 +46,9 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            {/* Pages publiques exigées par le Play Store (liens dans la fiche de l'app). */}
+            <Route path="/confidentialite" element={<PrivacyPage />} />
+            <Route path="/suppression-compte" element={<DeleteAccountInfoPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>

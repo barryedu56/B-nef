@@ -8,7 +8,9 @@
     "scheme": "benef",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.ahmadbarry.benef",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +19,9 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.ahmadbarry.benef",
+      "versionCode": 1
     },
     "web": {
       "output": "static",
@@ -36,7 +40,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Bénef a besoin d'accéder à tes photos pour choisir ta photo de profil."
+          "photosPermission": "Bénef a besoin d'accéder à tes photos pour choisir ta photo de profil.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       "expo-secure-store"

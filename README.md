@@ -32,6 +32,7 @@ ménage, freelance…) : chacun fait « l'inventaire » de ce qu'il fait et conn
 | [`mobile/`](mobile/) | App React Native (Expo) | ✅ écrans principaux + typecheck/export OK |
 | [`web/`](web/) | App React / Vite (poste d'analyse) | ✅ pages principales + typecheck/build OK |
 | [`deploy/`](deploy/) | Docker Compose de production (PostgreSQL, HTTPS, sauvegardes) | voir [DEPLOIEMENT.md](DEPLOIEMENT.md) |
+| [`docs/play-store/`](docs/play-store/) | Icône et bannière de la fiche Play Store | voir [PUBLICATION-PLAY-STORE.md](PUBLICATION-PLAY-STORE.md) |
 
 Voir [`backend/README.md`](backend/README.md), [`mobile/README.md`](mobile/README.md) et [`web/README.md`](web/README.md) pour l'installation.
 
