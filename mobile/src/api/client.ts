@@ -156,7 +156,11 @@ export async function apiRequest<T = unknown>(path: string, opts: RequestOptions
         headers,
         body: isFormData ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,
       });
-    } catch {
+    } catch (cause) {
+      // En développement, la vraie cause (ex. corps de requête refusé par
+      // fetch) apparaît dans les logs Metro au lieu d'être confondue avec
+      // une simple coupure réseau.
+      if (__DEV__) console.warn(`[api] ${method} ${path} :`, cause);
       throw new ApiError(0, {
         detail: onlineManager.isOnline()
           ? `Impossible de joindre le serveur (${API_URL}). Vérifie ta connexion, ou que l'API tourne et que EXPO_PUBLIC_API_URL pointe vers la bonne adresse.`

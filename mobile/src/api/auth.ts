@@ -1,3 +1,6 @@
+import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
+
 import { apiRequest, clearTokens, setTokens } from './client';
 import type { Me } from './types';
 
@@ -42,11 +45,15 @@ export interface AvatarFile {
   type: string;
 }
 
-export function uploadAvatar(file: AvatarFile) {
+export async function uploadAvatar(file: AvatarFile) {
   const form = new FormData();
-  // React Native's FormData attend cette forme {uri,name,type} pour un fichier
-  // (contrairement au web où on passerait un vrai `File`/`Blob`).
-  form.append('avatar', file as unknown as Blob);
+  // Depuis le SDK 58, `fetch` est celui d'Expo (expo/fetch) : il refuse
+  // l'ancienne forme React Native {uri, name, type} et veut un vrai fichier
+  // (interface Blob). Sur téléphone : le `File` d'expo-file-system ; sur le
+  // web : le Blob lu depuis l'URI choisie.
+  const blob =
+    Platform.OS === 'web' ? await (await fetch(file.uri)).blob() : (new File(file.uri) as unknown as Blob);
+  form.append('avatar', blob, file.name);
   return apiRequest<Me>('/auth/me/avatar/', { method: 'POST', body: form });
 }
 

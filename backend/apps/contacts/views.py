@@ -16,7 +16,9 @@ class PartyViewSet(viewsets.ModelViewSet):
     search_fields = ("name", "phone")
 
     def get_queryset(self):
-        return with_balances(Party.objects.filter(owner=self.request.user))
+        # Ordre explicite : avec les agrégats de solde, Django ignore
+        # Meta.ordering et la pagination deviendrait instable.
+        return with_balances(Party.objects.filter(owner=self.request.user)).order_by("name", "id")
 
     def destroy(self, request, *args, **kwargs):
         # Un tiers supprimé viderait le champ `party` de ses transactions
