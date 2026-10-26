@@ -77,3 +77,64 @@ class ActivitySerializer(serializers.ModelSerializer):
         validated_data.pop("opening_balance", None)
         validated_data.pop("opening_account", None)
         return super().update(instance, validated_data)
+
+
+class _CashRow(serializers.Serializer):
+    account = serializers.IntegerField()
+    amount = serializers.DecimalField(max_digits=20, decimal_places=2, min_value=Decimal("0.01"))
+
+
+class _ProductRow(serializers.Serializer):
+    name = serializers.CharField(max_length=120)
+    unit = serializers.CharField(max_length=20, required=False, allow_blank=True, default="pièce")
+    quantity = serializers.DecimalField(max_digits=16, decimal_places=3, min_value=Decimal("0"), default=Decimal("0"))
+    unit_cost = serializers.DecimalField(max_digits=20, decimal_places=2, min_value=Decimal("0"), default=Decimal("0"))
+    sale_price = serializers.DecimalField(max_digits=20, decimal_places=2, min_value=Decimal("0"), default=Decimal("0"))
+    low_stock_threshold = serializers.DecimalField(max_digits=16, decimal_places=3, required=False, allow_null=True)
+
+    def validate(self, attrs):
+        if attrs["quantity"] > 0 and not attrs["unit_cost"]:
+            raise serializers.ValidationError({"unit_cost": "Indique combien t'a coûté chaque unité de ce stock."})
+        return attrs
+
+
+class _PartyRow(serializers.Serializer):
+    name = serializers.CharField(max_length=120)
+    phone = serializers.CharField(required=False, allow_blank=True, default="")
+    direction = serializers.ChoiceField(choices=["in", "out"], help_text="in = il me doit, out = je lui dois")
+    amount = serializers.DecimalField(max_digits=20, decimal_places=2, min_value=Decimal("0"))
+
+    def validate_phone(self, value):
+        from apps.common.phone import clean_guinea_phone
+
+        return clean_guinea_phone(value)
+
+
+class OnboardingSerializer(serializers.Serializer):
+    """Données de départ d'une activité (voir onboarding.py)."""
+
+    cash = _CashRow(many=True, required=False, default=list)
+    products = _ProductRow(many=True, required=False, default=list)
+    parties = _PartyRow(many=True, required=False, default=list)
+
+    def validate_cash(self, rows):
+        user = self.context["request"].user
+        accounts = {a.pk: a for a in PaymentMethod.objects.filter(owner=user)}
+        for row in rows:
+            if row["account"] not in accounts:
+                raise serializers.ValidationError("Caisse inconnue.")
+            row["account"] = accounts[row["account"]]
+        return rows
+
+    def validate_products(self, rows):
+        activity = self.context["activity"]
+        existing = {n.lower() for n in activity.products.values_list("name", flat=True)}
+        seen = set()
+        for row in rows:
+            key = row["name"].strip().lower()
+            if key in existing:
+                raise serializers.ValidationError(f"« {row['name']} » existe déjà dans cette activité.")
+            if key in seen:
+                raise serializers.ValidationError(f"« {row['name']} » apparaît deux fois dans la liste.")
+            seen.add(key)
+        return rows

@@ -1,9 +1,12 @@
+from django.http import HttpResponse
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
+from . import importer
 from .models import Product, SaleLine, StockMovement
 from .serializers import ProductSerializer, SaleLineSerializer, StockMovementSerializer
 
@@ -34,6 +37,30 @@ class ProductViewSet(viewsets.ModelViewSet):
         product = self.get_object()
         data = StockMovementSerializer(product.movements.all()[:100], many=True).data
         return Response(data)
+
+    @action(detail=False, methods=["post"], url_path="import-parse", parser_classes=[MultiPartParser, FormParser])
+    def import_parse(self, request):
+        """Lit un fichier Excel / CSV de produits et renvoie les lignes
+        reconnues et les erreurs, sans rien enregistrer."""
+        upload = request.FILES.get("file")
+        if upload is None:
+            raise ValidationError({"file": "Choisis un fichier Excel ou CSV."})
+        if upload.size > 2 * 1024 * 1024:
+            raise ValidationError({"file": "Fichier trop gros (2 Mo maximum)."})
+        try:
+            return Response(importer.parse_products(upload))
+        except importer.ImportError_ as exc:
+            raise ValidationError({"file": str(exc)}) from exc
+
+    @action(detail=False, methods=["get"], url_path="import-template")
+    def import_template(self, request):
+        response = HttpResponse(
+            importer.template_xlsx(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="benef-modele-produits.xlsx"'
+        return response
+
 
 
 class StockMovementViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
