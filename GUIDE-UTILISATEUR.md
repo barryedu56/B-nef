@@ -465,6 +465,24 @@ l'argent à la fin — pour toutes les caisses puis caisse par caisse. Un
 transfert entre deux de tes caisses apparaît à la fois en entrée et en sortie :
 il ne change pas ton total.
 
+**Frais de transfert.** Quand l'opérateur (Orange Money, Wave, la banque…)
+prend des frais, saisis-les dans le champ « Frais de transfert » :
+
+- **Transférer** : le *montant qui arrive* dans l'autre caisse, et les
+  frais payés en plus par la caisse de départ. Ex. 100 000 d'Orange Money
+  vers la banque avec 1 500 de frais : Orange Money −101 500, Banque
+  +100 000. Si les frais ont été retirés de l'envoi (tu envoies 100 000, il
+  arrive 98 500), saisis 98 500 et 1 500 de frais.
+- **Réapprovisionnement payé** (ou l'acompte d'un achat à crédit) et
+  **règlement d'une dette** : le champ apparaît quand le moyen de paiement
+  n'est pas les espèces.
+
+Les frais sont une **dépense** (catégorie « Frais de transfert ») de
+l'activité qui paie : ils baissent le bénéfice et comptent dans les budgets.
+Ils ne font pas partie du coût de la marchandise, et le fournisseur ne les
+reçoit pas : ce que tu lui dois baisse seulement du montant réglé. Annuler
+l'opération annule aussi ses frais.
+
 **Un solde négatif ?** C'est impossible dans la vraie vie : une opération a
 sûrement été enregistrée avec la mauvaise caisse (ex. un achat payé par
 Orange Money saisi en Espèces). Ouvre la caisse pour voir ses mouvements.
