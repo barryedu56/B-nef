@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
 
 import { colors } from '@/theme';
@@ -32,15 +32,21 @@ export function Screen({ children, scroll = true, edges = ['top', 'bottom'], con
   }
   return (
     <SafeAreaView style={styles.flex} edges={edges}>
-      <ScrollView
-        style={styles.flex}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 32 + extraBottomPadding }, contentStyle]}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.accent} /> : undefined
-        }>
-        {children}
-      </ScrollView>
+      {/* Le clavier remonte le contenu au lieu de cacher le champ en cours de
+          saisie. Android s'affiche bord à bord depuis le SDK 53 et ne réduit
+          plus la fenêtre tout seul : `padding` est nécessaire sur les deux
+          plateformes. */}
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 32 + extraBottomPadding }, contentStyle]}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.accent} /> : undefined
+          }>
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

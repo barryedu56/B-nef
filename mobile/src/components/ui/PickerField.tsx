@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontSize, radius, spacing } from '@/theme';
+import { SheetModal } from '@/components/ui/SheetModal';
 
 export interface PickerOption {
   value: string;
@@ -39,40 +39,35 @@ export function PickerField({ label, placeholder = 'Choisir…', value, options,
         </View>
       </Pressable>
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View style={styles.overlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
-          <SafeAreaView edges={['bottom']} style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{label}</Text>
-              <Pressable onPress={() => setOpen(false)} hitSlop={10}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            <FlatList
-              data={options}
-              keyExtractor={(item) => item.value}
-              style={styles.list}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              ListEmptyComponent={<Text style={styles.empty}>Aucune option disponible.</Text>}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.option}
-                  onPress={() => {
-                    onChange(item.value);
-                    setOpen(false);
-                  }}>
-                  <View style={styles.optionText}>
-                    <Text style={styles.optionLabel}>{item.label}</Text>
-                    {item.description ? <Text style={styles.optionDescription}>{item.description}</Text> : null}
-                  </View>
-                  {item.value === value ? <Ionicons name="checkmark" size={18} color={colors.accent} /> : null}
-                </Pressable>
-              )}
-            />
-          </SafeAreaView>
+      <SheetModal visible={open} onClose={() => setOpen(false)} style={styles.sheet}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>{label}</Text>
+          <Pressable onPress={() => setOpen(false)} hitSlop={10}>
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
+          </Pressable>
         </View>
-      </Modal>
+        <FlatList
+          data={options}
+          keyExtractor={(item) => item.value}
+          style={styles.list}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ListEmptyComponent={<Text style={styles.empty}>Aucune option disponible.</Text>}
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.option}
+              onPress={() => {
+                onChange(item.value);
+                setOpen(false);
+              }}>
+              <View style={styles.optionText}>
+                <Text style={styles.optionLabel}>{item.label}</Text>
+                {item.description ? <Text style={styles.optionDescription}>{item.description}</Text> : null}
+              </View>
+              {item.value === value ? <Ionicons name="checkmark" size={18} color={colors.accent} /> : null}
+            </Pressable>
+          )}
+        />
+          </SheetModal>
     </>
   );
 }
@@ -92,7 +87,6 @@ const styles = StyleSheet.create({
   valueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   value: { fontSize: fontSize.md, fontWeight: '600', color: colors.textPrimary, flexShrink: 1 },
   placeholder: { color: colors.textTertiary, fontWeight: '400' },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.card,
     borderTopLeftRadius: radius.lg,

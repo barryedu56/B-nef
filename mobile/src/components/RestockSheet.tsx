@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
 import type { Product } from '@/api/types';
@@ -14,6 +13,7 @@ import { useCreatePurchase } from '@/hooks/useProducts';
 import { usePaymentMethods } from '@/hooks/useTransactions';
 import { formatAmount } from '@/lib/money';
 import { colors, fontSize, radius, spacing } from '@/theme';
+import { SheetModal } from '@/components/ui/SheetModal';
 
 interface RestockSheetProps {
   product: Product | null;
@@ -111,110 +111,104 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
   };
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <SafeAreaView edges={['bottom']} style={styles.sheet}>
-          <View style={styles.header}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Réapprovisionner</Text>
-              <Text style={styles.subtitle}>{product.name}</Text>
-            </View>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
-            </Pressable>
-          </View>
+    <SheetModal onClose={onClose} style={styles.sheet}>
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Réapprovisionner</Text>
+          <Text style={styles.subtitle}>{product.name}</Text>
+        </View>
+        <Pressable onPress={onClose} hitSlop={10}>
+          <Ionicons name="close" size={22} color={colors.textSecondary} />
+        </Pressable>
+      </View>
 
-          <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-            <Text style={styles.currentStock}>
-              Stock actuel : {product.stock_quantity} · coût moyen actuel : {product.purchase_price} {currency}
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <Text style={styles.currentStock}>
+          Stock actuel : {product.stock_quantity} · coût moyen actuel : {product.purchase_price} {currency}
+        </Text>
+        <TextField label={`Quantité (${product.unit})`} value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
+        <AmountField label="Coût d'achat unitaire" value={unitCost} onChangeText={setUnitCost} suffix={currency} />
+        <AmountField
+          label="Frais annexes (facultatif)"
+          value={extraFees}
+          onChangeText={setExtraFees}
+          placeholder="0"
+          suffix={currency}
+        />
+        <Text style={styles.hint}>
+          Transport, douane… pour tout le lot (pas par unité) — réparti automatiquement sur la quantité.
+        </Text>
+
+        {landedUnitCost > 0 ? (
+          <View style={styles.priceBlock}>
+            <Text style={styles.priceBlockTitle}>Prix de vente proposé</Text>
+            <Text style={styles.landedCost}>
+              Coût de revient : {formatAmount(landedUnitCost, currency)} / {product.unit}
             </Text>
-            <TextField label={`Quantité (${product.unit})`} value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
-            <AmountField label="Coût d'achat unitaire" value={unitCost} onChangeText={setUnitCost} suffix={currency} />
+            <View style={styles.marginRow}>
+              <Text style={styles.label}>Marge souhaitée</Text>
+              <View style={styles.marginInputWrap}>
+                <TextInput
+                  value={marginPct}
+                  onChangeText={onMarginChange}
+                  keyboardType="numeric"
+                  style={styles.marginInput}
+                />
+                <Text style={styles.marginSuffix}>%</Text>
+              </View>
+            </View>
+            <AmountField label="Prix de vente" value={salePrice} onChangeText={onPriceChange} suffix={currency} />
+            <Text style={styles.hint}>
+              Calculé à partir du coût de revient et de la marge — modifie l'un ou l'autre si ça ne te convient pas.
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={{ gap: spacing.sm }}>
+          <Text style={styles.label}>Moyen de paiement</Text>
+          <View style={styles.chipRow}>
+            {(paymentMethods.data ?? []).map((method) => (
+              <Chip
+                key={method.id}
+                label={method.name}
+                selected={paymentMethodId === String(method.id)}
+                onPress={() => setPaymentMethodId(String(method.id))}
+              />
+            ))}
+          </View>
+        </View>
+
+        {hasDebts ? (
+          <View style={styles.creditRow}>
+            <Text style={styles.label}>Achat à crédit</Text>
+            <Switch value={isCredit} onValueChange={setIsCredit} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
+          </View>
+        ) : null}
+        {hasDebts && isCredit ? (
+          <>
+            <PartyPicker label="Fournisseur" kind="supplier" value={partyId} onChange={setPartyId} />
             <AmountField
-              label="Frais annexes (facultatif)"
-              value={extraFees}
-              onChangeText={setExtraFees}
+              label="Montant payé maintenant (facultatif)"
+              value={amountPaidNow}
+              onChangeText={setAmountPaidNow}
               placeholder="0"
               suffix={currency}
             />
             <Text style={styles.hint}>
-              Transport, douane… pour tout le lot (pas par unité) — réparti automatiquement sur la quantité.
+              Laisse à 0 si rien n'est payé tout de suite. Sinon, le reste devient ta dette envers ce fournisseur.
             </Text>
+          </>
+        ) : null}
 
-            {landedUnitCost > 0 ? (
-              <View style={styles.priceBlock}>
-                <Text style={styles.priceBlockTitle}>Prix de vente proposé</Text>
-                <Text style={styles.landedCost}>
-                  Coût de revient : {formatAmount(landedUnitCost, currency)} / {product.unit}
-                </Text>
-                <View style={styles.marginRow}>
-                  <Text style={styles.label}>Marge souhaitée</Text>
-                  <View style={styles.marginInputWrap}>
-                    <TextInput
-                      value={marginPct}
-                      onChangeText={onMarginChange}
-                      keyboardType="numeric"
-                      style={styles.marginInput}
-                    />
-                    <Text style={styles.marginSuffix}>%</Text>
-                  </View>
-                </View>
-                <AmountField label="Prix de vente" value={salePrice} onChangeText={onPriceChange} suffix={currency} />
-                <Text style={styles.hint}>
-                  Calculé à partir du coût de revient et de la marge — modifie l'un ou l'autre si ça ne te convient pas.
-                </Text>
-              </View>
-            ) : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-            <View style={{ gap: spacing.sm }}>
-              <Text style={styles.label}>Moyen de paiement</Text>
-              <View style={styles.chipRow}>
-                {(paymentMethods.data ?? []).map((method) => (
-                  <Chip
-                    key={method.id}
-                    label={method.name}
-                    selected={paymentMethodId === String(method.id)}
-                    onPress={() => setPaymentMethodId(String(method.id))}
-                  />
-                ))}
-              </View>
-            </View>
-
-            {hasDebts ? (
-              <View style={styles.creditRow}>
-                <Text style={styles.label}>Achat à crédit</Text>
-                <Switch value={isCredit} onValueChange={setIsCredit} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
-              </View>
-            ) : null}
-            {hasDebts && isCredit ? (
-              <>
-                <PartyPicker label="Fournisseur" kind="supplier" value={partyId} onChange={setPartyId} />
-                <AmountField
-                  label="Montant payé maintenant (facultatif)"
-                  value={amountPaidNow}
-                  onChangeText={setAmountPaidNow}
-                  placeholder="0"
-                  suffix={currency}
-                />
-                <Text style={styles.hint}>
-                  Laisse à 0 si rien n'est payé tout de suite. Sinon, le reste devient ta dette envers ce fournisseur.
-                </Text>
-              </>
-            ) : null}
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <Button label="Enregistrer le réapprovisionnement" onPress={onSubmit} loading={createPurchase.isPending} />
-          </ScrollView>
-        </SafeAreaView>
-      </View>
-    </Modal>
+        <Button label="Enregistrer le réapprovisionnement" onPress={onSubmit} loading={createPurchase.isPending} />
+      </ScrollView>
+        </SheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.card, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '85%' },
   header: {
     flexDirection: 'row',

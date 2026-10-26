@@ -9,7 +9,8 @@ import { colors, fontSize, radius, spacing } from '@/theme';
 export function AuthScreen({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // Android bord à bord (SDK 53+) : `padding` aussi, sinon le clavier cache les champs.
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
       <ScrollView
         style={styles.flex}
         contentContainerStyle={styles.scroll}

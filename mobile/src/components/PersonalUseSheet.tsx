@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
 import type { Product } from '@/api/types';
@@ -10,6 +9,7 @@ import { TextField } from './ui/TextField';
 import { useCreatePersonalUse } from '@/hooks/useProducts';
 import { formatAmount } from '@/lib/money';
 import { colors, fontSize, radius, spacing } from '@/theme';
+import { SheetModal } from '@/components/ui/SheetModal';
 
 interface PersonalUseSheetProps {
   product: Product | null;
@@ -55,47 +55,41 @@ export function PersonalUseSheet({ product, activityId, currency, onClose }: Per
   };
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <SafeAreaView edges={['bottom']} style={styles.sheet}>
-          <View style={styles.header}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Gardé pour moi</Text>
-              <Text style={styles.subtitle}>{product.name}</Text>
-            </View>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          <View style={styles.body}>
-            <Text style={styles.currentStock}>Stock actuel : {product.stock_quantity}</Text>
-            <TextField label={`Quantité (${product.unit})`} value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
-            {qty > 0 ? (
-              <Text style={styles.estimate}>
-                Valeur retirée du stock (au coût) : {formatAmount(estimatedCost, currency)}
-              </Text>
-            ) : null}
-            <TextField label="Note (facultatif)" value={note} onChangeText={setNote} placeholder="ex. pour la maison" />
-
-            <Text style={styles.hint}>
-              Ça ne compte ni comme une vente, ni comme une charge — juste une ligne d'info séparée dans le
-              rapport (« Consommé personnellement »). Le stock et sa valeur diminuent, ton Bénéfice net non.
-            </Text>
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <Button label="Confirmer" onPress={onSubmit} loading={consume.isPending} />
-          </View>
-        </SafeAreaView>
+    <SheetModal onClose={onClose} style={styles.sheet}>
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Gardé pour moi</Text>
+          <Text style={styles.subtitle}>{product.name}</Text>
+        </View>
+        <Pressable onPress={onClose} hitSlop={10}>
+          <Ionicons name="close" size={22} color={colors.textSecondary} />
+        </Pressable>
       </View>
-    </Modal>
+
+      <View style={styles.body}>
+        <Text style={styles.currentStock}>Stock actuel : {product.stock_quantity}</Text>
+        <TextField label={`Quantité (${product.unit})`} value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
+        {qty > 0 ? (
+          <Text style={styles.estimate}>
+            Valeur retirée du stock (au coût) : {formatAmount(estimatedCost, currency)}
+          </Text>
+        ) : null}
+        <TextField label="Note (facultatif)" value={note} onChangeText={setNote} placeholder="ex. pour la maison" />
+
+        <Text style={styles.hint}>
+          Ça ne compte ni comme une vente, ni comme une charge — juste une ligne d'info séparée dans le
+          rapport (« Consommé personnellement »). Le stock et sa valeur diminuent, ton Bénéfice net non.
+        </Text>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <Button label="Confirmer" onPress={onSubmit} loading={consume.isPending} />
+      </View>
+        </SheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.card, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '85%' },
   header: {
     flexDirection: 'row',

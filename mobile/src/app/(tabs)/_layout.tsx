@@ -39,6 +39,9 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // Pendant la saisie, la barre d'onglets se cache au lieu de flotter
+        // au-dessus du clavier et de manger la place des champs.
+        tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarStyle: {
