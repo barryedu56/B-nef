@@ -21,6 +21,7 @@ tout est expliqué avec des mots simples et un exemple chiffré.
 12. [Écran : Paramètres](#12-écran--paramètres)
 13. [Questions fréquentes](#13-questions-fréquentes)
 14. [Écran : Mon argent (caisses)](#14-écran--mon-argent-caisses)
+15. [Je démarre avec Bénef (commerce qui existait déjà)](#15-je-démarre-avec-bénef-commerce-qui-existait-déjà)
 
 ---
 
@@ -94,8 +95,10 @@ La liste de toutes tes activités.
 - **Bandeau du haut** : ton bénéfice net total du mois, toutes activités confondues.
 - **Chaque carte d'activité** : son nom, son type, les modules actifs
   (badges *Inventaire*, *Dettes*…), et son bénéfice net du mois.
-- **+ Nouvelle activité** : crée une activité (nom, type, devise, modules à activer,
-  solde de caisse de départ si tu as déjà de l'argent en réserve pour cette activité).
+- **+ Nouvelle activité** : crée une activité (nom, type, devise, modules à activer).
+  Juste après, l'**assistant de démarrage** te propose d'ajouter ce que tu
+  avais déjà : argent, marchandise, dettes (voir [section 15](#15-je-démarre-avec-bénef-commerce-qui-existait-déjà)).
+  Chaque étape peut être passée.
 - **Archiver / désarchiver** : depuis le tableau de bord d'une activité, « Archiver
   cette activité » la retire de la liste sans rien effacer (ses données restent
   consultables). Pour la faire réapparaître : Réglages/Paramètres → **Activités
@@ -123,6 +126,7 @@ charges et le bénéfice net. **Ne change pas** la caisse ni la valeur du stock
 | Charges | somme des sorties simples (hors achats de stock) | ✅ oui |
 | Consommé personnellement *(si Inventaire)* | quantité gardée pour toi × coût d'achat moyen — hors Bénéfice net | ✅ oui |
 | Valeur du stock *(si Inventaire)* | stock actuel × coût d'achat moyen | ❌ non — c'est une photo d'aujourd'hui |
+| Achats de marchandise *(si Inventaire)* | ce que tu as dépensé pour acheter du stock sur la période — **pas une charge** : il le devient seulement quand tu vends (via le coût des ventes) | ✅ oui |
 | Caisse | solde de départ + tout l'argent réellement encaissé/décaissé depuis toujours | ❌ non — c'est un solde cumulé |
 
 **Graphique « Évolution du bénéfice »** : le bénéfice net des 6 derniers mois,
@@ -313,6 +317,9 @@ c'est l'onglet « Tiers »)*
   et l'historique de ce qui a déjà été soldé ou annulé avec lui
 - **Modifier** un tiers : depuis sa fiche, tu peux corriger son nom, son
   numéro, son type (client/fournisseur) et sa note à tout moment
+- **Bilan depuis le début** *(sur la fiche d'un tiers)* : pour un
+  fournisseur, le total acheté, le total payé et ce que tu lui dois encore ;
+  pour un client, le total vendu, le total encaissé et ce qu'il te doit encore
 - **Marquer réglé** ouvre un petit formulaire au lieu de valider tout de
   suite : le montant est pré-rempli avec ce qu'il reste à devoir, mais tu
   peux le réduire pour un **règlement partiel** (le client ne paie qu'une
@@ -449,14 +456,23 @@ dans ta devise principale au taux du jour.
 | **Retrait** | Tu prends de l'argent pour toi (salaire, famille) | La caisse baisse. **Ce n'est pas une dépense de l'activité** : le bénéfice ne change pas. |
 | **Vérifier** | De temps en temps (idéalement chaque soir pour les espèces) | Tu comptes l'argent réel ; Bénef compare au solde attendu. S'il y a un écart, le solde est corrigé et l'écart compte comme une charge (manque) ou un gain (surplus) — ligne « Écart de caisse ». |
 
+**Entrées et sorties d'argent** (bouton « Entrées et sorties d'argent du mois »
+sur mobile, section en bas de Mon argent sur le web) : pour une période,
+l'argent au début, d'où il est venu (ventes encaissées, clients qui ont payé
+leur dette, apports, transferts reçus…), où il est parti (achats de
+marchandise, dépenses, fournisseurs payés, retraits, transferts envoyés…) et
+l'argent à la fin — pour toutes les caisses puis caisse par caisse. Un
+transfert entre deux de tes caisses apparaît à la fois en entrée et en sortie :
+il ne change pas ton total.
+
 **Un solde négatif ?** C'est impossible dans la vraie vie : une opération a
 sûrement été enregistrée avec la mauvaise caisse (ex. un achat payé par
 Orange Money saisi en Espèces). Ouvre la caisse pour voir ses mouvements.
 
-**Argent de départ.** À la création d'une activité, l'argent que tu as déjà
-est enregistré comme un *Apport* dans la caisse que tu choisis : il compte
-dans ta caisse, pas dans ton bénéfice. Erreur de montant ? Annule l'apport
-« Somme de départ » et saisis-en un nouveau.
+**Argent de départ.** L'argent que tu as déjà se saisit dans l'assistant de
+démarrage, caisse par caisse (voir section 15). Il est enregistré comme un
+*Apport* « Somme de départ » : il compte dans ta caisse, pas dans ton bénéfice.
+Erreur de montant ? Annule cet apport et saisis-en un nouveau.
 
 **Stock déjà en ta possession.** À la création d'un produit, active
 « J'ai déjà ce produit en stock » et indique la quantité, le coût d'achat de
@@ -464,3 +480,33 @@ chaque unité et le prix de vente. Ce stock est compté à son coût (pour un
 bénéfice juste quand tu le vendras) **sans toucher ta caisse**, puisqu'il a
 été payé avant Bénef.
 
+---
+
+## 15. Je démarre avec Bénef (commerce qui existait déjà)
+
+Tu avais déjà ta boutique avant l'application ? L'**assistant de démarrage**
+enregistre en une fois ce que tu as aujourd'hui, pour continuer sans
+problème. Il s'ouvre juste après la création d'une activité, et reste
+accessible ensuite : réglages de l'activité (mobile) ou carte « Assistant de
+démarrage » sur la fiche de l'activité (web).
+
+1. **Mon argent** — combien tu as dans chaque caisse (compte le tiroir,
+   regarde tes soldes Orange Money, banque…).
+2. **Ma marchandise** — fais le tour de ton stock : pour chaque produit, la
+   quantité, ce qu'il t'a coûté (le dernier prix d'achat) et ton prix de
+   vente. Sur le **web**, tu peux tout importer d'un **fichier Excel ou CSV** :
+   télécharge le **modèle**, remplis-le (une ligne par produit), puis
+   « Importer un fichier ». Les colonnes sont reconnues même écrites
+   autrement (« Désignation », « Qté », « Prix d'achat »…). Les lignes à
+   problème (coût manquant, nombre illisible) sont listées pour que tu les
+   corriges ; relis le tableau avant de continuer.
+3. **Dettes et créances** — les clients qui te doivent de l'argent et les
+   fournisseurs que tu n'as pas encore payés.
+4. **Récapitulatif** — l'argent, la marchandise, ce qu'on te doit, ce que tu
+   dois, et **ce que vaut ton affaire** aujourd'hui. « Valider le démarrage »
+   enregistre tout d'un coup.
+
+Rien de tout ça ne compte dans ton bénéfice : ce sont tes affaires d'avant
+Bénef. Le bénéfice commence à partir de tes premières ventes enregistrées.
+L'argent va dans tes caisses, la marchandise dans ton stock (à son coût, pour
+calculer une marge juste quand tu la vendras), et les dettes dans Tiers & dettes.
