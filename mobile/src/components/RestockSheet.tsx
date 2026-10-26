@@ -14,6 +14,7 @@ import { usePaymentMethods } from '@/hooks/useTransactions';
 import { formatAmount } from '@/lib/money';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { SheetModal } from '@/components/ui/SheetModal';
+import { formatQty, unitLabel } from '@/components/ProductCard';
 
 interface RestockSheetProps {
   product: Product | null;
@@ -124,7 +125,7 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <Text style={styles.currentStock}>
-          Stock actuel : {product.stock_quantity} · coût moyen actuel : {product.purchase_price} {currency}
+          Stock actuel : {formatQty(product.stock_quantity)} {unitLabel(product.stock_quantity, product.unit)} · coût moyen actuel : {formatAmount(product.purchase_price, currency)}
         </Text>
         <TextField label={`Quantité (${product.unit})`} value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
         <AmountField label="Coût d'achat unitaire" value={unitCost} onChangeText={setUnitCost} suffix={currency} />

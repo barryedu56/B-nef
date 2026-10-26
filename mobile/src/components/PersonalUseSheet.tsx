@@ -10,6 +10,7 @@ import { useCreatePersonalUse } from '@/hooks/useProducts';
 import { formatAmount } from '@/lib/money';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { SheetModal } from '@/components/ui/SheetModal';
+import { formatQty, unitLabel } from '@/components/ProductCard';
 
 interface PersonalUseSheetProps {
   product: Product | null;
@@ -40,7 +41,7 @@ export function PersonalUseSheet({ product, activityId, currency, onClose }: Per
       return;
     }
     if (qty > stock) {
-      setError(`Il ne reste que ${product.stock_quantity} ${product.unit} en stock.`);
+      setError(`Il ne reste que ${formatQty(product.stock_quantity)} ${unitLabel(product.stock_quantity, product.unit)} en stock.`);
       return;
     }
     setError(null);
@@ -67,7 +68,7 @@ export function PersonalUseSheet({ product, activityId, currency, onClose }: Per
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.currentStock}>Stock actuel : {product.stock_quantity}</Text>
+        <Text style={styles.currentStock}>Stock actuel : {formatQty(product.stock_quantity)} {unitLabel(product.stock_quantity, product.unit)}</Text>
         <TextField label={`Quantité (${product.unit})`} value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
         {qty > 0 ? (
           <Text style={styles.estimate}>

@@ -1,15 +1,16 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Product } from '@/api/types';
-import { AmountText } from '@/components/ui/AmountText';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorView, LoadingView } from '@/components/ui/QueryState';
 import { Screen } from '@/components/ui/Screen';
 import { TopBar } from '@/components/ui/TopBar';
+import { ProductActionSheet, type ProductAction } from '@/components/ProductActionSheet';
+import { ProductCard } from '@/components/ProductCard';
 import { RestockSheet } from '@/components/RestockSheet';
 import { PersonalUseSheet } from '@/components/PersonalUseSheet';
 import { useActivity } from '@/hooks/useActivities';
@@ -31,30 +32,52 @@ export default function ProductsScreen() {
   const [restockTarget, setRestockTarget] = useState<Product | null>(null);
   const [personalUseTarget, setPersonalUseTarget] = useState<Product | null>(null);
 
-  const openActions = (product: Product) => {
+  const [actionTarget, setActionTarget] = useState<Product | null>(null);
+
+  const actionsFor = (product: Product): ProductAction[] => {
     if (showArchived) {
-      Alert.alert(product.name, 'Réactiver ce produit ?', [
-        { text: 'Réactiver', onPress: () => updateProduct.mutate({ id: product.id, patch: { is_archived: false } }) },
-        { text: 'Annuler', style: 'cancel' },
-      ]);
-      return;
+      return [
+        {
+          key: 'restore',
+          icon: 'refresh-outline',
+          title: 'Réactiver',
+          description: 'Le produit revient dans la liste et dans les ventes.',
+          onPress: () => updateProduct.mutate({ id: product.id, patch: { is_archived: false } }),
+        },
+      ];
     }
-    Alert.alert(product.name, 'Que veux-tu faire ?', [
-      { text: 'Réapprovisionner', onPress: () => setRestockTarget(product) },
-      { text: 'Gardé pour moi', onPress: () => setPersonalUseTarget(product) },
+    return [
+      {
+        key: 'restock',
+        icon: 'add-circle-outline',
+        title: 'Réapprovisionner',
+        description: 'Enregistrer un achat : le stock et le coût moyen se mettent à jour.',
+        onPress: () => setRestockTarget(product),
+      },
+      {
+        key: 'personal',
+        icon: 'restaurant-outline',
+        title: 'Gardé pour moi',
+        description: 'Retirer du stock sans vente (consommation personnelle).',
+        tone: 'warning',
+        onPress: () => setPersonalUseTarget(product),
+      },
       // Produit créé hors-ligne (numéro provisoire < 0) : pas encore de fiche
       // sur le serveur à modifier.
       ...(product.id > 0
         ? [
             {
-              text: 'Modifier',
+              key: 'edit',
+              icon: 'create-outline' as const,
+              title: 'Modifier la fiche',
+              description: 'Nom, prix de vente, seuil d’alerte, catégorie…',
+              tone: 'neutral' as const,
               onPress: () =>
                 router.push({ pathname: '/activity/[id]/products/[productId]', params: { id, productId: String(product.id) } }),
             },
           ]
         : []),
-      { text: 'Annuler', style: 'cancel' as const },
-    ]);
+    ];
   };
 
   const list = products.data ?? [];
@@ -67,6 +90,7 @@ export default function ProductsScreen() {
   const lowCount = list.filter((p) => p.is_low_stock && Number(p.stock_quantity) > 0).length;
   const outCount = list.filter((p) => Number(p.stock_quantity) <= 0).length;
   const totalStockValue = list.reduce((sum, p) => sum + Number(p.stock_value), 0);
+  const maxStock = Math.max(0, ...list.map((p) => Number(p.stock_quantity)));
 
   if (activity.isLoading || products.isLoading) return <LoadingView label="Chargement des produits…" />;
   if (activity.isError || !activity.data) return <ErrorView message="Activité introuvable." onRetry={() => activity.refetch()} />;
@@ -102,9 +126,15 @@ export default function ProductsScreen() {
             onAction={!showArchived && list.length === 0 ? () => router.push({ pathname: '/activity/[id]/products/new', params: { id } }) : undefined}
           />
         ) : (
-          <View>
+          <View style={styles.list}>
             {filtered.map((product) => (
-              <ProductRow key={product.id} product={product} currency={act.currency} onPress={() => openActions(product)} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                currency={act.currency}
+                maxStock={maxStock}
+                onPress={() => setActionTarget(product)}
+              />
             ))}
           </View>
         )}
@@ -116,6 +146,12 @@ export default function ProductsScreen() {
         </Pressable>
       </View>
 
+      <ProductActionSheet
+        product={actionTarget}
+        currency={act.currency}
+        actions={actionTarget ? actionsFor(actionTarget) : []}
+        onClose={() => setActionTarget(null)}
+      />
       <RestockSheet
         product={restockTarget}
         activityId={activityId}
@@ -133,59 +169,22 @@ export default function ProductsScreen() {
   );
 }
 
-function ProductRow({ product, currency, onPress }: { product: Product; currency: string; onPress: () => void }) {
-  const stock = Number(product.stock_quantity);
-  const stockLabel = stock <= 0 ? `${product.stock_quantity} · rupture` : product.is_low_stock ? `${product.stock_quantity} · faible` : `${product.stock_quantity} en stock`;
-  const stockColor = stock <= 0 ? colors.negative : product.is_low_stock ? colors.warning : colors.textPrimary;
-
-  return (
-    <Pressable onPress={onPress} style={styles.productRow}>
-      <View style={styles.productThumb} />
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={1}>
-          {product.name}
-        </Text>
-        <Text style={styles.productMeta}>
-          Achat {formatAmount(product.purchase_price, currency)} · Vente {formatAmount(product.sale_price, currency)}
-        </Text>
-      </View>
-      <View style={styles.productStockCol}>
-        <Text style={[styles.productStock, { color: stockColor }]}>{stockLabel}</Text>
-        <AmountText amount={product.margin} currency={currency} size={11} sign="positive" />
-      </View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md },
+  list: { gap: spacing.sm + 2 },
   summaryRow: { flexDirection: 'row', gap: spacing.sm },
   summaryTile: { flex: 1, gap: 3 },
   summaryLabel: { fontSize: 11.5, color: colors.textSecondary },
   summaryValue: { fontSize: fontSize.md, fontWeight: '600', color: colors.textPrimary },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  productThumb: { width: 40, height: 40, borderRadius: 8, backgroundColor: colors.placeholder, flexShrink: 0 },
-  productInfo: { flex: 1, gap: 2 },
-  productName: { fontSize: 13.5, fontWeight: '600', color: colors.textPrimary },
-  productMeta: { fontSize: 11.5, color: colors.textTertiary },
-  productStockCol: { alignItems: 'flex-end', gap: 2 },
-  productStock: { fontSize: 13, fontWeight: '600' },
   addButton: {
-    minHeight: 44,
-    borderWidth: 1,
+    minHeight: 52,
+    borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: colors.borderStrong,
-    borderRadius: 10,
+    borderColor: '#c7cbf3',
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addButtonLabel: { fontSize: fontSize.sm, fontWeight: '600', color: colors.accent },
+  addButtonLabel: { fontSize: fontSize.md, fontWeight: '700', color: colors.accent },
 });

@@ -20,6 +20,7 @@ import { useCreateSale, useProducts } from '@/hooks/useProducts';
 import { usePaymentMethods } from '@/hooks/useTransactions';
 import { formatAmount } from '@/lib/money';
 import { colors, fontSize, radius, spacing } from '@/theme';
+import { formatQty } from '@/components/ProductCard';
 
 export default function NewSaleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -207,7 +208,7 @@ function ProductLine({
           {product.name}
         </Text>
         <Text style={[styles.productMeta, stock <= 0 && styles.productMetaWarning]}>
-          Stock {product.stock_quantity} · {formatAmount(product.sale_price, currency)} l’unité
+          Stock {formatQty(product.stock_quantity)} · {formatAmount(product.sale_price, currency)} l’unité
         </Text>
       </View>
       <Stepper value={quantity} onChange={onChange} min={0} max={Math.max(stock, quantity)} />
