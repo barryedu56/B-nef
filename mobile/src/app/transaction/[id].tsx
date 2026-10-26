@@ -100,6 +100,9 @@ export default function TransactionDetailScreen() {
           <AmountText amount={t.amount_activity} currency={currency} size={26} sign={t.direction === 'in' ? 'positive' : 'negative'} />
           <Text style={styles.dateText}>{formatLongDate(t.occurred_on)}</Text>
           {t.is_credit ? <Text style={styles.creditBadge}>{creditStatusLabel(t)}</Text> : null}
+          {Number(t.fees_total ?? 0) > 0 ? (
+            <Text style={styles.dateText}>+ {formatAmount(t.fees_total ?? '0', t.currency)} de frais de transfert</Text>
+          ) : null}
           {t.is_voided ? (
             <Text style={styles.voidedBadge}>
               Annulée{t.voided_reason ? ` — ${t.voided_reason}` : ''}

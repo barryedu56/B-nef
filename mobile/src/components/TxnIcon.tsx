@@ -16,6 +16,7 @@ const ICONS: Partial<Record<TransactionKind, ComponentProps<typeof Ionicons>['na
   withdrawal: 'remove-circle-outline',
   transfer: 'swap-horizontal-outline',
   cash_adjustment: 'calculator-outline',
+  fee: 'pricetag-outline',
 };
 
 export function kindLabel(kind: TransactionKind, direction: Direction, categoryName?: string) {
@@ -40,6 +41,8 @@ export function kindLabel(kind: TransactionKind, direction: Direction, categoryN
       return direction === 'in' ? 'Transfert reçu' : 'Transfert envoyé';
     case 'cash_adjustment':
       return direction === 'in' ? 'Écart de caisse (surplus)' : 'Écart de caisse (manque)';
+    case 'fee':
+      return 'Frais de transfert';
     default:
       return categoryName ?? (direction === 'in' ? 'Entrée' : 'Dépense');
   }

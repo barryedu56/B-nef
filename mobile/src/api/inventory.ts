@@ -79,6 +79,8 @@ export interface PurchaseInput {
   /** Nouveau prix de vente à appliquer au produit après ce réappro. */
   sale_price?: string;
   note?: string;
+  /** Frais de l'opérateur (Orange Money, banque…) payés en plus : une charge. */
+  fee?: string;
 }
 
 export interface PurchaseResult {

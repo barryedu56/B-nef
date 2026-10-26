@@ -14,6 +14,8 @@ interface AmountFieldProps {
   placeholder?: string;
   suffix?: string;
   error?: string;
+  /** Petite aide sous le champ. */
+  hint?: string;
   editable?: boolean;
 }
 
@@ -21,7 +23,7 @@ interface AmountFieldProps {
  * milliers pendant la frappe ("1000" -> "1 000") pour mieux les lire, tout
  * en exposant au parent la même valeur "brute" qu'un champ numérique
  * classique. */
-export function AmountField({ label, value, onChangeText, placeholder, suffix, error, editable = true }: AmountFieldProps) {
+export function AmountField({ label, value, onChangeText, placeholder, suffix, error, hint, editable = true }: AmountFieldProps) {
   const display = formatDisplay(value);
 
   const handleChange = (text: string) => {
@@ -43,7 +45,7 @@ export function AmountField({ label, value, onChangeText, placeholder, suffix, e
         />
         {suffix ? <Text style={styles.suffix}>{suffix}</Text> : null}
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={styles.error}>{error}</Text> : hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>
   );
 }
@@ -83,6 +85,7 @@ function formatDisplay(raw: string): string {
 }
 
 const styles = StyleSheet.create({
+  hint: { fontSize: fontSize.xs, color: colors.textTertiary, lineHeight: 16 },
   wrap: { gap: 6 },
   label: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: '500' },
   inputRow: {

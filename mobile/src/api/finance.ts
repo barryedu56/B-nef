@@ -90,6 +90,8 @@ export interface SettleInput {
   payment_method?: number | null;
   occurred_on?: string;
   note?: string;
+  /** Frais de l'opérateur (Orange Money, banque…) payés en plus : une charge. */
+  fee?: string;
 }
 
 export function settleTransaction(id: number, input: SettleInput = {}) {
@@ -133,6 +135,8 @@ export interface TransferInput {
   currency?: string;
   occurred_on?: string;
   note?: string;
+  /** Frais de l'opérateur (Orange Money, banque…) payés en plus : une charge. */
+  fee?: string;
 }
 
 export function fetchCashFlow(params: { period: string; date?: string }) {

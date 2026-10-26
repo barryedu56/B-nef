@@ -32,6 +32,7 @@ export default function TransferScreen() {
   const [toActivity, setToActivity] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [fee, setFee] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const from = accounts.find((a) => String(a.id) === fromId) ?? accounts[0];
@@ -69,6 +70,7 @@ export default function TransferScreen() {
         amount: String(value),
         currency: from.effective_currency,
         note: note.trim(),
+        fee: Number(fee.replace(',', '.')) > 0 ? String(Number(fee.replace(',', '.'))) : undefined,
       });
       router.back();
     } catch (e) {
@@ -83,7 +85,15 @@ export default function TransferScreen() {
         <Card style={styles.card}>
           <PickerField label="Depuis la caisse" value={from ? String(from.id) : null} options={accountOptions} onChange={setFromId} />
           <PickerField label="Vers la caisse" value={to ? String(to.id) : null} options={accountOptions} onChange={setToId} />
-          <AmountField label="Montant" value={amount} onChangeText={setAmount} placeholder="0" suffix={from?.effective_currency} />
+          <AmountField label="Montant qui arrive" value={amount} onChangeText={setAmount} placeholder="0" suffix={from?.effective_currency} />
+          <AmountField
+            label="Frais de transfert (facultatif)"
+            value={fee}
+            onChangeText={setFee}
+            placeholder="0"
+            suffix={from?.effective_currency}
+            hint={`Payés en plus par ${from?.name ?? 'la caisse de départ'}. Comptés comme une dépense.`}
+          />
           {acts.length > 1 ? (
             <>
               <PickerField label="Activité qui donne" value={fromAct} options={activityOptions} onChange={setFromActivity} />
@@ -93,7 +103,8 @@ export default function TransferScreen() {
           <TextField label="Note (facultatif)" value={note} onChangeText={setNote} placeholder="ex. dépôt à la banque" />
         </Card>
         <Text style={styles.help}>
-          Un transfert n'est ni un gain ni une dépense : ton bénéfice ne change pas, seule la répartition de ton argent bouge.
+          Un transfert n'est ni un gain ni une dépense : seule la répartition de ton argent bouge. Seuls les frais comptent comme une
+          dépense, pour l'activité qui envoie.
         </Text>
         {error ? <Alert message={error} /> : null}
         <Button label="Transférer" icon="swap-horizontal-outline" onPress={onSubmit} loading={transfer.isPending} />
