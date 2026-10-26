@@ -10,6 +10,7 @@ import { useCallback, useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { WebFrame } from '@/components/WebFrame';
 import { AuthProvider } from '@/context/AuthContext';
 import { OFFLINE_CACHE_MAX_AGE, persister, queryClient } from '@/offline/queryClient';
 import { startOutboxSync } from '@/offline/sync';
@@ -48,7 +49,9 @@ export default function RootLayout() {
           persistOptions={{ persister, maxAge: OFFLINE_CACHE_MAX_AGE, buster: 'v1' }}>
           <AuthProvider>
             <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }} />
+            <WebFrame>
+              <Stack screenOptions={{ headerShown: false }} />
+            </WebFrame>
           </AuthProvider>
         </PersistQueryClientProvider>
       </SafeAreaProvider>
