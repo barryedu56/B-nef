@@ -16,6 +16,7 @@ from apps.finance.views import (
     SaleView,
     StockAdjustmentView,
     TransactionViewSet,
+    TransferView,
 )
 from apps.inventory.views import ProductViewSet, SaleLineViewSet, StockMovementViewSet
 
@@ -39,6 +40,7 @@ api_patterns = [
     path("purchases/", PurchaseView.as_view(), name="purchase-create"),
     path("stock-adjustments/", StockAdjustmentView.as_view(), name="stock-adjustment"),
     path("personal-use/", PersonalUseView.as_view(), name="personal-use"),
+    path("transfers/", TransferView.as_view(), name="transfer-create"),
     path("reports/", include("apps.reports.urls")),
     path("", include(router.urls)),
 ]

@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from apps.activities.models import Activity
 
-from .models import Category, PaymentMethod, Transaction
+from .models import CashCount, Category, PaymentMethod, Transaction
 from .services import create_transaction
 
 
@@ -39,10 +39,24 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
+    """Moyen de paiement = caisse. `balance` (solde, dans `effective_currency`)
+    est calculé une fois pour toute la liste par la vue (contexte
+    « balances »)."""
+
+    balance = serializers.SerializerMethodField()
+    effective_currency = serializers.SerializerMethodField()
+
     class Meta:
         model = PaymentMethod
-        fields = ("id", "name", "is_cash")
+        fields = ("id", "name", "is_cash", "currency", "effective_currency", "balance")
         read_only_fields = ("id",)
+
+    def get_balance(self, obj):
+        balances = self.context.get("balances")
+        return str(balances.get(obj.pk, Decimal("0.00"))) if balances is not None else None
+
+    def get_effective_currency(self, obj):
+        return obj.currency_id or self.context["request"].user.base_currency_id
 
     def validate_name(self, value):
         value = value.strip()
@@ -114,7 +128,12 @@ class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
     # Les autres types (vente, achat, règlement, ajustement, consommation
     # perso) ont leurs propres endpoints qui mettent aussi à jour le stock /
     # le crédit d'origine : les créer ici donnerait une opération orpheline.
-    _CREATABLE_KINDS = (Transaction.Kind.SIMPLE, Transaction.Kind.OPENING_BALANCE)
+    _CREATABLE_KINDS = (
+        Transaction.Kind.SIMPLE,
+        Transaction.Kind.OPENING_BALANCE,
+        Transaction.Kind.CONTRIBUTION,
+        Transaction.Kind.WITHDRAWAL,
+    )
 
     def validate_kind(self, value):
         if value not in self._CREATABLE_KINDS:
@@ -124,7 +143,16 @@ class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        if attrs.get("kind") == Transaction.Kind.OPENING_BALANCE and not (
+        kind = attrs.get("kind")
+        personal = {Transaction.Kind.CONTRIBUTION: "in", Transaction.Kind.WITHDRAWAL: "out"}
+        if kind in personal:
+            if attrs.get("direction") != personal[kind]:
+                raise serializers.ValidationError(
+                    {"direction": "Un apport est une entrée d'argent, un retrait une sortie."}
+                )
+            if attrs.get("is_credit"):
+                raise serializers.ValidationError({"is_credit": "Un apport ou un retrait ne se fait pas à crédit."})
+        if kind == Transaction.Kind.OPENING_BALANCE and not (
             attrs.get("is_credit") and attrs.get("party")
         ):
             raise serializers.ValidationError(
@@ -266,3 +294,30 @@ class StockAdjustmentInputSerializer(serializers.Serializer):
     new_quantity = serializers.DecimalField(max_digits=16, decimal_places=3)
     occurred_on = serializers.DateField(required=False)
     note = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class TransferInputSerializer(serializers.Serializer):
+    from_account = serializers.IntegerField()
+    to_account = serializers.IntegerField()
+    from_activity = serializers.IntegerField()
+    to_activity = serializers.IntegerField(required=False)
+    amount = serializers.DecimalField(max_digits=20, decimal_places=2)
+    currency = serializers.CharField(required=False, allow_null=True)
+    occurred_on = serializers.DateField(required=False)
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class CashCountInputSerializer(serializers.Serializer):
+    counted = serializers.DecimalField(max_digits=20, decimal_places=2)
+    activity = serializers.IntegerField()
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class CashCountSerializer(serializers.ModelSerializer):
+    activity_name = serializers.CharField(source="activity.name", read_only=True)
+
+    class Meta:
+        model = CashCount
+        fields = ("id", "payment_method", "activity", "activity_name", "currency", "expected", "counted",
+                  "difference", "transaction", "note", "created_at")
+        read_only_fields = fields

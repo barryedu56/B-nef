@@ -6,15 +6,16 @@ from apps.inventory.models import Product
 
 
 class OpeningBalanceTests(ApiTestCase):
-    def test_vue_globale_convertit_le_solde_initial_de_chaque_activite(self):
+    def test_vue_globale_convertit_la_somme_de_depart_de_chaque_activite(self):
         self.set_rate("USD", "GNF", "8600")
-        Activity.objects.create(
-            owner=self.user, name="Import", currency_id="USD", opening_balance=Decimal("100")
-        )
-        self.shop.opening_balance = Decimal("50000")
-        self.shop.save()
+        r = self.client.post("/api/activities/", {"name": "Import", "currency": "USD", "opening_balance": "100"},
+                             format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.client.post("/api/activities/", {"name": "Kiosque", "currency": "GNF", "opening_balance": "50000"},
+                         format="json")
         s = self.summary("/api/reports/global/", currency="GNF")
         self.assertEqual(s["cash_balance"], 50000 + 100 * 8600)
+        self.assertEqual(s["revenue"], 0)  # une somme de départ n'est pas un gain
 
 
 class CreditTests(ApiTestCase):

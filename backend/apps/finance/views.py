@@ -11,9 +11,13 @@ from apps.contacts.models import Party
 from apps.inventory.models import Product
 from apps.inventory.services import adjust_stock, consume_for_personal_use, register_sale, restock
 
-from .models import Category, PaymentMethod, Transaction
+from . import accounts
+from .models import CashCount, Category, PaymentMethod, Transaction
 from .ops import VoidError, settle_transaction, void_transaction
 from .serializers import (
+    CashCountInputSerializer,
+    CashCountSerializer,
+    TransferInputSerializer,
     CategorySerializer,
     PaymentMethodSerializer,
     PersonalUseInputSerializer,
@@ -48,11 +52,63 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class PaymentMethodViewSet(viewsets.ModelViewSet):
+    """Moyens de paiement = caisses, avec leur solde (voir accounts.py)."""
+
     serializer_class = PaymentMethodSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return PaymentMethod.objects.filter(owner=self.request.user)
+        return PaymentMethod.objects.filter(owner=self.request.user).order_by("-is_cash", "name")
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.user.is_authenticated:
+            context["balances"] = accounts.balances(self.request.user)
+        return context
+
+    @action(detail=False, methods=["get"])
+    def overview(self, request):
+        """Tout l'argent de l'utilisateur : total dans sa devise principale
+        (taux du jour) et chaque caisse avec son solde et sa dernière
+        vérification."""
+        user = request.user
+        per_account = accounts.balances(user)
+        context = {**self.get_serializer_context(), "balances": per_account}
+        rows = PaymentMethodSerializer(self.get_queryset(), many=True, context=context).data
+        last_counts = {}
+        for count in CashCount.objects.filter(owner=user).order_by("payment_method_id", "-created_at"):
+            last_counts.setdefault(count.payment_method_id, count)
+        for row in rows:
+            count = last_counts.get(row["id"])
+            row["last_count"] = (
+                {"at": count.created_at, "difference": str(count.difference)} if count else None
+            )
+        return Response({
+            "currency": user.base_currency_id,
+            "total": str(accounts.total_in(user, user.base_currency_id, per_account)),
+            "unassigned": str(per_account.get(None, 0)),
+            "accounts": rows,
+        })
+
+    @action(detail=True, methods=["post"])
+    def count(self, request, pk=None):
+        account = self.get_object()
+        data = CashCountInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        activity = get_object_or_404(Activity, pk=data.validated_data["activity"], owner=request.user)
+        try:
+            record = accounts.count_cash(
+                user=request.user, account=account, activity=activity,
+                counted=data.validated_data["counted"], note=data.validated_data["note"],
+            )
+        except accounts.AccountError as exc:
+            raise ValidationError({"detail": str(exc)}) from exc
+        return Response(CashCountSerializer(record).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"])
+    def counts(self, request, pk=None):
+        account = self.get_object()
+        return Response(CashCountSerializer(account.counts.select_related("activity")[:50], many=True).data)
 
     def destroy(self, request, *args, **kwargs):
         method = self.get_object()
@@ -66,7 +122,7 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
 class TransactionViewSet(viewsets.ModelViewSet):
     serializer_class = TransactionSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ("activity", "direction", "kind", "category", "party", "is_credit", "is_settled")
+    filterset_fields = ("activity", "direction", "kind", "category", "party", "payment_method", "is_credit", "is_settled")
     search_fields = ("note",)
     ordering_fields = ("occurred_on", "created_at", "amount_base")
 
@@ -267,5 +323,32 @@ class PersonalUseView(APIView):
                 "transaction": TransactionSerializer(movement.transaction).data,
                 "product": {"id": product.pk, "stock_quantity": str(product.stock_quantity)},
             },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class TransferView(_OwnedLookupMixin, APIView):
+    """Transfert d'argent entre deux caisses et/ou deux activités."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = TransferInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        v = data.validated_data
+        from_activity = self._activity(request, v["from_activity"])
+        to_activity = self._activity(request, v.get("to_activity") or v["from_activity"])
+        from_account = get_object_or_404(PaymentMethod, pk=v["from_account"], owner=request.user)
+        to_account = get_object_or_404(PaymentMethod, pk=v["to_account"], owner=request.user)
+        try:
+            out, inn = accounts.transfer(
+                user=request.user, from_account=from_account, to_account=to_account, amount=v["amount"],
+                from_activity=from_activity, to_activity=to_activity, currency=v.get("currency"),
+                occurred_on=v.get("occurred_on"), note=v["note"],
+            )
+        except (accounts.AccountError, ValueError) as exc:
+            raise ValidationError({"detail": str(exc)}) from exc
+        return Response(
+            {"out": TransactionSerializer(out).data, "in": TransactionSerializer(inn).data},
             status=status.HTTP_201_CREATED,
         )

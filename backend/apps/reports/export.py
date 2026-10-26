@@ -29,6 +29,7 @@ SUMMARY_ROWS = [
     ("Marge brute", "gross_margin"),
     ("Charges (dont pertes de stock)", "expenses"),
     ("Dont pertes / surplus de stock", "stock_losses"),
+    ("Dont écarts de caisse", "cash_differences"),
     ("Bénéfice net", "net_profit"),
     ("Consommé personnellement (au coût)", "personal_use"),
     ("Valeur du stock (aujourd'hui)", "stock_value"),

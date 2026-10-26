@@ -381,3 +381,26 @@ def consume_for_personal_use(
         occurred_on=occurred_on,
         note=note,
     )
+
+
+@db_transaction.atomic
+def set_initial_stock(product: Product, quantity: Decimal, unit_cost: Decimal) -> StockMovement:
+    """Stock déjà en ta possession au moment de créer le produit (acheté
+    avant d'utiliser Bénef). Il entre au coût indiqué — le coût des ventes
+    sera juste — mais la caisse ne bouge pas : cet argent a été dépensé
+    avant, il n'est pas dans tes caisses Bénef."""
+    quantity = Decimal(quantity)
+    unit_cost = _round2(Decimal(unit_cost))
+    product = Product.objects.select_for_update().get(pk=product.pk)
+    product.stock_quantity = quantity
+    product.purchase_price = unit_cost
+    product.save(update_fields=["stock_quantity", "purchase_price", "updated_at"])
+    return StockMovement.objects.create(
+        product=product,
+        type=StockMovement.Type.IN,
+        quantity=quantity,
+        unit_cost=unit_cost,
+        stock_after=quantity,
+        occurred_on=timezone.localdate(),
+        note="Stock initial",
+    )

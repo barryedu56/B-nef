@@ -37,11 +37,24 @@ class Category(TimeStampedModel):
 
 
 class PaymentMethod(TimeStampedModel):
+    """Moyen de paiement ET caisse : chaque moyen (Espèces, Orange Money,
+    Banque…) a son propre solde, calculé à partir des opérations qui le
+    touchent — voir apps/finance/accounts.py."""
+
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payment_methods"
     )
     name = models.CharField("nom", max_length=60)
     is_cash = models.BooleanField("espèces / liquide", default=False)
+    currency = models.ForeignKey(
+        "currencies.Currency",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name="devise de la caisse",
+        help_text="Vide = devise principale de l'utilisateur.",
+    )
 
     class Meta:
         verbose_name = "moyen de paiement"
@@ -73,6 +86,14 @@ class Transaction(TimeStampedModel):
         ADJUSTMENT = "adjustment", "Ajustement"
         OPENING_BALANCE = "opening_balance", "Solde initial (report)"
         PERSONAL_USE = "personal_use", "Consommation personnelle"
+        # Mouvements d'argent qui ne sont ni un gain ni une charge : ils font
+        # bouger la caisse, jamais le bénéfice.
+        CONTRIBUTION = "contribution", "Apport personnel"
+        WITHDRAWAL = "withdrawal", "Retrait personnel"
+        TRANSFER = "transfer", "Transfert"
+        # Écart constaté en comptant la caisse : un manque est une perte (ou
+        # un surplus un gain), compté dans les charges.
+        CASH_ADJUSTMENT = "cash_adjustment", "Écart de caisse"
 
     activity = models.ForeignKey(
         "activities.Activity", on_delete=models.CASCADE, related_name="transactions"
@@ -130,6 +151,16 @@ class Transaction(TimeStampedModel):
         related_name="settlements",
         help_text="Transaction à crédit que ce règlement vient solder.",
     )
+    # Un transfert = deux opérations (sortie d'une caisse, entrée dans
+    # l'autre) qui se désignent l'une l'autre.
+    transfer_peer = models.OneToOneField(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name="autre moitié du transfert",
+    )
 
     # Annulation façon comptable : on ne supprime jamais une écriture, on
     # l'annule (elle reste visible dans l'historique, mais sort de tous les
@@ -174,3 +205,26 @@ class Transaction(TimeStampedModel):
     @property
     def is_voided(self) -> bool:
         return self.voided_at is not None
+
+
+class CashCount(TimeStampedModel):
+    """Vérification de caisse : l'utilisateur compte l'argent réellement
+    présent ; l'écart avec le solde attendu est enregistré (et, s'il n'est
+    pas nul, une opération « Écart de caisse » corrige le solde)."""
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cash_counts")
+    payment_method = models.ForeignKey(PaymentMethod, on_delete=models.CASCADE, related_name="counts")
+    activity = models.ForeignKey("activities.Activity", on_delete=models.CASCADE, related_name="cash_counts")
+    currency = models.ForeignKey("currencies.Currency", on_delete=models.PROTECT, related_name="+")
+    expected = models.DecimalField("solde attendu", max_digits=20, decimal_places=2)
+    counted = models.DecimalField("montant compté", max_digits=20, decimal_places=2)
+    difference = models.DecimalField("écart", max_digits=20, decimal_places=2)
+    transaction = models.OneToOneField(
+        Transaction, on_delete=models.SET_NULL, null=True, blank=True, related_name="cash_count"
+    )
+    note = models.CharField("note", max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "vérification de caisse"
+        verbose_name_plural = "vérifications de caisse"
+        ordering = ["-created_at"]

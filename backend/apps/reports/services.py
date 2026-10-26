@@ -18,6 +18,8 @@ from django.utils import timezone
 
 from apps.activities.models import Activity
 from apps.currencies.services import try_convert
+from apps.finance import accounts
+from apps.finance.accounts import AFFECTS_CASH
 from apps.finance.models import Transaction
 from apps.inventory.models import Product, SaleLine
 
@@ -57,6 +59,7 @@ class Summary:
     gross_margin: Decimal = Z
     expenses: Decimal = Z
     stock_losses: Decimal = Z
+    cash_differences: Decimal = Z
     net_profit: Decimal = Z
     personal_use: Decimal = Z
     stock_value: Decimal = Z
@@ -95,7 +98,9 @@ def _flows(txns, amount_field: str, group: str | None = None) -> dict:
     rows = qs.values("g", "direction", "kind").annotate(total=Sum(amount_field)).order_by()
     out: dict = {}
     for row in rows:
-        bucket = out.setdefault(row["g"], {"revenue": Z, "expenses": Z, "stock_losses": Z, "personal_use": Z})
+        bucket = out.setdefault(
+            row["g"], {"revenue": Z, "expenses": Z, "stock_losses": Z, "cash_differences": Z, "personal_use": Z}
+        )
         total = row["total"] or Z
         kind, direction = row["kind"], row["direction"]
         if direction == D.IN and kind in (K.SIMPLE, K.SALE):
@@ -104,6 +109,10 @@ def _flows(txns, amount_field: str, group: str | None = None) -> dict:
             bucket["expenses"] += total
         elif kind == K.ADJUSTMENT:
             bucket["stock_losses"] += total if direction == D.OUT else -total
+        elif kind == K.CASH_ADJUSTMENT:
+            bucket["cash_differences"] += total if direction == D.OUT else -total
+        # Apports, retraits et transferts : de l'argent qui bouge, ni gain ni
+        # charge — ils n'entrent dans aucun de ces totaux.
         elif kind == K.PERSONAL_USE:
             bucket["personal_use"] += total
     return out
@@ -208,13 +217,9 @@ def _summary(activity_qs, start: date, end: date, currency: str, amount_field: s
     cogs = _cogs(period.filter(kind=Transaction.Kind.SALE), amount_field).get(0, Z)
 
     # Trésorerie : tout l'historique, uniquement les mouvements qui touchent
-    # la caisse. Consommation perso et ajustements de stock : aucun argent
-    # n'a changé de main — voir apps/inventory/services.py.
-    cash_ok = (Q(is_credit=False) | Q(kind=Transaction.Kind.SETTLEMENT)) & ~Q(
-        kind__in=[Transaction.Kind.PERSONAL_USE, Transaction.Kind.ADJUSTMENT]
-    )
+    # la caisse (voir apps/finance/accounts.py::AFFECTS_CASH).
     cash = (
-        txns.filter(cash_ok).values("direction").annotate(total=Sum(amount_field)).order_by()
+        txns.filter(AFFECTS_CASH).values("direction").annotate(total=Sum(amount_field)).order_by()
     )
     cash_by_direction = {row["direction"]: row["total"] or Z for row in cash}
 
@@ -226,7 +231,8 @@ def _summary(activity_qs, start: date, end: date, currency: str, amount_field: s
     # comptage), valorisés au coût : comptés dans les charges (un surplus les
     # réduit) — voir inventory/services.py::adjust_stock.
     s.stock_losses = flows.get("stock_losses", Z)
-    s.expenses = flows.get("expenses", Z) + s.stock_losses
+    s.cash_differences = flows.get("cash_differences", Z)
+    s.expenses = flows.get("expenses", Z) + s.stock_losses + s.cash_differences
     s.net_profit = s.revenue - cogs - s.expenses
     # Consommation personnelle : valorisée au coût, visible séparément, mais
     # jamais dans le CA, les charges ou la caisse.
@@ -258,11 +264,18 @@ def range_summary(user, start: date, end: date, activity: Activity | None = None
 def global_summary(user, period: str, anchor: date | None = None) -> Summary:
     start, end = resolve_period(period, anchor)
     qs = Activity.objects.filter(owner=user, is_archived=False)
-    return _summary(qs, start, end, user.base_currency_id, "amount_base")
+    s = _summary(qs, start, end, user.base_currency_id, "amount_base")
+    # L'argent réel = la somme des caisses (Espèces, Orange Money…), au taux
+    # du jour, archives comprises : c'est de l'argent qu'on a toujours.
+    s.cash_balance = accounts.total_in(user, user.base_currency_id)
+    return s
 
 
 def _net(flows: dict, cogs: Decimal) -> Decimal:
-    return flows.get("revenue", Z) - cogs - flows.get("expenses", Z) - flows.get("stock_losses", Z)
+    return (
+        flows.get("revenue", Z) - cogs - flows.get("expenses", Z)
+        - flows.get("stock_losses", Z) - flows.get("cash_differences", Z)
+    )
 
 
 def _q2(value: Decimal) -> str:

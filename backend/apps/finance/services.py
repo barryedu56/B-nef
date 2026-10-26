@@ -50,8 +50,20 @@ def create_transaction(*, activity, direction, amount, currency, occurred_on, **
     """Crée une transaction en remplissant les montants convertis.
 
     `extra` accepte : kind, category, payment_method, party, note, is_credit,
-    is_settled, settles.
+    is_settled, settles, transfer_peer.
+
+    Une opération qui fait bouger l'argent sans moyen de paiement précisé va
+    dans la caisse « Espèces » : sinon son argent n'apparaîtrait dans aucune
+    caisse (voir apps/finance/accounts.py).
     """
+    kind = extra.get("kind", Transaction.Kind.SIMPLE)
+    moves_cash = kind not in (Transaction.Kind.PERSONAL_USE, Transaction.Kind.ADJUSTMENT) and (
+        not extra.get("is_credit") or kind == Transaction.Kind.SETTLEMENT
+    )
+    if moves_cash and extra.get("payment_method") is None:
+        from .accounts import default_cash_account  # import circulaire sinon
+
+        extra["payment_method"] = default_cash_account(activity.owner)
     base_code = activity.owner.base_currency_id
     currency_code = getattr(currency, "code", currency)
     amounts = compute_amounts(

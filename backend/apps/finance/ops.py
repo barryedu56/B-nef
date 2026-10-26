@@ -62,6 +62,14 @@ def void_transaction(txn: Transaction, user, reason: str = "") -> Transaction:
         _reverse_settlement(txn)
     elif txn.kind == Transaction.Kind.PERSONAL_USE:
         _reverse_personal_use(txn)
+    elif txn.kind == Transaction.Kind.TRANSFER:
+        # Les deux moitiés d'un transfert s'annulent ensemble.
+        peer = txn.transfer_peer or Transaction.objects.filter(transfer_peer=txn).first()
+        if peer is not None and not peer.is_voided:
+            peer.voided_at = timezone.now()
+            peer.voided_reason = reason
+            peer.voided_by = user
+            peer.save(update_fields=["voided_at", "voided_reason", "voided_by", "updated_at"])
     elif txn.kind == Transaction.Kind.ADJUSTMENT:
         # Le stock a pu bouger depuis : remettre l'ancienne quantité
         # écraserait les ventes/réappros suivants.

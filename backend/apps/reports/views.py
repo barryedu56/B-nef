@@ -36,7 +36,7 @@ def _period_label(period: str, anchor: date) -> str:
     return f"{_MONTHS_LONG[anchor.month - 1]} {anchor.year}"
 
 _MONEY_FIELDS = (
-    "revenue", "cogs", "gross_margin", "expenses", "stock_losses", "net_profit",
+    "revenue", "cogs", "gross_margin", "expenses", "stock_losses", "cash_differences", "net_profit",
     "stock_value", "cash_balance", "receivable", "payable",
 )
 

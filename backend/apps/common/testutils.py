@@ -58,6 +58,6 @@ class ApiTestCase(TestCase):
 
 
 _MONEY = {
-    "revenue", "cogs", "gross_margin", "expenses", "stock_losses", "net_profit",
+    "revenue", "cogs", "gross_margin", "expenses", "stock_losses", "cash_differences", "net_profit",
     "stock_value", "cash_balance", "receivable", "payable",
 }
