@@ -6,7 +6,7 @@ from rest_framework.response import Response
 
 from .models import Party
 from .serializers import PartySerializer
-from .services import parties_totals
+from .services import parties_totals, with_balances
 
 
 class PartyViewSet(viewsets.ModelViewSet):
@@ -16,7 +16,7 @@ class PartyViewSet(viewsets.ModelViewSet):
     search_fields = ("name", "phone")
 
     def get_queryset(self):
-        return Party.objects.filter(owner=self.request.user)
+        return with_balances(Party.objects.filter(owner=self.request.user))
 
     def destroy(self, request, *args, **kwargs):
         # Un tiers supprimé viderait le champ `party` de ses transactions

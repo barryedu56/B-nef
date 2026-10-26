@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import DecimalField, Q, Sum
-from django.db.models.functions import Coalesce
+from django.db.models import Case, DecimalField, ExpressionWrapper, F, IntegerField, Q, Sum, Value, When
+from django.db.models.functions import Coalesce, TruncMonth
 from django.utils import timezone
 
 from apps.activities.models import Activity
@@ -73,21 +73,83 @@ class Summary:
         }
 
 
-def _cogs_for_sales(sales_qs, amount_field: str) -> Decimal:
-    """Coût des marchandises vendues pour un ensemble de ventes.
+# --- Agrégats groupés ----------------------------------------------------
+# Tous les totaux sont calculés par la base de données en une requête,
+# éventuellement groupés (par activité, par mois) : le coût ne dépend plus du
+# nombre de ventes, seulement du nombre de groupes.
 
-    Les lignes de vente stockent le coût dans la devise de l'activité ; pour la
-    vue globale on met à l'échelle avec le ratio base/activité de la transaction.
-    """
+def _group_expr(group: str | None, date_field: str):
+    if group == "month":
+        return TruncMonth(date_field)
+    if group == "activity":
+        return F("activity_id" if date_field == "occurred_on" else "transaction__activity_id")
+    return None
+
+
+def _flows(txns, amount_field: str, group: str | None = None) -> dict:
+    """{clé de groupe: {revenue, expenses, stock_losses, personal_use}} pour
+    des transactions déjà filtrées (période, non annulées)."""
+    K, D = Transaction.Kind, Transaction.Direction
+    expr = _group_expr(group, "occurred_on")
+    qs = txns.annotate(g=expr) if expr is not None else txns.annotate(g=Value(0, output_field=IntegerField()))
+    rows = qs.values("g", "direction", "kind").annotate(total=Sum(amount_field)).order_by()
+    out: dict = {}
+    for row in rows:
+        bucket = out.setdefault(row["g"], {"revenue": Z, "expenses": Z, "stock_losses": Z, "personal_use": Z})
+        total = row["total"] or Z
+        kind, direction = row["kind"], row["direction"]
+        if direction == D.IN and kind in (K.SIMPLE, K.SALE):
+            bucket["revenue"] += total
+        elif direction == D.OUT and kind == K.SIMPLE:
+            bucket["expenses"] += total
+        elif kind == K.ADJUSTMENT:
+            bucket["stock_losses"] += total if direction == D.OUT else -total
+        elif kind == K.PERSONAL_USE:
+            bucket["personal_use"] += total
+    return out
+
+
+def _cogs(sales, amount_field: str, group: str | None = None) -> dict:
+    """{clé de groupe: coût des marchandises vendues}.
+
+    Les lignes de vente stockent le coût dans la devise de l'activité ; en
+    devise principale, on le met à l'échelle avec le ratio base/activité de
+    la vente (le taux figé à la date de la vente)."""
+    cost = F("quantity") * F("unit_cost")
+    if amount_field == "amount_base":
+        cost = Case(
+            When(
+                ~Q(transaction__amount_activity=0),
+                then=cost * F("transaction__amount_base") / F("transaction__amount_activity"),
+            ),
+            default=cost,
+        )
+    lines = SaleLine.objects.filter(transaction__in=sales)
+    expr = _group_expr(group, "transaction__occurred_on")
+    lines = lines.annotate(g=expr) if expr is not None else lines.annotate(g=Value(0, output_field=IntegerField()))
+    rows = lines.values("g").annotate(
+        total=Sum(ExpressionWrapper(cost, output_field=_DEC), output_field=_DEC)
+    ).order_by()
+    return {row["g"]: Decimal(str(row["total"] or 0)) for row in rows}
+
+
+def _stock_value(activity_qs, amount_field: str, base_currency: str) -> Decimal:
+    """Valeur du stock au coût moyen. En devise principale, convertie par
+    devise d'activité (taux du jour) au lieu d'additionner des devises
+    différentes telles quelles."""
+    rows = (
+        Product.objects.filter(activity__in=activity_qs, is_archived=False)
+        .values("activity__currency_id")
+        .annotate(total=Sum(ExpressionWrapper(F("stock_quantity") * F("purchase_price"), output_field=_DEC)))
+        .order_by()
+    )
     total = Z
-    lines = SaleLine.objects.filter(transaction__in=sales_qs).select_related("transaction")
-    for line in lines:
-        cost = line.quantity * line.unit_cost
-        if amount_field == "amount_base":
-            txn = line.transaction
-            if txn.amount_activity and txn.amount_activity != 0:
-                cost = cost * (txn.amount_base / txn.amount_activity)
-        total += cost
+    for row in rows:
+        value = Decimal(str(row["total"] or 0))
+        currency = row["activity__currency_id"]
+        if amount_field == "amount_base" and currency != base_currency:
+            value = try_convert(value, currency, base_currency) or value
+        total += value
     return total
 
 
@@ -115,76 +177,66 @@ def _open_credits(txns, amount_field: str) -> tuple[Decimal, Decimal]:
     """(créances, dettes) : la part encore due des opérations à crédit, dans
     `amount_field` (le reste dû est en devise de saisie, on le ramène au
     prorata du montant converti)."""
-    receivable = payable = Z
-    rows = txns.filter(is_credit=True, is_settled=False).values_list(
-        "direction", "amount", "settled_amount", amount_field
+    due = ExpressionWrapper(
+        F(amount_field) * (F("amount") - F("settled_amount")) / F("amount"), output_field=_DEC
     )
-    for direction, amount, settled, converted in rows:
-        if not amount:
-            continue
-        due = converted * (amount - settled) / amount
-        if direction == Transaction.Direction.IN:
-            receivable += due
-        else:
-            payable += due
-    return receivable.quantize(Decimal("0.01")), payable.quantize(Decimal("0.01"))
+    rows = (
+        txns.filter(is_credit=True, is_settled=False).exclude(amount=0)
+        .values("direction").annotate(total=Sum(due, output_field=_DEC)).order_by()
+    )
+    totals = {row["direction"]: Decimal(str(row["total"] or 0)) for row in rows}
+    cents = Decimal("0.01")
+    return (
+        totals.get(Transaction.Direction.IN, Z).quantize(cents),
+        totals.get(Transaction.Direction.OUT, Z).quantize(cents),
+    )
+
+
+def _live(activity_qs):
+    # Une transaction annulée reste dans l'historique mais sort de tous les calculs.
+    return Transaction.objects.filter(activity__in=activity_qs, voided_at__isnull=True)
+
+
+def _in_range(start: date, end: date) -> Q:
+    return Q(occurred_on__gte=start, occurred_on__lte=end)
 
 
 def _summary(activity_qs, start: date, end: date, currency: str, amount_field: str) -> Summary:
-    in_range = Q(occurred_on__gte=start, occurred_on__lte=end)
-    # Une transaction annulée reste dans l'historique mais sort de tous les calculs.
-    txns = Transaction.objects.filter(activity__in=activity_qs, voided_at__isnull=True)
+    txns = _live(activity_qs)
+    period = txns.filter(_in_range(start, end))
+    flows = _flows(period, amount_field).get(0, {})
+    cogs = _cogs(period.filter(kind=Transaction.Kind.SALE), amount_field).get(0, Z)
 
-    revenue = _sum(
-        txns.filter(in_range, direction=Transaction.Direction.IN,
-                    kind__in=[Transaction.Kind.SIMPLE, Transaction.Kind.SALE]),
-        amount_field,
-    )
-    expenses = _sum(
-        txns.filter(in_range, direction=Transaction.Direction.OUT,
-                    kind=Transaction.Kind.SIMPLE),
-        amount_field,
-    )
-    # Pertes / surplus constatés à l'inventaire (casse, vol, erreur de
-    # comptage), valorisés au coût : une charge (ou un gain si surplus),
-    # comptée dans les charges — voir inventory/services.py::adjust_stock.
-    adjustments = txns.filter(in_range, kind=Transaction.Kind.ADJUSTMENT)
-    stock_losses = _sum(
-        adjustments.filter(direction=Transaction.Direction.OUT), amount_field
-    ) - _sum(adjustments.filter(direction=Transaction.Direction.IN), amount_field)
-    sales = txns.filter(in_range, kind=Transaction.Kind.SALE)
-    cogs = _cogs_for_sales(sales, amount_field)
-
-    # Consommation personnelle : de la marchandise retirée du stock sans être
-    # vendue (gardée pour soi). Valorisée au coût, visible séparément, mais
-    # jamais dans le CA, les charges ou la caisse — voir
-    # apps/inventory/services.py::consume_for_personal_use.
-    personal_use = _sum(
-        txns.filter(in_range, kind=Transaction.Kind.PERSONAL_USE), amount_field,
-    )
-
-    # Trésorerie : tout l'historique, uniquement les mouvements qui touchent la caisse.
+    # Trésorerie : tout l'historique, uniquement les mouvements qui touchent
+    # la caisse. Consommation perso et ajustements de stock : aucun argent
+    # n'a changé de main — voir apps/inventory/services.py.
     cash_ok = (Q(is_credit=False) | Q(kind=Transaction.Kind.SETTLEMENT)) & ~Q(
         kind__in=[Transaction.Kind.PERSONAL_USE, Transaction.Kind.ADJUSTMENT]
     )
-    cash_in = _sum(txns.filter(cash_ok, direction=Transaction.Direction.IN), amount_field)
-    cash_out = _sum(txns.filter(cash_ok, direction=Transaction.Direction.OUT), amount_field)
-    opening = _opening_balance(activity_qs, amount_field, currency)
-
-    stock_value = Z
-    for p in Product.objects.filter(activity__in=activity_qs, is_archived=False):
-        stock_value += p.stock_quantity * p.purchase_price
+    cash = (
+        txns.filter(cash_ok).values("direction").annotate(total=Sum(amount_field)).order_by()
+    )
+    cash_by_direction = {row["direction"]: row["total"] or Z for row in cash}
 
     s = Summary(currency=currency, period_start=start, period_end=end)
-    s.revenue = revenue
+    s.revenue = flows.get("revenue", Z)
     s.cogs = cogs
-    s.gross_margin = revenue - cogs
-    s.stock_losses = stock_losses
-    s.expenses = expenses + stock_losses
-    s.net_profit = revenue - cogs - s.expenses
-    s.personal_use = personal_use
-    s.stock_value = stock_value
-    s.cash_balance = opening + cash_in - cash_out
+    s.gross_margin = s.revenue - cogs
+    # Pertes / surplus constatés à l'inventaire (casse, vol, erreur de
+    # comptage), valorisés au coût : comptés dans les charges (un surplus les
+    # réduit) — voir inventory/services.py::adjust_stock.
+    s.stock_losses = flows.get("stock_losses", Z)
+    s.expenses = flows.get("expenses", Z) + s.stock_losses
+    s.net_profit = s.revenue - cogs - s.expenses
+    # Consommation personnelle : valorisée au coût, visible séparément, mais
+    # jamais dans le CA, les charges ou la caisse.
+    s.personal_use = flows.get("personal_use", Z)
+    s.stock_value = _stock_value(activity_qs, amount_field, currency)
+    s.cash_balance = (
+        _opening_balance(activity_qs, amount_field, currency)
+        + cash_by_direction.get(Transaction.Direction.IN, Z)
+        - cash_by_direction.get(Transaction.Direction.OUT, Z)
+    )
     s.receivable, s.payable = _open_credits(txns, amount_field)
     return s
 
@@ -192,8 +244,7 @@ def _summary(activity_qs, start: date, end: date, currency: str, amount_field: s
 def activity_summary(activity: Activity, period: str, anchor: date | None = None) -> Summary:
     start, end = resolve_period(period, anchor)
     qs = Activity.objects.filter(pk=activity.pk)
-    s = _summary(qs, start, end, activity.currency_id, "amount_activity")
-    return s
+    return _summary(qs, start, end, activity.currency_id, "amount_activity")
 
 
 def global_summary(user, period: str, anchor: date | None = None) -> Summary:
@@ -202,24 +253,38 @@ def global_summary(user, period: str, anchor: date | None = None) -> Summary:
     return _summary(qs, start, end, user.base_currency_id, "amount_base")
 
 
+def _net(flows: dict, cogs: Decimal) -> Decimal:
+    return flows.get("revenue", Z) - cogs - flows.get("expenses", Z) - flows.get("stock_losses", Z)
+
+
+def _q2(value: Decimal) -> str:
+    return str(value.quantize(Decimal("0.01")))
+
+
 def per_activity_breakdown(user, period: str, anchor: date | None = None) -> list[dict]:
     start, end = resolve_period(period, anchor)
+    activities = Activity.objects.filter(owner=user, is_archived=False)
+    period_txns = _live(activities).filter(_in_range(start, end))
+    flows = _flows(period_txns, "amount_base", group="activity")
+    cogs = _cogs(period_txns.filter(kind=Transaction.Kind.SALE), "amount_base", group="activity")
     rows = []
-    for activity in Activity.objects.filter(owner=user, is_archived=False):
-        s = _summary(
-            Activity.objects.filter(pk=activity.pk), start, end,
-            user.base_currency_id, "amount_base",
-        )
+    for activity in activities:
+        f = flows.get(activity.pk, {})
         rows.append({
             "activity_id": activity.pk,
             "name": activity.name,
             "type": activity.type,
-            "net_profit": str(s.net_profit.quantize(Decimal("0.01"))),
-            "revenue": str(s.revenue.quantize(Decimal("0.01"))),
+            "net_profit": _q2(_net(f, cogs.get(activity.pk, Z))),
+            "revenue": _q2(f.get("revenue", Z)),
             "currency": user.base_currency_id,
         })
     rows.sort(key=lambda r: Decimal(r["net_profit"]), reverse=True)
     return rows
+
+
+def _month_key(value) -> date:
+    # TruncMonth renvoie une date (DateField) ; certains moteurs une datetime.
+    return value.date() if hasattr(value, "date") and callable(value.date) else value
 
 
 def net_profit_timeseries(user, months: int = 6, activity: Activity | None = None) -> list[dict]:
@@ -227,6 +292,7 @@ def net_profit_timeseries(user, months: int = 6, activity: Activity | None = Non
     start = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
     for _ in range(months - 1):
         start = (start - timedelta(days=1)).replace(day=1)
+    end = resolve_period("month", today)[1]
 
     activities = Activity.objects.filter(owner=user, is_archived=False)
     if activity is not None:
@@ -235,12 +301,20 @@ def net_profit_timeseries(user, months: int = 6, activity: Activity | None = Non
     else:
         amount_field, currency = "amount_base", user.base_currency_id
 
+    txns = _live(activities).filter(_in_range(start, end))
+    flows = {_month_key(k): v for k, v in _flows(txns, amount_field, group="month").items()}
+    cogs = {
+        _month_key(k): v
+        for k, v in _cogs(txns.filter(kind=Transaction.Kind.SALE), amount_field, group="month").items()
+    }
+
     series = []
     cursor = start
     while cursor <= today:
-        p_start, p_end = resolve_period("month", cursor)
-        s = _summary(activities, p_start, p_end, currency, amount_field)
-        series.append({"month": p_start.isoformat(), "net_profit": str(s.net_profit.quantize(Decimal("0.01"))), "currency": currency})
-        # mois suivant
-        cursor = (p_end + timedelta(days=1))
+        series.append({
+            "month": cursor.isoformat(),
+            "net_profit": _q2(_net(flows.get(cursor, {}), cogs.get(cursor, Z))),
+            "currency": currency,
+        })
+        cursor = resolve_period("month", cursor)[1] + timedelta(days=1)
     return series

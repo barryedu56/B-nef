@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from apps.activities.models import Activity
 from apps.common.testutils import ApiTestCase
+from apps.inventory.models import Product
 
 
 class OpeningBalanceTests(ApiTestCase):
@@ -45,3 +46,75 @@ class CreditTests(ApiTestCase):
         )
         self.client.post(f"/api/transactions/{r.json()['id']}/void/", {}, format="json")
         self.assertEqual(self.summary("/api/reports/global/")["receivable"], 0)
+
+
+class StockValueTests(ApiTestCase):
+    def test_vue_globale_convertit_la_valeur_du_stock_de_chaque_activite(self):
+        self.set_rate("USD", "GNF", "8600")
+        shop_usd = Activity.objects.create(owner=self.user, name="Import", currency_id="USD", has_inventory=True)
+        Product.objects.create(activity=shop_usd, name="Téléphone", purchase_price=Decimal("50"),
+                               stock_quantity=Decimal("2"))
+        s = self.summary("/api/reports/global/", currency="GNF")
+        self.assertEqual(s["stock_value"], 10 * 1000 + 2 * 50 * 8600)
+
+
+class ReportPerformanceTests(ApiTestCase):
+    """Le nombre de requêtes d'un rapport ne doit pas dépendre du nombre de
+    ventes (autrefois une boucle Python sur chaque ligne de vente)."""
+
+    def sell(self, n):
+        for _ in range(n):
+            self.client.post(
+                "/api/sales/",
+                {"activity": self.shop.pk, "lines": [{"product": self.product.pk, "quantity": "1"}],
+                 "recorded_offline": True},
+                format="json",
+            )
+
+    def count_queries(self, path):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as ctx:
+            self.assertEqual(self.client.get(path).status_code, 200)
+        return len(ctx.captured_queries)
+
+    def test_nombre_de_requetes_constant(self):
+        paths = ["/api/reports/global/?period=year", f"/api/reports/activity/{self.shop.pk}/?period=year"]
+        self.sell(2)
+        before = [self.count_queries(p) for p in paths]
+        self.sell(15)
+        after = [self.count_queries(p) for p in paths]
+        self.assertEqual(before, after)
+
+    def test_benefice_mensuel_coherent_avec_le_resume(self):
+        self.sell(3)  # 3 × (1 500 − 1 000)
+        r = self.client.get(f"/api/reports/activity/{self.shop.pk}/?period=month").json()
+        self.assertEqual(r["net_profit"], "1500.00")
+        self.assertEqual(r["timeseries"][-1]["net_profit"], "1500.00")
+
+
+class PartyListPerformanceTests(ApiTestCase):
+    def test_soldes_des_tiers_en_nombre_de_requetes_constant(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        def list_queries():
+            with CaptureQueriesContext(connection) as ctx:
+                r = self.client.get("/api/parties/")
+            self.assertEqual(r.status_code, 200)
+            return len(ctx.captured_queries), r.json()["results"]
+
+        for i in range(2):
+            self.client.post(
+                "/api/transactions/",
+                {"activity": self.shop.pk, "direction": "in", "amount": "1000", "currency": "GNF",
+                 "occurred_on": "2026-01-15", "is_credit": True, "party": self.party(name=f"C{i}").pk},
+                format="json",
+            )
+        few, _ = list_queries()
+        for i in range(8):
+            self.party(name=f"D{i}")
+        many, results = list_queries()
+        self.assertEqual(few, many)
+        self.assertEqual(sorted(r["balance"] for r in results if r["name"].startswith("C")), ["1000.00", "1000.00"])
