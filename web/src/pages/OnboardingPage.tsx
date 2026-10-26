@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { downloadProductTemplate, parseProductFile, submitOnboarding } from '@/api/activities';
 import { ApiError } from '@/api/client';
+import { isValidGuineaPhone } from '@/lib/phone';
 import type { OnboardingInput, OnboardingResult, ProductImport } from '@/api/types';
 import { UnitSelect } from '@/components/UnitSelect';
 import { AmountInput } from '@/components/ui/AmountInput';
@@ -96,6 +97,8 @@ export function OnboardingPage() {
     if (step === 2) {
       const bad = filledParties.find((p) => num(p.amount) <= 0);
       if (bad) return `« ${bad.name} » : indique le montant.`;
+      const badPhone = filledParties.find((p) => p.phone.trim() && !isValidGuineaPhone(p.phone));
+      if (badPhone) return `« ${badPhone.name} » : numéro invalide — 9 chiffres commençant par 61, 62, 65 ou 66 (ex. 622 12 34 56), ou laisse vide.`;
     }
     return null;
   };
@@ -413,13 +416,17 @@ function describeError(e: unknown): string {
   if (body && typeof body === 'object') {
     for (const [field, value] of Object.entries(body)) {
       if (typeof value === 'string') return value;
-      if (Array.isArray(value)) {
-        const index = value.findIndex((v) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
-        if (index >= 0) {
-          const first = Object.values(value[index] as Record<string, string[]>)[0];
-          return `${labels[field] ?? field} ${index + 1} : ${Array.isArray(first) ? first[0] : String(first)}`;
+      if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
+      // Erreurs par ligne : une liste ([{}, {phone: [...]}]) ou un objet
+      // indexé ({"1": {phone: [...]}}) selon la version de l'API.
+      if (value && typeof value === 'object') {
+        const rows = Array.isArray(value) ? value.map((v, i) => [String(i), v] as const) : Object.entries(value);
+        for (const [index, row] of rows) {
+          if (row && typeof row === 'object' && Object.keys(row as object).length > 0) {
+            const first = Object.values(row as Record<string, unknown>)[0];
+            return `${labels[field] ?? field} ${Number(index) + 1} : ${Array.isArray(first) ? first[0] : String(first)}`;
+          }
         }
-        if (typeof value[0] === 'string') return value[0];
       }
     }
   }

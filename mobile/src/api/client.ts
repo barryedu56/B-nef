@@ -72,18 +72,21 @@ export class ApiError extends Error {
 }
 
 function extractMessage(body: unknown, status: number): string {
-  if (body && typeof body === 'object') {
-    const b = body as Record<string, unknown>;
-    if (typeof b.detail === 'string') return b.detail;
-    // Erreurs de validation DRF : { field: ["message", ...] }
-    const firstKey = Object.keys(b)[0];
-    if (firstKey) {
-      const val = b[firstKey];
-      const msg = Array.isArray(val) ? val[0] : val;
-      if (typeof msg === 'string') return msg;
-    }
+  return firstMessage(body) ?? `Erreur réseau (${status})`;
+}
+
+/** Premier message lisible d'une erreur DRF, même imbriquée : { detail },
+ * { champ: ["…"] } ou erreurs par ligne { lignes: { "0": { champ: ["…"] } } }. */
+function firstMessage(value: unknown, depth = 0): string | null {
+  if (typeof value === 'string') return value;
+  if (!value || typeof value !== 'object' || depth > 4) return null;
+  const b = value as Record<string, unknown>;
+  if (typeof b.detail === 'string') return b.detail;
+  for (const v of Array.isArray(value) ? value : Object.values(b)) {
+    const msg = firstMessage(v, depth + 1);
+    if (msg) return msg;
   }
-  return `Erreur réseau (${status})`;
+  return null;
 }
 
 type Params = Record<string, string | number | boolean | undefined | null>;
