@@ -9,6 +9,7 @@ import { TextField } from '@/components/ui/TextField';
 import { TopBar } from '@/components/ui/TopBar';
 import { useCreateProduct } from '@/hooks/useProducts';
 import { colors, fontSize, spacing } from '@/theme';
+import { UnitField } from '@/components/UnitField';
 
 export default function NewProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -44,7 +45,7 @@ export default function NewProductScreen() {
       <TopBar title="Nouveau produit" back />
       <View style={styles.content}>
         <TextField label="Nom" value={name} onChangeText={setName} placeholder="ex. Sac de riz 25 kg" />
-        <TextField label="Unité" value={unit} onChangeText={setUnit} placeholder="pièce, kg, sac, carton…" />
+        <UnitField value={unit} onChange={setUnit} />
         <TextField
           label="Seuil d'alerte de stock (facultatif)"
           value={lowStockThreshold}

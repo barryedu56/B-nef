@@ -17,6 +17,7 @@ import { RestockModal } from '@/components/RestockModal';
 import { useActivities } from '@/hooks/useActivities';
 import { useCreateProduct, useProducts, useUpdateProduct } from '@/hooks/useProducts';
 import { formatAmount } from '@/lib/money';
+import { formatStock, UnitSelect } from '@/components/UnitSelect';
 
 type Filter = 'all' | 'low' | 'out' | 'archived';
 
@@ -152,7 +153,7 @@ export function InventoryPage() {
                                 style={{
                                   color: stock <= 0 ? 'var(--negative)' : product.is_low_stock ? 'var(--warning)' : 'var(--text-primary)',
                                 }}>
-                                {product.stock_quantity} {product.unit}
+                                {formatStock(product.stock_quantity, product.unit)}
                               </span>
                             </td>
                             <td style={{ textAlign: 'right' }} className="mono">
@@ -246,9 +247,7 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
         <Field label="Nom">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="ex. Sac de riz 25 kg" autoFocus />
         </Field>
-        <Field label="Unité">
-          <TextInput value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="pièce, kg, sac, carton…" />
-        </Field>
+        <UnitSelect value={unit} onChange={setUnit} />
         <Field label="Seuil d'alerte de stock (facultatif)">
           <TextInput value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} inputMode="numeric" />
         </Field>
@@ -317,9 +316,7 @@ function EditProductModal({ product, activityId, onClose }: { product: Product; 
         <Field label="Nom">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </Field>
-        <Field label="Unité">
-          <TextInput value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="pièce, kg, sac, carton…" />
-        </Field>
+        <UnitSelect value={unit} onChange={setUnit} />
         <Field label="Prix de vente">
           <AmountInput value={salePrice} onChange={setSalePrice} placeholder="0" />
         </Field>

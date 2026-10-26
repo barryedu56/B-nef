@@ -11,6 +11,7 @@ import { TextField } from '@/components/ui/TextField';
 import { TopBar } from '@/components/ui/TopBar';
 import { useProduct, useUpdateProduct } from '@/hooks/useProducts';
 import { colors, fontSize, spacing } from '@/theme';
+import { UnitField } from '@/components/UnitField';
 
 export default function EditProductScreen() {
   const { productId } = useLocalSearchParams<{ id: string; productId: string }>();
@@ -85,7 +86,7 @@ export default function EditProductScreen() {
       <TopBar title="Modifier le produit" back />
       <View style={styles.content}>
         <TextField label="Nom" value={name} onChangeText={setName} placeholder="ex. Sac de riz 25 kg" />
-        <TextField label="Unité" value={unit} onChangeText={setUnit} placeholder="pièce, kg, sac, carton…" />
+        <UnitField value={unit} onChange={setUnit} />
         <AmountField label="Prix de vente" value={salePrice} onChangeText={setSalePrice} placeholder="0" />
         <TextField
           label="Seuil d'alerte de stock (facultatif)"

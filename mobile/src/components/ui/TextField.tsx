@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState, type ComponentProps } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 
 import { colors, fontSize, radius, spacing } from '@/theme';
 
@@ -104,7 +104,14 @@ const styles = StyleSheet.create({
   boxError: { borderColor: colors.negative },
   boxDisabled: { backgroundColor: colors.bg },
   multiline: { minHeight: 88, alignItems: 'flex-start', paddingVertical: 10 },
-  input: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, paddingVertical: 12 },
+  input: {
+    flex: 1,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    paddingVertical: 12,
+    // Version web : le cadre coloré du champ suffit, pas de contour navigateur en plus.
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null),
+  },
   inputMultiline: { textAlignVertical: 'top', paddingVertical: 0 },
   error: { fontSize: fontSize.xs, color: colors.negative },
   hint: { fontSize: fontSize.xs, color: colors.textTertiary, lineHeight: 16 },
