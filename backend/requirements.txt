@@ -9,6 +9,7 @@ python-dotenv>=1.0
 requests>=2.32
 Pillow>=11.0
 reportlab>=4.2
+openpyxl>=3.1
 sentry-sdk>=2.0
 gunicorn>=23.0
 whitenoise>=6.7

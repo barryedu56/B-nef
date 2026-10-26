@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 
 import { ApiError } from '@/api/client';
-import { downloadReportPdf } from '@/api/reports';
+import { downloadExport, downloadReportPdf } from '@/api/reports';
 import type { Period } from '@/api/types';
 import { AmountText } from '@/components/ui/AmountText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Select } from '@/components/ui/Field';
+import { Field, Select, TextInput } from '@/components/ui/Field';
 import { ErrorBlock, LoadingBlock } from '@/components/ui/QueryState';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -124,6 +124,7 @@ export function ReportsPage() {
               <IndicatorRow label="Consommé personnellement" value={data.personal_use} currency={currency} />
             ) : null}
           </Card>
+          <ExportCard activityId={numericActivityId} />
           <Card muted>
             <span style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
               Choisis une activité ou « Toutes les activités » pour un rapport consolidé, une période, puis
@@ -190,5 +191,57 @@ function IndicatorRow({ label, value, currency }: { label: string; value: string
       <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{label}</span>
       <AmountText amount={value} currency={currency} size={12.5} sign="neutral" />
     </div>
+  );
+}
+
+function firstDayOfMonth(iso: string) {
+  return `${iso.slice(0, 8)}01`;
+}
+
+/** Export Excel / CSV pour le comptable, sur des dates libres. */
+function ExportCard({ activityId }: { activityId?: number }) {
+  const today = todayISO();
+  const [start, setStart] = useState(firstDayOfMonth(today));
+  const [end, setEnd] = useState(today);
+  const [busy, setBusy] = useState<'xlsx' | 'csv' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const onExport = async (file: 'xlsx' | 'csv') => {
+    setError(null);
+    setBusy(file);
+    try {
+      await downloadExport({ file, start, end, activity: activityId });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Impossible de générer l'export.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Card>
+      <span className="card-title">Export pour le comptable</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <Field label="Du">
+          <TextInput type="date" value={start} max={end} onChange={(e) => setStart(e.target.value)} />
+        </Field>
+        <Field label="Au">
+          <TextInput type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} />
+        </Field>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button onClick={() => onExport('xlsx')} loading={busy === 'xlsx'} disabled={busy !== null}>
+            Excel
+          </Button>
+          <Button variant="secondary" onClick={() => onExport('csv')} loading={busy === 'csv'} disabled={busy !== null}>
+            CSV
+          </Button>
+        </div>
+        <span className="field-hint">
+          Toutes les opérations de la période (annulées comprises, signalées) et le compte de résultat, pour
+          l'activité choisie en haut de la page.
+        </span>
+        {error ? <span className="error-text">{error}</span> : null}
+      </div>
+    </Card>
   );
 }

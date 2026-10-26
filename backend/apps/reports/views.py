@@ -15,6 +15,7 @@ from apps.currencies.services import try_convert
 from apps.currencies.models import Currency
 
 from . import services
+from .export import build_csv, build_xlsx
 from .pdf import build_report_pdf
 
 _MONTHS_LONG = [
@@ -123,6 +124,47 @@ class GlobalSummaryView(APIView):
         return Response(payload)
 
 
+def _attachment(response: HttpResponse, raw_name: str) -> HttpResponse:
+    # Repli ASCII pour les clients qui ignorent filename* (RFC 5987), et la
+    # vraie version UTF-8 pour les autres (noms d'activité accentués).
+    ascii_name = raw_name.encode("ascii", "ignore").decode("ascii") or "benef-export"
+    response["Content-Disposition"] = (
+        f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{quote(raw_name)}'
+    )
+    return response
+
+
+class ExportView(APIView):
+    """Opérations + compte de résultat sur des dates libres, pour le
+    comptable : `?file=xlsx|csv&start=AAAA-MM-JJ&end=AAAA-MM-JJ[&activity=]`
+    (par défaut : le mois en cours, toutes les activités)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        default_start, default_end = services.resolve_period("month")
+        start = parse_date(request.query_params.get("start") or "") or default_start
+        end = parse_date(request.query_params.get("end") or "") or default_end
+        if end < start:
+            return Response({"detail": "La date de fin est avant la date de début."}, status=400)
+        activity = None
+        if request.query_params.get("activity"):
+            activity = get_object_or_404(Activity, pk=request.query_params["activity"], owner=request.user)
+
+        # « file » et non « format » : DRF réserve ?format= au choix de son rendu.
+        fmt = request.query_params.get("file", "xlsx")
+        label = (activity.name if activity else "toutes-activites").replace(" ", "_").replace("/", "-")
+        name = f"benef-{label}-{start.isoformat()}_{end.isoformat()}"
+        if fmt == "csv":
+            response = HttpResponse(build_csv(request.user, start, end, activity), content_type="text/csv; charset=utf-8")
+            return _attachment(response, f"{name}.csv")
+        response = HttpResponse(
+            build_xlsx(request.user, start, end, activity),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        return _attachment(response, f"{name}.xlsx")
+
+
 class ReportPdfView(APIView):
     """Le même compte de résultat que les vues JSON ci-dessus, mais en vrai
     fichier PDF téléchargeable (pas une impression de navigateur)."""
@@ -151,12 +193,4 @@ class ReportPdfView(APIView):
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         raw_name = f"benef-rapport-{activity_name.replace(' ', '_').replace('/', '-')}-{anchor.isoformat()}.pdf"
-        # Repli ASCII pour les clients qui ignorent filename* (RFC 5987), et
-        # la vraie version UTF-8 pour ceux (tous les navigateurs modernes) qui
-        # la comprennent — sinon un nom d'activité accentué s'affiche mal.
-        ascii_name = raw_name.encode("ascii", "ignore").decode("ascii") or "benef-rapport.pdf"
-        encoded_name = quote(raw_name)
-        response["Content-Disposition"] = (
-            f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{encoded_name}'
-        )
-        return response
+        return _attachment(response, raw_name)

@@ -12,13 +12,13 @@ export function fetchGlobalSummary(params: { period: Period; currency?: string; 
   return apiRequest<GlobalSummary>('/reports/global/', { params });
 }
 
-/** Télécharge le vrai fichier PDF du rapport (pas `apiRequest` : réponse
+/** Télécharge un fichier généré par l'API (pas `apiRequest` : réponse
  * binaire, pas JSON) et déclenche l'enregistrement dans le navigateur. */
-export async function downloadReportPdf(params: { activity?: number; period: Period; date?: string }) {
-  const url = new URL(`${API_URL}/reports/pdf/`, window.location.origin);
-  if (params.activity !== undefined) url.searchParams.set('activity', String(params.activity));
-  url.searchParams.set('period', params.period);
-  if (params.date) url.searchParams.set('date', params.date);
+async function downloadFile(path: string, params: Record<string, string | undefined>, fallbackName: string) {
+  const url = new URL(`${API_URL}${path}`, window.location.origin);
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') url.searchParams.set(key, value);
+  }
 
   const { access } = getTokens();
   const res = await fetch(url.toString(), {
@@ -40,7 +40,7 @@ export async function downloadReportPdf(params: { activity?: number; period: Per
   // nom d'activité accentué perdrait ses accents dans le fichier téléchargé.
   const utf8Match = /filename\*=UTF-8''([^;]+)/.exec(disposition);
   const asciiMatch = /filename="([^"]+)"/.exec(disposition);
-  const filename = utf8Match ? decodeURIComponent(utf8Match[1]) : asciiMatch ? asciiMatch[1] : 'rapport.pdf';
+  const filename = utf8Match ? decodeURIComponent(utf8Match[1]) : asciiMatch ? asciiMatch[1] : fallbackName;
 
   const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -50,4 +50,22 @@ export async function downloadReportPdf(params: { activity?: number; period: Per
   link.click();
   link.remove();
   URL.revokeObjectURL(objectUrl);
+}
+
+/** Le vrai fichier PDF du rapport (pas une impression de navigateur). */
+export function downloadReportPdf(params: { activity?: number; period: Period; date?: string }) {
+  return downloadFile(
+    '/reports/pdf/',
+    { activity: params.activity?.toString(), period: params.period, date: params.date },
+    'rapport.pdf'
+  );
+}
+
+/** Export pour le comptable : opérations + compte de résultat. */
+export function downloadExport(params: { file: 'xlsx' | 'csv'; start: string; end: string; activity?: number }) {
+  return downloadFile(
+    '/reports/export/',
+    { file: params.file, start: params.start, end: params.end, activity: params.activity?.toString() },
+    `benef-export.${params.file}`
+  );
 }

@@ -118,3 +118,49 @@ class PartyListPerformanceTests(ApiTestCase):
         many, results = list_queries()
         self.assertEqual(few, many)
         self.assertEqual(sorted(r["balance"] for r in results if r["name"].startswith("C")), ["1000.00", "1000.00"])
+
+
+class ExportTests(ApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.post("/api/sales/", {"activity": self.shop.pk, "occurred_on": "2026-03-10",
+                                         "lines": [{"product": self.product.pk, "quantity": "2"}]}, format="json")
+        r = self.client.post("/api/transactions/", {"activity": self.shop.pk, "direction": "out", "amount": "700.50",
+                                                    "currency": "GNF", "occurred_on": "2026-03-12", "note": "Taxi"},
+                             format="json")
+        self.client.post(f"/api/transactions/{r.json()['id']}/void/", {"reason": "doublon"}, format="json")
+        self.client.post("/api/transactions/", {"activity": self.shop.pk, "direction": "out", "amount": "500",
+                                                "currency": "GNF", "occurred_on": "2026-04-01"}, format="json")
+
+    def test_excel_operations_et_compte_de_resultat(self):
+        import io
+
+        from openpyxl import load_workbook
+
+        r = self.client.get("/api/reports/export/", {"start": "2026-03-01", "end": "2026-03-31"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(".xlsx", r["Content-Disposition"])
+        wb = load_workbook(io.BytesIO(r.content))
+        ops = list(wb["Opérations"].values)
+        self.assertEqual(ops[0][0], "Date")
+        self.assertEqual(len(ops), 3)  # en-tête + vente + sortie annulée (avril exclu)
+        voided = [row for row in ops[1:] if row[16] == "oui"][0]
+        self.assertEqual(voided[8], -700.5)
+        self.assertEqual(voided[17], "doublon")
+        summary = {row[0]: row[1] for row in wb["Compte de résultat"].values if row and len(row) > 1}
+        self.assertEqual(summary["Chiffre d'affaires"], 3000)
+        self.assertEqual(summary["Bénéfice net"], 1000)  # la sortie annulée ne compte pas
+
+    def test_csv_format_francais(self):
+        r = self.client.get("/api/reports/export/", {"file": "csv", "start": "2026-03-01", "end": "2026-03-31",
+                                                     "activity": self.shop.pk})
+        self.assertEqual(r.status_code, 200)
+        text = r.content.decode("utf-8")
+        self.assertTrue(text.startswith("﻿Date;Activité;"))
+        self.assertIn("12/03/2026", text)
+        self.assertIn("-700,50", text)
+
+    def test_activite_d_un_autre_compte_refusee(self):
+        other = self.make_user("autre")
+        r = self.client_for(other).get("/api/reports/export/", {"activity": self.shop.pk})
+        self.assertEqual(r.status_code, 404)

@@ -247,6 +247,14 @@ def activity_summary(activity: Activity, period: str, anchor: date | None = None
     return _summary(qs, start, end, activity.currency_id, "amount_activity")
 
 
+def range_summary(user, start: date, end: date, activity: Activity | None = None) -> Summary:
+    """Compte de résultat sur des dates libres (exports)."""
+    if activity is not None:
+        return _summary(Activity.objects.filter(pk=activity.pk), start, end, activity.currency_id, "amount_activity")
+    qs = Activity.objects.filter(owner=user, is_archived=False)
+    return _summary(qs, start, end, user.base_currency_id, "amount_base")
+
+
 def global_summary(user, period: str, anchor: date | None = None) -> Summary:
     start, end = resolve_period(period, anchor)
     qs = Activity.objects.filter(owner=user, is_archived=False)
