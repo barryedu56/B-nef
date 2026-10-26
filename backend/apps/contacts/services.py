@@ -1,7 +1,7 @@
 """Calcul du solde d'un tiers (créance positive / dette négative)."""
 from decimal import Decimal
 
-from django.db.models import DecimalField, Q, Sum
+from django.db.models import DecimalField, Max, Q, Sum
 from django.db.models.functions import Coalesce
 
 from apps.finance.models import Transaction
@@ -83,3 +83,44 @@ def parties_totals(owner) -> dict:
         else:
             total_payable += -bal
     return {"receivable": total_receivable, "payable": total_payable}
+
+
+TRADE_KINDS = (Transaction.Kind.SALE, Transaction.Kind.PURCHASE, Transaction.Kind.SIMPLE, Transaction.Kind.OPENING_BALANCE)
+
+
+def party_statement(party: Party, start=None, end=None) -> dict:
+    """Bilan d'un tiers, en devise principale : côté fournisseur, ce qu'on lui
+    a acheté et payé ; côté client, ce qu'on lui a vendu et encaissé (sur la
+    période si donnée, sinon depuis le début). Le reste dû est toujours le
+    solde actuel."""
+    txns = Transaction.objects.filter(party=party, voided_at__isnull=True)
+    if start:
+        txns = txns.filter(occurred_on__gte=start)
+    if end:
+        txns = txns.filter(occurred_on__lte=end)
+    D, K = Transaction.Direction, Transaction.Kind
+    trade = Q(kind__in=TRADE_KINDS)
+    agg = txns.aggregate(
+        bought=Sum("amount_base", filter=trade & Q(direction=D.OUT)),
+        paid_now=Sum("amount_base", filter=trade & Q(direction=D.OUT, is_credit=False)),
+        paid_later=Sum("amount_base", filter=Q(kind=K.SETTLEMENT, direction=D.OUT)),
+        sold=Sum("amount_base", filter=trade & Q(direction=D.IN)),
+        received_now=Sum("amount_base", filter=trade & Q(direction=D.IN, is_credit=False)),
+        received_later=Sum("amount_base", filter=Q(kind=K.SETTLEMENT, direction=D.IN)),
+        last=Max("occurred_on"),
+    )
+    z = Decimal(0)
+    balance = party_balance(party)
+    q = lambda v: str((v or z).quantize(Decimal("0.01")))  # noqa: E731
+    return {
+        "currency": party.owner.base_currency_id,
+        "period_start": start,
+        "period_end": end,
+        "bought": q(agg["bought"]),
+        "paid": q((agg["paid_now"] or z) + (agg["paid_later"] or z)),
+        "sold": q(agg["sold"]),
+        "received": q((agg["received_now"] or z) + (agg["received_later"] or z)),
+        "owed_to_party": q(-balance if balance < 0 else z),
+        "owed_by_party": q(balance if balance > 0 else z),
+        "last_operation": agg["last"],
+    }

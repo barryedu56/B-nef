@@ -31,6 +31,7 @@ SUMMARY_ROWS = [
     ("Dont pertes / surplus de stock", "stock_losses"),
     ("Dont écarts de caisse", "cash_differences"),
     ("Bénéfice net", "net_profit"),
+    ("Achats de marchandise (pour information : comptés dans le coût des ventes à la revente)", "purchases"),
     ("Consommé personnellement (au coût)", "personal_use"),
     ("Valeur du stock (aujourd'hui)", "stock_value"),
     ("Caisse (aujourd'hui)", "cash_balance"),

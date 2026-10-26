@@ -6,7 +6,9 @@ from rest_framework.response import Response
 
 from .models import Party
 from .serializers import PartySerializer
-from .services import parties_totals, with_balances
+from django.utils.dateparse import parse_date
+
+from .services import parties_totals, party_statement, with_balances
 
 
 class PartyViewSet(viewsets.ModelViewSet):
@@ -32,3 +34,12 @@ class PartyViewSet(viewsets.ModelViewSet):
     def totals(self, request):
         totals = parties_totals(request.user)
         return Response({k: str(v) for k, v in totals.items()})
+
+    @action(detail=True, methods=["get"])
+    def statement(self, request, pk=None):
+        """Bilan du tiers (?start=&end= facultatifs) : acheté / payé, vendu /
+        encaissé, reste dû."""
+        party = self.get_object()
+        start = parse_date(request.query_params.get("start") or "")
+        end = parse_date(request.query_params.get("end") or "")
+        return Response(party_statement(party, start, end))

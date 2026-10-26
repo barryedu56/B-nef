@@ -149,3 +149,107 @@ def count_cash(*, user, account: PaymentMethod, activity, counted: Decimal, note
         owner=user, payment_method=account, activity=activity, currency_id=currency,
         expected=expected, counted=counted, difference=difference, transaction=txn, note=note,
     )
+
+
+# --- Entrées et sorties d'argent sur une période --------------------------
+
+K = Transaction.Kind
+IN_GROUPS = {
+    "sales": "Ventes encaissées",
+    "collections": "Clients qui ont payé leur dette",
+    "other_income": "Autres entrées",
+    "contributions": "Apports personnels",
+    "transfers_in": "Transferts reçus",
+    "cash_surplus": "Surplus constatés",
+}
+OUT_GROUPS = {
+    "purchases": "Achats de marchandise payés",
+    "expenses": "Dépenses",
+    "supplier_payments": "Dettes payées aux fournisseurs",
+    "withdrawals": "Retraits personnels",
+    "transfers_out": "Transferts envoyés",
+    "cash_shortage": "Manques constatés",
+}
+
+
+def _flow_group(kind: str, direction: str) -> str:
+    if direction == Transaction.Direction.IN:
+        return {
+            K.SALE: "sales", K.SETTLEMENT: "collections", K.CONTRIBUTION: "contributions",
+            K.TRANSFER: "transfers_in", K.CASH_ADJUSTMENT: "cash_surplus",
+        }.get(kind, "other_income")
+    return {
+        K.PURCHASE: "purchases", K.SETTLEMENT: "supplier_payments", K.WITHDRAWAL: "withdrawals",
+        K.TRANSFER: "transfers_out", K.CASH_ADJUSTMENT: "cash_shortage",
+    }.get(kind, "expenses")
+
+
+def cash_flow(user, start: date, end: date) -> dict:
+    """Pour chaque caisse : solde au début de la période, entrées et sorties
+    regroupées par nature, solde à la fin — et les mêmes totaux toutes
+    caisses confondues, dans la devise principale (taux du jour)."""
+    base = user.base_currency_id
+    accounts = list(PaymentMethod.objects.filter(owner=user).select_related("owner").order_by("-is_cash", "name"))
+    by_id = {a.pk: a for a in accounts}
+    live = Transaction.objects.filter(AFFECTS_CASH, activity__owner=user, voided_at__isnull=True,
+                                      payment_method__in=accounts)
+
+    def to(value, source, target):
+        return value if source == target else (try_convert(value, source, target) or value)
+
+    per_account = {
+        a.pk: {"opening": Z, "in": {k: Z for k in IN_GROUPS}, "out": {k: Z for k in OUT_GROUPS}} for a in accounts
+    }
+    before = (
+        live.filter(occurred_on__lt=start).values("payment_method_id", "currency_id", "direction")
+        .annotate(total=Sum("amount")).order_by()
+    )
+    for row in before:
+        acc = by_id[row["payment_method_id"]]
+        value = to(row["total"] or Z, row["currency_id"], account_currency(acc))
+        per_account[acc.pk]["opening"] += value if row["direction"] == Transaction.Direction.IN else -value
+    during = (
+        live.filter(occurred_on__gte=start, occurred_on__lte=end)
+        .values("payment_method_id", "currency_id", "direction", "kind").annotate(total=Sum("amount")).order_by()
+    )
+    for row in during:
+        acc = by_id[row["payment_method_id"]]
+        value = to(row["total"] or Z, row["currency_id"], account_currency(acc))
+        side = "in" if row["direction"] == Transaction.Direction.IN else "out"
+        per_account[acc.pk][side][_flow_group(row["kind"], row["direction"])] += value
+
+    totals = {"opening": Z, "in": {k: Z for k in IN_GROUPS}, "out": {k: Z for k in OUT_GROUPS}}
+    rows = []
+    for acc in accounts:
+        data = per_account[acc.pk]
+        cur = account_currency(acc)
+        total_in = sum(data["in"].values(), Z)
+        total_out = sum(data["out"].values(), Z)
+        rows.append({
+            "id": acc.pk, "name": acc.name, "is_cash": acc.is_cash, "currency": cur,
+            "opening": str(data["opening"].quantize(CENTS)),
+            "in": {k: str(v.quantize(CENTS)) for k, v in data["in"].items()},
+            "out": {k: str(v.quantize(CENTS)) for k, v in data["out"].items()},
+            "total_in": str(total_in.quantize(CENTS)),
+            "total_out": str(total_out.quantize(CENTS)),
+            "closing": str((data["opening"] + total_in - total_out).quantize(CENTS)),
+        })
+        totals["opening"] += to(data["opening"], cur, base)
+        for side in ("in", "out"):
+            for k, v in data[side].items():
+                totals[side][k] += to(v, cur, base)
+    total_in = sum(totals["in"].values(), Z)
+    total_out = sum(totals["out"].values(), Z)
+    return {
+        "period_start": start, "period_end": end, "currency": base,
+        "labels": {"in": IN_GROUPS, "out": OUT_GROUPS},
+        "totals": {
+            "opening": str(totals["opening"].quantize(CENTS)),
+            "in": {k: str(v.quantize(CENTS)) for k, v in totals["in"].items()},
+            "out": {k: str(v.quantize(CENTS)) for k, v in totals["out"].items()},
+            "total_in": str(total_in.quantize(CENTS)),
+            "total_out": str(total_out.quantize(CENTS)),
+            "closing": str((totals["opening"] + total_in - total_out).quantize(CENTS)),
+        },
+        "accounts": rows,
+    }

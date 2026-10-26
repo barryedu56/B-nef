@@ -165,3 +165,35 @@ class ExportTests(ApiTestCase):
         other = self.make_user("autre")
         r = self.client_for(other).get("/api/reports/export/", {"activity": self.shop.pk})
         self.assertEqual(r.status_code, 404)
+
+
+class PurchasesTotalTests(ApiTestCase):
+    def test_achats_de_la_periode_sans_toucher_le_benefice(self):
+        self.client.post("/api/purchases/", {"product": self.product.pk, "quantity": "5", "unit_cost": "1000"},
+                         format="json")
+        self.client.post("/api/purchases/", {"product": self.product.pk, "quantity": "2", "unit_cost": "1000",
+                                             "is_credit": True}, format="json")
+        s = self.summary(f"/api/reports/activity/{self.shop.pk}/")
+        self.assertEqual(s["purchases"], 7000)
+        self.assertEqual(s["net_profit"], 0)
+        self.assertEqual(s["expenses"], 0)
+
+
+class PartyStatementTests(ApiTestCase):
+    def test_bilan_fournisseur_et_client(self):
+        from apps.contacts.models import Party
+
+        supplier = Party.objects.create(owner=self.user, name="Grossiste", kind="supplier")
+        client = self.party()
+        self.client.post("/api/purchases/", {"product": self.product.pk, "quantity": "10", "unit_cost": "1000",
+                                             "party": supplier.pk, "is_credit": True, "amount_paid_now": "4000"},
+                         format="json")
+        self.client.post("/api/purchases/", {"product": self.product.pk, "quantity": "2", "unit_cost": "1000",
+                                             "party": supplier.pk}, format="json")
+        self.client.post("/api/sales/", {"activity": self.shop.pk, "party": client.pk, "is_credit": True,
+                                         "amount_paid_now": "1000", "lines": [{"product": self.product.pk, "quantity": "2"}]},
+                         format="json")
+        s = self.client.get(f"/api/parties/{supplier.pk}/statement/").json()
+        self.assertEqual((s["bought"], s["paid"], s["owed_to_party"]), ("12000.00", "6000.00", "6000.00"))
+        c = self.client.get(f"/api/parties/{client.pk}/statement/").json()
+        self.assertEqual((c["sold"], c["received"], c["owed_by_party"]), ("3000.00", "1000.00", "2000.00"))

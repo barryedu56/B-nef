@@ -60,6 +60,10 @@ class Summary:
     expenses: Decimal = Z
     stock_losses: Decimal = Z
     cash_differences: Decimal = Z
+    # Marchandise achetée sur la période (payée ou à crédit) : information
+    # seulement — son coût entre dans le bénéfice à la vente (coût des
+    # ventes), pas à l'achat.
+    purchases: Decimal = Z
     net_profit: Decimal = Z
     personal_use: Decimal = Z
     stock_value: Decimal = Z
@@ -99,7 +103,8 @@ def _flows(txns, amount_field: str, group: str | None = None) -> dict:
     out: dict = {}
     for row in rows:
         bucket = out.setdefault(
-            row["g"], {"revenue": Z, "expenses": Z, "stock_losses": Z, "cash_differences": Z, "personal_use": Z}
+            row["g"],
+            {"revenue": Z, "expenses": Z, "stock_losses": Z, "cash_differences": Z, "personal_use": Z, "purchases": Z},
         )
         total = row["total"] or Z
         kind, direction = row["kind"], row["direction"]
@@ -115,6 +120,8 @@ def _flows(txns, amount_field: str, group: str | None = None) -> dict:
         # charge — ils n'entrent dans aucun de ces totaux.
         elif kind == K.PERSONAL_USE:
             bucket["personal_use"] += total
+        elif kind == K.PURCHASE and direction == D.OUT:
+            bucket["purchases"] += total
     return out
 
 
@@ -237,6 +244,7 @@ def _summary(activity_qs, start: date, end: date, currency: str, amount_field: s
     # Consommation personnelle : valorisée au coût, visible séparément, mais
     # jamais dans le CA, les charges ou la caisse.
     s.personal_use = flows.get("personal_use", Z)
+    s.purchases = flows.get("purchases", Z)
     s.stock_value = _stock_value(activity_qs, amount_field, currency)
     s.cash_balance = (
         _opening_balance(activity_qs, amount_field, currency)

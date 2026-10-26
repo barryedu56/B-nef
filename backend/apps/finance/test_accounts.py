@@ -172,3 +172,29 @@ class CashOnlyMovementsTests(ApiTestCase):
                                          "lines": [{"product": self.product.pk, "quantity": "2"}]}, format="json")
         rows = self.client.get("/api/transactions/", {"payment_method": cash.pk, "cash_only": 1}).json()["results"]
         self.assertEqual([(r["kind"], r["amount"]) for r in rows], [("settlement", "1000.00")])
+
+
+class CashFlowTests(ApiTestCase):
+    def test_entrees_sorties_par_nature_et_soldes(self):
+        cash = PaymentMethod.objects.get(owner=self.user, name="Espèces")
+        bank = PaymentMethod.objects.get(owner=self.user, name="Banque")
+        post = lambda **d: self.client.post("/api/transactions/", {"activity": self.shop.pk, "currency": "GNF", **d},
+                                            format="json")
+        post(direction="in", amount="100000", kind="contribution", occurred_on="2026-02-20", payment_method=cash.pk)
+        post(direction="out", amount="7000", occurred_on="2026-03-05", payment_method=cash.pk)
+        self.client.post("/api/sales/", {"activity": self.shop.pk, "occurred_on": "2026-03-06", "payment_method": cash.pk,
+                                         "lines": [{"product": self.product.pk, "quantity": "2"}]}, format="json")
+        self.client.post("/api/sales/", {"activity": self.shop.pk, "occurred_on": "2026-03-07", "is_credit": True,
+                                         "party": self.party().pk, "lines": [{"product": self.product.pk, "quantity": "1"}]},
+                         format="json")  # à crédit : n'apparaît pas
+        self.client.post("/api/transfers/", {"from_account": cash.pk, "to_account": bank.pk, "from_activity": self.shop.pk,
+                                             "amount": "50000", "occurred_on": "2026-03-10"}, format="json")
+        data = self.client.get("/api/payment-methods/flow/", {"period": "month", "date": "2026-03-15"}).json()
+        esp = [a for a in data["accounts"] if a["name"] == "Espèces"][0]
+        self.assertEqual(Decimal(esp["opening"]), 100000)
+        self.assertEqual(Decimal(esp["in"]["sales"]), 3000)
+        self.assertEqual(Decimal(esp["out"]["expenses"]), 7000)
+        self.assertEqual(Decimal(esp["out"]["transfers_out"]), 50000)
+        self.assertEqual(Decimal(esp["closing"]), 100000 + 3000 - 7000 - 50000)
+        self.assertEqual(Decimal(data["totals"]["closing"]), 96000)
+        self.assertEqual(Decimal(data["totals"]["in"]["transfers_in"]), 50000)

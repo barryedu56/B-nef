@@ -1,4 +1,6 @@
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, ValidationError
@@ -89,6 +91,16 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
             "unassigned": str(per_account.get(None, 0)),
             "accounts": rows,
         })
+
+    @action(detail=False, methods=["get"])
+    def flow(self, request):
+        """Entrées et sorties d'argent de chaque caisse sur une période
+        (?period=day|week|month|year&date=AAAA-MM-JJ)."""
+        from apps.reports.services import resolve_period  # import circulaire sinon
+
+        anchor = parse_date(request.query_params.get("date") or "") or timezone.localdate()
+        start, end = resolve_period(request.query_params.get("period", "month"), anchor)
+        return Response(accounts.cash_flow(request.user, start, end))
 
     @action(detail=True, methods=["post"])
     def count(self, request, pk=None):
