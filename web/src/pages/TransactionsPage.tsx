@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type { Direction, TransactionKind } from '@/api/types';
+import type { Direction } from '@/api/types';
 import { AmountText } from '@/components/ui/AmountText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -9,20 +9,11 @@ import { Select } from '@/components/ui/Field';
 import { EmptyState, ErrorBlock, LoadingBlock } from '@/components/ui/QueryState';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { NewTransactionModal } from '@/components/NewTransactionModal';
+import { TxnType } from '@/components/TxnType';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
 import { useActivities } from '@/hooks/useActivities';
 import { useCategories, usePaymentMethods, useTransactions } from '@/hooks/useTransactions';
 import { formatRelativeDate } from '@/lib/dates';
-
-const KIND_LABELS: Record<TransactionKind, string> = {
-  simple: 'Simple',
-  sale: 'Vente',
-  purchase: 'Réapprovisionnement',
-  settlement: 'Règlement',
-  adjustment: 'Ajustement',
-  opening_balance: 'Solde initial',
-  personal_use: 'Consommation personnelle',
-};
 
 export function TransactionsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -118,8 +109,17 @@ export function TransactionsPage() {
                         </td>
                         <td style={voided ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}>{activity?.name ?? '—'}</td>
                         <td style={voided ? { opacity: 0.5 } : undefined}>
-                          {KIND_LABELS[txn.kind]}
-                          {voided ? ' · annulée' : txn.is_credit && !txn.is_settled ? ' · à crédit' : ''}
+                          <TxnType
+                            kind={txn.kind}
+                            direction={txn.direction}
+                            extra={
+                              voided ? (
+                                <span className="badge" style={{ marginLeft: 6 }}>annulée</span>
+                              ) : txn.is_credit && !txn.is_settled ? (
+                                <span className="badge warning" style={{ marginLeft: 6 }}>à crédit</span>
+                              ) : null
+                            }
+                          />
                         </td>
                         <td style={voided ? { opacity: 0.5 } : undefined}>{txn.category ? (categoryById.get(txn.category) ?? '—') : '—'}</td>
                         <td style={voided ? { opacity: 0.5 } : undefined}>{txn.payment_method ? (paymentById.get(txn.payment_method) ?? '—') : '—'}</td>

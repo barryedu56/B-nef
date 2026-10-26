@@ -1,3 +1,4 @@
+import { Briefcase, Building2, ChevronRight, House, Shapes, Sprout, Store, Wallet, type LucideIcon } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,6 +16,15 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useActivities, useCreateActivity } from '@/hooks/useActivities';
 import { useGlobalSummary } from '@/hooks/useReports';
+
+const TYPE_ICONS: Partial<Record<Activity['type'], LucideIcon>> = {
+  commerce: Store,
+  service: Briefcase,
+  salary: Wallet,
+  rental: Building2,
+  farming: Sprout,
+  household: House,
+};
 
 const CURRENCY_OPTIONS = [
   { value: 'GNF', label: 'Franc guinéen (GNF)' },
@@ -51,44 +61,49 @@ export function ActivitiesPage() {
             onAction={() => setShowCreate(true)}
           />
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Type</th>
-                  <th>Modules</th>
-                  <th>Devise</th>
-                  <th style={{ textAlign: 'right' }}>Bénéfice net (ce mois)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activities.data?.map((activity) => {
-                  const row = netByActivity.get(activity.id);
-                  return (
-                    <tr key={activity.id} className="clickable" onClick={() => navigate(`/activities/${activity.id}`)}>
-                      <td style={{ fontWeight: 600 }}>{activity.name}</td>
-                      <td>{ACTIVITY_TYPE_OPTIONS.find((o) => o.value === activity.type)?.label ?? activity.type_display}</td>
-                      <td>
-                        <div className="chip-row">
-                          {activity.has_inventory ? <span className="badge">Inventaire</span> : null}
-                          {activity.has_debts ? <span className="badge">Dettes</span> : null}
-                          {activity.has_budget ? <span className="badge">Budget</span> : null}
-                        </div>
-                      </td>
-                      <td className="mono">{activity.currency}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        {row ? (
-                          <AmountText amount={row.net_profit} currency={row.currency} size={13} />
-                        ) : (
-                          <AmountText amount="0" currency={activity.currency} size={13} sign="neutral" />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="activity-grid">
+            {activities.data?.map((activity) => {
+              const row = netByActivity.get(activity.id);
+              const Icon = TYPE_ICONS[activity.type] ?? Shapes;
+              return (
+                <button key={activity.id} className="activity-card" onClick={() => navigate(`/activities/${activity.id}`)}>
+                  <div className="activity-card-head">
+                    <span className="row-icon" style={{ width: 42, height: 42, borderRadius: 12 }}>
+                      <Icon size={20} />
+                    </span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="activity-card-name">{activity.name}</div>
+                      <div className="activity-card-type">
+                        {ACTIVITY_TYPE_OPTIONS.find((o) => o.value === activity.type)?.label ?? activity.type_display} ·{' '}
+                        {activity.currency}
+                      </div>
+                    </div>
+                    <ChevronRight size={18} color="var(--text-tertiary)" />
+                  </div>
+                  <div>
+                    <div className="kpi-label">Bénéfice net ce mois</div>
+                    {row ? (
+                      <AmountText amount={row.net_profit} currency={row.currency} size={22} />
+                    ) : (
+                      <AmountText amount="0" currency={activity.currency} size={22} sign="neutral" />
+                    )}
+                  </div>
+                  <div className="chip-row" style={{ gap: 6 }}>
+                    {activity.has_inventory ? <span className="badge accent">Inventaire</span> : null}
+                    {activity.has_debts ? <span className="badge accent">Crédits & dettes</span> : null}
+                    {activity.has_budget ? <span className="badge accent">Budget</span> : null}
+                    {!activity.has_inventory && !activity.has_debts && !activity.has_budget ? (
+                      <span className="badge">Entrées / sorties</span>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
+            <button className="activity-card activity-card-add" onClick={() => setShowCreate(true)}>
+              <span className="state-icon">+</span>
+              <span className="state-title">Nouvelle activité</span>
+              <span className="field-hint">Une boutique, un salaire, un champ, un taxi…</span>
+            </button>
           </div>
         )}
       </div>

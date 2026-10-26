@@ -1,8 +1,11 @@
+import { Banknote, Boxes, ChevronLeft, ChevronRight, ChartColumn, HandCoins, PackageMinus, Receipt, TrendingUp, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import type { Period } from '@/api/types';
 import { BudgetProgress } from '@/components/BudgetProgress';
+import { ProfitChart } from '@/components/ProfitChart';
+import { TxnType } from '@/components/TxnType';
 import { AmountText } from '@/components/ui/AmountText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -48,7 +51,6 @@ export function ActivityDetailPage() {
 
   const act = activity.data;
   const data = summary.data;
-  const maxSeries = Math.max(1, ...data.timeseries.map((p) => Math.abs(Number(p.net_profit))));
   const recent = (transactions.data?.results ?? []).slice(0, 8);
 
   const toggleModule = (field: 'has_inventory' | 'has_debts' | 'has_budget') => (value: boolean) => {
@@ -62,12 +64,11 @@ export function ActivityDetailPage() {
         actions={
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <SegmentedControl options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
-            {act.has_inventory ? (
-              <Button variant="secondary" onClick={() => setModal('sale')}>
-                + Vente
-              </Button>
-            ) : null}
-            <Button onClick={() => setModal('transaction')}>+ Opération</Button>
+            {/* Avec un stock, la vente est l'action du quotidien : bouton principal. */}
+            <Button variant={act.has_inventory ? 'secondary' : 'primary'} onClick={() => setModal('transaction')}>
+              + Opération
+            </Button>
+            {act.has_inventory ? <Button onClick={() => setModal('sale')}>+ Vente</Button> : null}
             {act.has_inventory ? (
               <Link to={`/inventory?activity=${act.id}`} className="btn btn-secondary">
                 Produits & stock
@@ -81,39 +82,31 @@ export function ActivityDetailPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <button className="icon-btn" onClick={() => setAnchor((a) => shiftAnchor(period, a, -1))} aria-label="Période précédente">
-              ‹
+              <ChevronLeft size={18} />
             </button>
             <span style={{ fontSize: 13.5, fontWeight: 600 }}>{formatPeriodLabel(period, anchor)}</span>
             <button className="icon-btn" onClick={() => setAnchor((a) => shiftAnchor(period, a, 1))} aria-label="Période suivante">
-              ›
+              <ChevronRight size={18} />
             </button>
           </div>
 
           <div className="kpi-grid">
-            <KpiTile label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} sign="neutral" />
-            {act.has_inventory ? <KpiTile label="Coût des ventes" amount={data.cogs} currency={data.currency} sign="negative" /> : null}
-            {act.has_inventory ? <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} sign="neutral" /> : null}
-            <KpiTile label="Charges" amount={data.expenses} currency={data.currency} sign="negative" />
+            <KpiTile label="Bénéfice net" amount={data.net_profit} currency={data.currency} highlight icon={<TrendingUp size={18} />} />
+            <KpiTile label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} sign="neutral" icon={<Banknote size={18} />} tone="positive" />
+            {act.has_inventory ? <KpiTile label="Coût des ventes" amount={data.cogs} currency={data.currency} sign="neutral" icon={<PackageMinus size={18} />} tone="negative" /> : null}
+            {act.has_inventory ? <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} sign="neutral" icon={<ChartColumn size={18} />} tone="info" /> : null}
+            <KpiTile label="Charges" amount={data.expenses} currency={data.currency} sign="neutral" icon={<Receipt size={18} />} tone="negative" />
             {act.has_inventory ? (
-              <KpiTile label="Consommé personnellement" amount={data.personal_use} currency={data.currency} sign="neutral" />
+              <KpiTile label="Consommé personnellement" amount={data.personal_use} currency={data.currency} sign="neutral" icon={<HandCoins size={18} />} tone="warning" />
             ) : null}
-            <KpiTile label="Bénéfice net" amount={data.net_profit} currency={data.currency} highlight />
-            {act.has_inventory ? <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} sign="neutral" /> : null}
-            <KpiTile label="Caisse" amount={data.cash_balance} currency={data.currency} sign="neutral" />
+            {act.has_inventory ? <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} sign="neutral" icon={<Boxes size={18} />} tone="warning" /> : null}
+            <KpiTile label="Caisse" amount={data.cash_balance} currency={data.currency} sign="neutral" icon={<Wallet size={18} />} tone="accent" />
           </div>
 
           {data.timeseries.length > 0 ? (
             <Card>
               <span className="card-title">Évolution du bénéfice</span>
-              <div className="chart-columns">
-                {data.timeseries.map((point) => (
-                  <div
-                    key={point.month}
-                    className={['chart-bar', Number(point.net_profit) < 0 ? 'negative' : ''].filter(Boolean).join(' ')}
-                    style={{ height: `${Math.max(4, (Math.abs(Number(point.net_profit)) / maxSeries) * 100)}%` }}
-                  />
-                ))}
-              </div>
+              <ProfitChart series={data.timeseries} />
             </Card>
           ) : null}
 
@@ -138,12 +131,17 @@ export function ActivityDetailPage() {
                           {formatRelativeDate(txn.occurred_on)}
                         </td>
                         <td style={txn.is_voided ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}>
-                          {kindLabel(txn.kind, txn.direction)}
-                          {txn.is_voided ? (
-                            <span className="badge" style={{ marginLeft: 6 }}>annulée</span>
-                          ) : txn.is_credit && !txn.is_settled ? (
-                            <span className="badge" style={{ marginLeft: 6 }}>à crédit</span>
-                          ) : null}
+                          <TxnType
+                            kind={txn.kind}
+                            direction={txn.direction}
+                            extra={
+                              txn.is_voided ? (
+                                <span className="badge" style={{ marginLeft: 6 }}>annulée</span>
+                              ) : txn.is_credit && !txn.is_settled ? (
+                                <span className="badge warning" style={{ marginLeft: 6 }}>à crédit</span>
+                              ) : null
+                            }
+                          />
                         </td>
                         <td style={{ textAlign: 'right', opacity: txn.is_voided ? 0.5 : 1 }}>
                           <AmountText amount={txn.amount_activity} currency={act.currency} size={12.5} sign={txn.direction === 'in' ? 'positive' : 'negative'} />
@@ -212,16 +210,6 @@ export function ActivityDetailPage() {
       ) : null}
     </>
   );
-}
-
-function kindLabel(kind: string, direction: 'in' | 'out') {
-  if (kind === 'sale') return 'Vente';
-  if (kind === 'purchase') return 'Réapprovisionnement';
-  if (kind === 'settlement') return 'Règlement';
-  if (kind === 'adjustment') return 'Ajustement de stock';
-  if (kind === 'opening_balance') return 'Solde initial';
-  if (kind === 'personal_use') return 'Consommation personnelle';
-  return direction === 'in' ? 'Entrée' : 'Sortie';
 }
 
 function ActivityBudgetsCard({ activityId }: { activityId: number }) {

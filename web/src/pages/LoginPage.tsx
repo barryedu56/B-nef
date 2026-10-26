@@ -1,9 +1,13 @@
+import { CircleAlert, ShieldCheck, User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
+import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/Button';
-import { Field, TextInput } from '@/components/ui/Field';
+import { Field } from '@/components/ui/Field';
+import { IconInput } from '@/components/ui/IconInput';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { useAuth } from '@/context/AuthContext';
 
 export function LoginPage() {
@@ -35,42 +39,43 @@ export function LoginPage() {
   };
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div>
-          <h1 className="auth-title">Bénef</h1>
-          <p className="auth-subtitle">Poste d'analyse — connecte-toi pour continuer.</p>
+    <AuthLayout title="Bon retour 👋" subtitle="Connecte-toi pour retrouver tes activités et tes chiffres.">
+      <form className="auth-form" onSubmit={onSubmit} noValidate>
+        <Field label="Nom d'utilisateur">
+          <IconInput
+            icon={<User size={16} />}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            placeholder="ex. amadou"
+            autoFocus
+          />
+        </Field>
+        <Field label="Mot de passe">
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+        </Field>
+        <div className="auth-row">
+          <span />
+          <Link to="/forgot-password">Mot de passe oublié ?</Link>
         </div>
-        <form className="auth-form" onSubmit={onSubmit}>
-          <Field label="Nom d'utilisateur">
-            <TextInput value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
-          </Field>
-          <Field label="Mot de passe">
-            <TextInput
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-          </Field>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Link to="/forgot-password" style={{ fontSize: 12.5 }}>
-              Mot de passe oublié ?
-            </Link>
+        {error ? (
+          <div className="alert error" role="alert">
+            <CircleAlert size={16} />
+            {error}
           </div>
-          {error ? <span className="error-text">{error}</span> : null}
-          <Button type="submit" block loading={loading}>
-            Se connecter
-          </Button>
-        </form>
-        <div className="auth-footer">
-          <span>Pas encore de compte ?</span>
-          <Link to="/register">Créer un compte</Link>
-        </div>
-        <div className="auth-footer" style={{ fontSize: 12 }}>
-          <Link to="/confidentialite">Confidentialité</Link>
-        </div>
+        ) : null}
+        <Button type="submit" block loading={loading} className="btn-lg">
+          Se connecter
+        </Button>
+      </form>
+      <div className="auth-footer">
+        <span>Pas encore de compte ?</span>
+        <Link to="/register">Créer un compte gratuit</Link>
       </div>
-    </div>
+      <div className="auth-trust">
+        <ShieldCheck size={14} />
+        Connexion chiffrée · <Link to="/confidentialite">Confidentialité</Link>
+      </div>
+    </AuthLayout>
   );
 }

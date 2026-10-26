@@ -1,12 +1,13 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 
-import { deleteAccount, deleteAvatar, updateMe, uploadAvatar } from '@/api/auth';
+import { changePassword, deleteAccount, deleteAvatar, updateMe, uploadAvatar } from '@/api/auth';
 import { ApiError } from '@/api/client';
 import { Avatar } from '@/components/ui/Avatar';
 import { CategoriesCard, PaymentMethodsCard } from '@/components/SettingsLists';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Field, Select, TextInput } from '@/components/ui/Field';
+import { Field, Select } from '@/components/ui/Field';
+import { PasswordInput, PasswordStrength } from '@/components/ui/PasswordInput';
 import { EmptyState, ErrorBlock, LoadingBlock } from '@/components/ui/QueryState';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -127,6 +128,7 @@ export function SettingsPage() {
           ) : null}
         </Card>
 
+        <ChangePasswordCard />
         <CategoriesCard />
         <PaymentMethodsCard />
 
@@ -237,7 +239,7 @@ function DeleteAccountCard({ onDeleted }: { onDeleted: () => void }) {
       {open ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 360 }}>
           <Field label="Confirme avec ton mot de passe">
-            <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
           </Field>
           {error ? <span className="error-text">{error}</span> : null}
           <div style={{ display: 'flex', gap: 8 }}>
@@ -254,6 +256,68 @@ function DeleteAccountCard({ onDeleted }: { onDeleted: () => void }) {
           Supprimer mon compte…
         </Button>
       )}
+    </Card>
+  );
+}
+
+function ChangePasswordCard() {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirmNext, setConfirmNext] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setDone(false);
+    if (next.length < 8) {
+      setError('Le nouveau mot de passe doit faire au moins 8 caractères.');
+      return;
+    }
+    if (next !== confirmNext) {
+      setError('Les deux mots de passe ne correspondent pas.');
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    try {
+      await changePassword(current, next);
+      setCurrent('');
+      setNext('');
+      setConfirmNext('');
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Changement impossible.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card style={{ marginTop: 16 }}>
+      <span className="card-title">Mot de passe</span>
+      <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 420 }}>
+        <Field label="Mot de passe actuel">
+          <PasswordInput value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+        </Field>
+        <Field label="Nouveau mot de passe">
+          <PasswordInput value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
+        </Field>
+        <PasswordStrength password={next} />
+        <Field label="Confirmer le nouveau mot de passe">
+          <PasswordInput value={confirmNext} onChange={(e) => setConfirmNext(e.target.value)} autoComplete="new-password" />
+        </Field>
+        {error ? <div className="alert error">{error}</div> : null}
+        {done ? (
+          <div className="alert success">Mot de passe changé. Tes autres appareils ont été déconnectés.</div>
+        ) : null}
+        <div>
+          <Button type="submit" loading={busy} disabled={!current || !next}>
+            Changer le mot de passe
+          </Button>
+        </div>
+      </form>
     </Card>
   );
 }

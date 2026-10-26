@@ -12,7 +12,7 @@ export function Button({ variant = 'primary', loading, block, disabled, classNam
   const classes = ['btn', `btn-${variant}`, block ? 'btn-block' : '', className].filter(Boolean).join(' ');
   return (
     <button className={classes} disabled={disabled || loading} {...rest}>
-      {loading ? '…' : children}
+      {loading ? <span className="spinner" aria-label="Chargement" /> : children}
     </button>
   );
 }

@@ -1,9 +1,13 @@
+import { CircleAlert, Mail, ShieldCheck, User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
+import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/Button';
-import { Field, Select, TextInput } from '@/components/ui/Field';
+import { Field, Select } from '@/components/ui/Field';
+import { IconInput } from '@/components/ui/IconInput';
+import { PasswordInput, PasswordStrength } from '@/components/ui/PasswordInput';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { useAuth } from '@/context/AuthContext';
 import { isValidGuineaPhone } from '@/lib/phone';
@@ -28,6 +32,8 @@ export function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   if (status === 'signedIn') return <Navigate to="/" replace />;
+
+  const mismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -70,51 +76,47 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div>
-          <h1 className="auth-title">Créer un compte</h1>
-          <p className="auth-subtitle">Choisis ta devise principale — tu pourras en changer plus tard.</p>
-        </div>
-        <form className="auth-form" onSubmit={onSubmit}>
-          <Field label="Nom d'utilisateur">
-            <TextInput value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
-          </Field>
-          <Field label="E-mail" hint="Obligatoire : c'est le seul moyen de récupérer ton compte si tu oublies ton mot de passe.">
-            <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-          </Field>
-          <Field label="Mot de passe (8 caractères min.)">
-            <TextInput
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-          </Field>
-          <Field label="Confirmer le mot de passe">
-            <TextInput
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-          </Field>
+    <AuthLayout title="Créer ton compte" subtitle="Gratuit, en moins d'une minute. Tu pourras tout modifier plus tard.">
+      <form className="auth-form" onSubmit={onSubmit} noValidate>
+        <Field label="Nom d'utilisateur">
+          <IconInput icon={<User size={16} />} value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" placeholder="ex. amadou" autoFocus />
+        </Field>
+        <Field label="E-mail" hint="Indispensable pour récupérer ton compte si tu oublies ton mot de passe.">
+          <IconInput icon={<Mail size={16} />} type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="toi@exemple.com" />
+        </Field>
+        <Field label="Mot de passe">
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" placeholder="8 caractères minimum" />
+        </Field>
+        <PasswordStrength password={password} />
+        <Field label="Confirmer le mot de passe" error={mismatch ? 'Les deux mots de passe ne correspondent pas.' : undefined}>
+          <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+        </Field>
+        <div className="form-grid" style={{ gap: 14 }}>
           <Field label="Téléphone (facultatif)">
             <PhoneInput value={phone} onChange={setPhone} />
           </Field>
           <Field label="Devise principale">
             <Select options={CURRENCY_OPTIONS} value={baseCurrency} onChange={setBaseCurrency} />
           </Field>
-          {error ? <span className="error-text">{error}</span> : null}
-          <Button type="submit" block loading={loading}>
-            Créer mon compte
-          </Button>
-        </form>
-        <div className="auth-footer">
-          <span>Déjà un compte ?</span>
-          <Link to="/login">Se connecter</Link>
         </div>
+        {error ? (
+          <div className="alert error" role="alert">
+            <CircleAlert size={16} />
+            {error}
+          </div>
+        ) : null}
+        <Button type="submit" block loading={loading} className="btn-lg">
+          Créer mon compte
+        </Button>
+      </form>
+      <div className="auth-footer">
+        <span>Déjà un compte ?</span>
+        <Link to="/login">Se connecter</Link>
       </div>
-    </div>
+      <div className="auth-trust">
+        <ShieldCheck size={14} />
+        En créant un compte, tu acceptes la <Link to="/confidentialite">politique de confidentialité</Link>.
+      </div>
+    </AuthLayout>
   );
 }

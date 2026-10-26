@@ -20,12 +20,12 @@ export function BudgetProgress({ budget, compact }: { budget: BudgetStatus; comp
   const remaining = Number(budget.remaining);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: compact ? '6px 0' : '10px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
-        <span style={{ fontWeight: 600 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '4px 12px', fontSize: 12.5, flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 600, minWidth: 0 }}>
           {budgetTitle(budget)}
           <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}> · par {PERIOD_LABEL[budget.period]}</span>
         </span>
-        <span>
+        <span style={{ whiteSpace: 'nowrap' }}>
           <AmountText amount={budget.spent} currency={budget.currency} size={12.5} sign="neutral" />
           <span style={{ color: 'var(--text-tertiary)' }}> / </span>
           <AmountText amount={budget.planned} currency={budget.currency} size={12.5} sign="neutral" />

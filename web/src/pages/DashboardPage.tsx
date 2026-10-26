@@ -1,8 +1,11 @@
+import { Banknote, Boxes, ChartColumn, HandCoins, Receipt, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { Period } from '@/api/types';
 import { BudgetProgress } from '@/components/BudgetProgress';
+import { ProfitChart } from '@/components/ProfitChart';
+import { TxnType } from '@/components/TxnType';
 import { AmountText } from '@/components/ui/AmountText';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -18,7 +21,6 @@ import { useLowStockAcrossActivities } from '@/hooks/useProducts';
 import { useParties } from '@/hooks/useParties';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatRelativeDate } from '@/lib/dates';
-import { useFormatMoney } from '@/lib/money';
 
 const PERIOD_OPTIONS: { value: Period; label: string }[] = [
   { value: 'day', label: 'Jour' },
@@ -42,7 +44,6 @@ export function DashboardPage() {
   // le solde (positif) qui fait foi, pas l'étiquette.
   const clients = useParties();
   const recentTransactions = useTransactions({ ordering: '-occurred_on' });
-  const formatMoney = useFormatMoney();
 
   if (summary.isLoading) return <LoadingBlock label="calcul du tableau de bord" />;
   if (summary.isError || !summary.data) {
@@ -55,7 +56,6 @@ export function DashboardPage() {
   // les agrégats du résumé, donc on ne doit pas les étiqueter avec la devise
   // d'affichage sélectionnée.
   const baseCurrency = user?.base_currency ?? data.source_currency;
-  const maxSeries = Math.max(1, ...data.timeseries.map((p) => Math.abs(Number(p.net_profit))));
   const maxBreakdown = Math.max(1, ...data.by_activity.map((r) => Math.abs(Number(r.net_profit))));
   const receivables = (clients.data ?? [])
     .filter((p) => Number(p.balance) > 0)
@@ -67,6 +67,7 @@ export function DashboardPage() {
     <>
       <PageHeader
         title="Tableau de bord"
+        subtitle={`Bonjour ${user?.username ?? ''} — voici où en sont tes affaires.`}
         actions={
           <>
             <SegmentedControl options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
@@ -81,30 +82,21 @@ export function DashboardPage() {
 
       <div className="content">
         <div className="kpi-grid">
-          <KpiTile label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} sign="neutral" />
-          <KpiTile label="Dépenses" amount={data.expenses} currency={data.currency} sign="neutral" />
-          <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} sign="neutral" />
-          <KpiTile label="Bénéfice net" amount={data.net_profit} currency={data.currency} highlight />
+          <KpiTile label="Bénéfice net" amount={data.net_profit} currency={data.currency} highlight icon={<TrendingUp size={18} />} />
+          <KpiTile label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} sign="neutral" icon={<Banknote size={18} />} tone="positive" />
+          <KpiTile label="Dépenses" amount={data.expenses} currency={data.currency} sign="neutral" icon={<Receipt size={18} />} tone="negative" />
+          <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} sign="neutral" icon={<ChartColumn size={18} />} tone="info" />
           {Number(data.personal_use) > 0 ? (
-            <KpiTile label="Consommé personnellement" amount={data.personal_use} currency={data.currency} sign="neutral" />
+            <KpiTile label="Consommé personnellement" amount={data.personal_use} currency={data.currency} sign="neutral" icon={<HandCoins size={18} />} tone="warning" />
           ) : null}
-          <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} sign="neutral" />
+          <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} sign="neutral" icon={<Boxes size={18} />} tone="warning" />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <Card>
               <span className="card-title">Évolution du bénéfice net</span>
-              <div className="chart-columns">
-                {data.timeseries.map((point) => (
-                  <div
-                    key={point.month}
-                    className={['chart-bar', Number(point.net_profit) < 0 ? 'negative' : ''].filter(Boolean).join(' ')}
-                    style={{ height: `${Math.max(4, (Math.abs(Number(point.net_profit)) / maxSeries) * 100)}%` }}
-                    title={`${point.month} · ${formatMoney(point.net_profit, point.currency)}`}
-                  />
-                ))}
-              </div>
+              <ProfitChart series={data.timeseries} />
             </Card>
 
             <Card>
@@ -204,7 +196,9 @@ export function DashboardPage() {
                   {recent.map((txn) => (
                     <tr key={txn.id}>
                       <td className="mono">{formatRelativeDate(txn.occurred_on)}</td>
-                      <td>{kindLabel(txn.kind, txn.direction)}</td>
+                      <td>
+                        <TxnType kind={txn.kind} direction={txn.direction} />
+                      </td>
                       <td style={{ textAlign: 'right' }}>
                         <AmountText amount={txn.amount_base} currency={baseCurrency} size={12.5} sign={txn.direction === 'in' ? 'positive' : 'negative'} />
                       </td>
@@ -218,16 +212,6 @@ export function DashboardPage() {
       </div>
     </>
   );
-}
-
-function kindLabel(kind: string, direction: 'in' | 'out') {
-  if (kind === 'sale') return 'Vente';
-  if (kind === 'purchase') return 'Réapprovisionnement';
-  if (kind === 'settlement') return 'Règlement';
-  if (kind === 'adjustment') return 'Ajustement';
-  if (kind === 'opening_balance') return 'Solde initial';
-  if (kind === 'personal_use') return 'Consommation personnelle';
-  return direction === 'in' ? 'Entrée' : 'Sortie';
 }
 
 /** Budgets en alerte (≥ 80 %) ou dépassés — rien si tout va bien. */
