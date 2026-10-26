@@ -1,4 +1,4 @@
-import { Banknote, Boxes, ChartColumn, HandCoins, Receipt, TrendingUp, Wallet } from 'lucide-react';
+import { Banknote, Boxes, ChartColumn, ShoppingCart, HandCoins, Receipt, TrendingUp, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -88,6 +88,9 @@ export function DashboardPage() {
           <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} sign="neutral" icon={<ChartColumn size={18} />} tone="info" />
           {Number(data.personal_use) > 0 ? (
             <KpiTile label="Consommé personnellement" amount={data.personal_use} currency={data.currency} sign="neutral" icon={<HandCoins size={18} />} tone="warning" />
+          ) : null}
+          {Number(data.purchases) > 0 ? (
+            <KpiTile label="Achats de marchandise" amount={data.purchases} currency={data.currency} sign="neutral" icon={<ShoppingCart size={18} />} tone="info" />
           ) : null}
           <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} sign="neutral" icon={<Boxes size={18} />} tone="warning" />
           <KpiTile label="Argent disponible (toutes caisses)" amount={data.cash_balance} currency={data.currency} sign="neutral" icon={<Wallet size={18} />} tone="accent" />

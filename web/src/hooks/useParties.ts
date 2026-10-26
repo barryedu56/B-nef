@@ -40,3 +40,11 @@ export function useUpdateParty(id: number) {
     },
   });
 }
+
+export function usePartyStatement(id: number | undefined) {
+  return useQuery({
+    queryKey: ['parties', 'statement', id],
+    queryFn: () => partiesApi.fetchPartyStatement(id as number),
+    enabled: id !== undefined,
+  });
+}

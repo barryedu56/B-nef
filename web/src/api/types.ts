@@ -221,6 +221,9 @@ export interface Summary {
   stock_losses: string
   // Écarts constatés en comptant les caisses, déjà inclus dans `expenses`.
   cash_differences: string
+  // Marchandise achetée sur la période (de l'argent sorti, pas une charge : elle
+  // devient une charge quand elle est vendue, via le coût des ventes).
+  purchases: string
   net_profit: string
   personal_use: string
   stock_value: string
@@ -260,3 +263,69 @@ export interface GlobalSummary extends Summary {
 }
 
 export type Period = 'day' | 'week' | 'month' | 'year'
+
+export type FlowGroups = Record<string, string>
+
+/** Entrées et sorties d'argent d'une caisse (ou de toutes) sur une période. */
+export interface CashFlowBlock {
+  opening: string
+  in: FlowGroups
+  out: FlowGroups
+  total_in: string
+  total_out: string
+  closing: string
+}
+
+export interface CashFlow {
+  period_start: string
+  period_end: string
+  currency: string
+  labels: { in: Record<string, string>; out: Record<string, string> }
+  totals: CashFlowBlock
+  accounts: (CashFlowBlock & { id: number; name: string; is_cash: boolean; currency: string })[]
+}
+
+/** Bilan d'un tiers (devise principale). */
+export interface PartyStatement {
+  currency: string
+  bought: string
+  paid: string
+  sold: string
+  received: string
+  owed_to_party: string
+  owed_by_party: string
+  last_operation: string | null
+}
+
+export interface OnboardingProduct {
+  name: string
+  unit?: string
+  quantity: string
+  unit_cost: string
+  sale_price: string
+  low_stock_threshold?: string | null
+}
+
+export interface OnboardingInput {
+  cash: { account: number; amount: string }[]
+  products: OnboardingProduct[]
+  parties: { name: string; phone?: string; direction: 'in' | 'out'; amount: string }[]
+}
+
+export interface OnboardingResult {
+  currency: string
+  cash_total: string
+  stock_value: string
+  receivable: string
+  payable: string
+  products: number
+  parties: number
+}
+
+/** Lecture d'un fichier Excel / CSV de produits, avant enregistrement. */
+export interface ProductImport {
+  products: OnboardingProduct[]
+  errors: { line: number; name: string; message: string }[]
+  truncated: boolean
+  max_rows: number
+}

@@ -10,6 +10,7 @@ import { Field, Select, TextInput } from '@/components/ui/Field';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { EmptyState, ErrorBlock, LoadingBlock } from '@/components/ui/QueryState';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { PartyStatementCard } from '@/components/PartyStatementCard';
 import { SettleForm } from '@/components/SettleForm';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
 import { useAuth } from '@/context/AuthContext';
@@ -147,6 +148,8 @@ export function PartyDetailPage() {
             <AmountText amount={Math.abs(Number(p.balance))} currency={currency} size={22} sign="neutral" />
           </div>
         </Card>
+
+        <PartyStatementCard party={p} />
 
         <div style={{ marginTop: 16 }}>
           <span className="card-title">Opérations à régler</span>

@@ -1363,3 +1363,19 @@ table.table tr.clickable:hover td {
   min-height: 180px;
   gap: 6px;
 }
+
+/* Assistant de démarrage */
+.onboarding-table td {
+  padding: 6px 6px;
+}
+.onboarding-table .input {
+  height: 38px;
+}
+@media (max-width: 760px) {
+  .onboarding-party-row {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .onboarding-party-row > :first-child {
+    grid-column: 1 / -1;
+  }
+}

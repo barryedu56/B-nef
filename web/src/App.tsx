@@ -15,6 +15,7 @@ import { InventoryPage } from '@/pages/InventoryPage';
 import { DeleteAccountInfoPage, PrivacyPage } from '@/pages/LegalPages';
 import { LoginPage } from '@/pages/LoginPage';
 import { MoneyPage } from '@/pages/MoneyPage';
+import { OnboardingPage } from '@/pages/OnboardingPage';
 import { PartiesPage } from '@/pages/PartiesPage';
 import { PartyDetailPage } from '@/pages/PartyDetailPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -57,6 +58,7 @@ function App() {
                 <Route path="/money" element={<MoneyPage />} />
                 <Route path="/activities" element={<ActivitiesPage />} />
                 <Route path="/activities/:id" element={<ActivityDetailPage />} />
+                <Route path="/activities/:id/onboarding" element={<OnboardingPage />} />
                 <Route path="/transactions" element={<TransactionsPage />} />
                 <Route path="/inventory" element={<InventoryPage />} />
                 <Route path="/parties" element={<PartiesPage />} />

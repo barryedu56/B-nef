@@ -1,5 +1,6 @@
 import { apiRequest } from './client';
-import type { Activity, Paginated } from './types';
+import type { Activity, OnboardingInput, OnboardingResult, Paginated, ProductImport } from './types';
+import { downloadFile } from './reports';
 
 export async function listActivities(params?: { is_archived?: boolean }) {
   const data = await apiRequest<Paginated<Activity>>('/activities/', { params });
@@ -39,3 +40,20 @@ export const ACTIVITY_TYPE_OPTIONS: { value: Activity['type']; label: string }[]
   { value: 'household', label: 'Ménage / dépenses' },
   { value: 'other', label: 'Autre' },
 ];
+
+/** Assistant de démarrage : argent par caisse, marchandise déjà en stock,
+ * dettes et créances d'avant Bénef, enregistrés en une fois. */
+export function submitOnboarding(activityId: number, input: OnboardingInput) {
+  return apiRequest<OnboardingResult>(`/activities/${activityId}/onboarding/`, { method: 'POST', body: input });
+}
+
+/** Lit un fichier Excel / CSV de produits sans rien enregistrer. */
+export function parseProductFile(file: File) {
+  const body = new FormData();
+  body.append('file', file);
+  return apiRequest<ProductImport>('/products/import-parse/', { method: 'POST', body });
+}
+
+export function downloadProductTemplate() {
+  return downloadFile('/products/import-template/', {}, 'benef-modele-produits.xlsx');
+}

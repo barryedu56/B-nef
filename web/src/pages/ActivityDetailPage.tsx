@@ -1,4 +1,4 @@
-import { Banknote, Boxes, ChevronLeft, ChevronRight, ChartColumn, HandCoins, PackageMinus, Receipt, TrendingUp, Wallet } from 'lucide-react';
+import { Banknote, Boxes, ShoppingCart, ChevronLeft, ChevronRight, ChartColumn, HandCoins, PackageMinus, Receipt, TrendingUp, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -99,6 +99,9 @@ export function ActivityDetailPage() {
             {act.has_inventory ? (
               <KpiTile label="Consommé personnellement" amount={data.personal_use} currency={data.currency} sign="neutral" icon={<HandCoins size={18} />} tone="warning" />
             ) : null}
+            {act.has_inventory ? (
+              <KpiTile label="Achats de marchandise" amount={data.purchases} currency={data.currency} sign="neutral" icon={<ShoppingCart size={18} />} tone="info" />
+            ) : null}
             {act.has_inventory ? <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} sign="neutral" icon={<Boxes size={18} />} tone="warning" /> : null}
             <KpiTile label="Caisse" amount={data.cash_balance} currency={data.currency} sign="neutral" icon={<Wallet size={18} />} tone="accent" />
           </div>
@@ -189,6 +192,16 @@ export function ActivityDetailPage() {
               <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>Créée le</span>
               <span style={{ fontSize: 12.5 }}>{new Date(act.created_at).toLocaleDateString('fr-FR')}</span>
             </div>
+          </Card>
+
+          <Card>
+            <span className="card-title">Assistant de démarrage</span>
+            <span className="field-hint" style={{ display: 'block', marginBottom: 10 }}>
+              Ajoute d'un coup l'argent, la marchandise (ou un fichier Excel) et les dettes que tu avais avant Bénef.
+            </span>
+            <Link to={`/activities/${act.id}/onboarding`} className="btn btn-secondary">
+              Ouvrir l'assistant
+            </Link>
           </Card>
 
           <Button

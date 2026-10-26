@@ -4,7 +4,7 @@ import { Field, Select, TextInput } from '@/components/ui/Field';
 
 /** Unités proposées (valeur enregistrée au singulier). Même liste que l'app
  * mobile (mobile/src/components/UnitField.tsx). */
-const UNIT_OPTIONS = [
+export const UNIT_OPTIONS = [
   { value: 'pièce', label: 'Pièce' },
   { value: 'kg', label: 'Kilogramme (kg)' },
   { value: 'g', label: 'Gramme (g)' },

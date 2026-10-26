@@ -14,7 +14,7 @@ export function fetchGlobalSummary(params: { period: Period; currency?: string; 
 
 /** Télécharge un fichier généré par l'API (pas `apiRequest` : réponse
  * binaire, pas JSON) et déclenche l'enregistrement dans le navigateur. */
-async function downloadFile(path: string, params: Record<string, string | undefined>, fallbackName: string) {
+export async function downloadFile(path: string, params: Record<string, string | undefined>, fallbackName: string) {
   const url = new URL(`${API_URL}${path}`, window.location.origin);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== '') url.searchParams.set(key, value);

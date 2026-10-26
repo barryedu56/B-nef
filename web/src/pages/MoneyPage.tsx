@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 
 import { ApiError } from '@/api/client';
 import type { AccountOverviewRow, CashCount } from '@/api/types';
+import { CashFlowCard } from '@/components/CashFlowCard';
 import { TxnType } from '@/components/TxnType';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { AmountText } from '@/components/ui/AmountText';
@@ -95,6 +96,8 @@ export function MoneyPage() {
             />
           ))}
         </div>
+
+        <CashFlowCard />
 
         {selected ? <AccountDetail account={selected} /> : null}
 

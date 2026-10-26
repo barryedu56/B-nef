@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { ACTIVITY_TYPE_OPTIONS } from '@/api/activities';
 import { ApiError } from '@/api/client';
 import type { Activity } from '@/api/types';
-import { AmountInput } from '@/components/ui/AmountInput';
 import { AmountText } from '@/components/ui/AmountText';
 import { Button } from '@/components/ui/Button';
 import { Field, Select, TextInput } from '@/components/ui/Field';
@@ -16,7 +15,6 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useActivities, useCreateActivity } from '@/hooks/useActivities';
 import { useGlobalSummary } from '@/hooks/useReports';
-import { usePaymentMethods } from '@/hooks/useTransactions';
 
 const TYPE_ICONS: Partial<Record<Activity['type'], LucideIcon>> = {
   commerce: Store,
@@ -125,9 +123,6 @@ function CreateActivityModal({ onClose }: { onClose: () => void }) {
   const [hasInventory, setHasInventory] = useState(false);
   const [hasDebts, setHasDebts] = useState(false);
   const [hasBudget, setHasBudget] = useState(false);
-  const [openingBalance, setOpeningBalance] = useState('0');
-  const [openingAccountId, setOpeningAccountId] = useState('');
-  const paymentMethods = usePaymentMethods();
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (e: FormEvent) => {
@@ -145,11 +140,11 @@ function CreateActivityModal({ onClose }: { onClose: () => void }) {
         has_inventory: hasInventory,
         has_debts: hasDebts,
         has_budget: hasBudget,
-        opening_balance: openingBalance || '0',
-        opening_account: openingAccountId ? Number(openingAccountId) : null,
       });
       onClose();
-      navigate(`/activities/${activity.id}`);
+      // L'assistant de démarrage prend la suite : argent par caisse,
+      // marchandise déjà en stock, dettes — chaque étape peut être passée.
+      navigate(`/activities/${activity.id}/onboarding`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Impossible de créer l’activité.');
     }
@@ -167,18 +162,6 @@ function CreateActivityModal({ onClose }: { onClose: () => void }) {
         <Field label="Devise">
           <Select options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
         </Field>
-        <Field label="Argent de départ (facultatif)" hint="L'argent que tu as déjà pour cette activité. Il compte dans ta caisse, pas dans ton bénéfice.">
-          <AmountInput value={openingBalance} onChange={setOpeningBalance} />
-        </Field>
-        {Number(openingBalance.replace(',', '.')) > 0 ? (
-          <Field label="Où se trouve cet argent ?">
-            <Select
-              options={(paymentMethods.data ?? []).map((m) => ({ value: String(m.id), label: m.name }))}
-              value={openingAccountId || String(paymentMethods.data?.[0]?.id ?? '')}
-              onChange={setOpeningAccountId}
-            />
-          </Field>
-        ) : null}
 
         <Switch label="Inventaire" description="Produits, stock, coût moyen pondéré" checked={hasInventory} onChange={setHasInventory} />
         <Switch label="Crédits & dettes" description="Clients qui doivent, fournisseurs à payer" checked={hasDebts} onChange={setHasDebts} />

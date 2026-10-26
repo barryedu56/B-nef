@@ -1,5 +1,6 @@
 import { apiRequest } from './client';
 import type {
+  CashFlow,
   AccountsOverview,
   CashCount,
   Category,
@@ -136,4 +137,9 @@ export interface TransferInput {
 
 export function createTransfer(input: TransferInput) {
   return apiRequest<{ out: Transaction; in: Transaction }>('/transfers/', { method: 'POST', body: input });
+}
+
+/** Entrées et sorties d'argent de chaque caisse sur une période. */
+export function fetchCashFlow(params: { period: string; date?: string }) {
+  return apiRequest<CashFlow>('/payment-methods/flow/', { params });
 }
