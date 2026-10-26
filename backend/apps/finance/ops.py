@@ -16,7 +16,7 @@ from django.utils import timezone
 from apps.inventory.models import Product, StockMovement
 
 from .models import Transaction
-from .services import create_transaction
+from .services import add_fee, create_transaction
 
 
 class VoidError(Exception):
@@ -66,10 +66,8 @@ def void_transaction(txn: Transaction, user, reason: str = "") -> Transaction:
         # Les deux moitiés d'un transfert s'annulent ensemble.
         peer = txn.transfer_peer or Transaction.objects.filter(transfer_peer=txn).first()
         if peer is not None and not peer.is_voided:
-            peer.voided_at = timezone.now()
-            peer.voided_reason = reason
-            peer.voided_by = user
-            peer.save(update_fields=["voided_at", "voided_reason", "voided_by", "updated_at"])
+            _mark_voided(peer, user, reason)
+            _void_fees(peer, user, reason)
     elif txn.kind == Transaction.Kind.ADJUSTMENT:
         # Le stock a pu bouger depuis : remettre l'ancienne quantité
         # écraserait les ventes/réappros suivants.
@@ -81,11 +79,22 @@ def void_transaction(txn: Transaction, user, reason: str = "") -> Transaction:
         # recalculé dynamiquement puisqu'on filtre les transactions annulées.
         _guard_not_settled(txn)
 
+    _mark_voided(txn, user, reason)
+    # Les frais n'existent que parce que l'opération a eu lieu.
+    _void_fees(txn, user, reason)
+    return txn
+
+
+def _mark_voided(txn: Transaction, user, reason: str) -> None:
     txn.voided_at = timezone.now()
     txn.voided_reason = reason
     txn.voided_by = user
     txn.save(update_fields=["voided_at", "voided_reason", "voided_by", "updated_at"])
-    return txn
+
+
+def _void_fees(txn: Transaction, user, reason: str) -> None:
+    for fee in txn.fees.filter(voided_at__isnull=True):
+        _mark_voided(fee, user, reason)
 
 
 def _reverse_sale(txn: Transaction) -> None:
@@ -182,6 +191,7 @@ def settle_transaction(
     payment_method=None,
     occurred_on=None,
     note: str = "",
+    fee: Decimal | None = None,
 ) -> Transaction:
     """Enregistre un règlement — total ou **partiel** — d'une opération à crédit.
 
@@ -223,4 +233,6 @@ def settle_transaction(
     original.settled_amount = original.settled_amount + settle_amount
     original.is_settled = original.settled_amount >= original.amount
     original.save(update_fields=["settled_amount", "is_settled", "updated_at"])
+    # Frais de l'opérateur (ex. Orange Money) sur ce paiement : une charge en plus.
+    add_fee(settlement, fee, note="Frais du règlement")
     return settlement

@@ -142,6 +142,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         qs = (
             Transaction.objects.filter(activity__owner=self.request.user)
             .select_related("activity", "currency", "category", "payment_method", "party")
+            .prefetch_related("fees")
         )
         # ?cash_only=1 : seulement les opérations qui ont réellement fait
         # bouger l'argent (mouvements d'une caisse) — pas une vente à crédit,
@@ -190,8 +191,9 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 payment_method=payment_method,
                 occurred_on=v.get("occurred_on"),
                 note=v.get("note", ""),
+                fee=v.get("fee"),
             )
-        except VoidError as exc:
+        except (VoidError, ValueError) as exc:
             raise ValidationError({"detail": str(exc)}) from exc
         return Response(TransactionSerializer(settlement).data, status=status.HTTP_201_CREATED)
 
@@ -268,6 +270,7 @@ class PurchaseView(_OwnedLookupMixin, APIView):
                 new_sale_price=v.get("sale_price"),
                 note=v.get("note", ""),
                 user=request.user,
+                payment_fee=v.get("fee"),
             )
         except (ValueError, VoidError) as exc:
             raise ValidationError({"detail": str(exc)}) from exc
@@ -362,7 +365,7 @@ class TransferView(_OwnedLookupMixin, APIView):
             out, inn = accounts.transfer(
                 user=request.user, from_account=from_account, to_account=to_account, amount=v["amount"],
                 from_activity=from_activity, to_activity=to_activity, currency=v.get("currency"),
-                occurred_on=v.get("occurred_on"), note=v["note"],
+                occurred_on=v.get("occurred_on"), note=v["note"], fee=v.get("fee"),
             )
         except (accounts.AccountError, ValueError) as exc:
             raise ValidationError({"detail": str(exc)}) from exc

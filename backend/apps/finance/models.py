@@ -94,6 +94,10 @@ class Transaction(TimeStampedModel):
         # Écart constaté en comptant la caisse : un manque est une perte (ou
         # un surplus un gain), compté dans les charges.
         CASH_ADJUSTMENT = "cash_adjustment", "Écart de caisse"
+        # Frais prélevés par l'opérateur (Orange Money, banque…) sur un
+        # transfert, un achat payé ou un règlement : une charge, rattachée à
+        # l'opération qui l'a causée (`fee_for`).
+        FEE = "fee", "Frais de transfert"
 
     activity = models.ForeignKey(
         "activities.Activity", on_delete=models.CASCADE, related_name="transactions"
@@ -160,6 +164,17 @@ class Transaction(TimeStampedModel):
         blank=True,
         related_name="+",
         verbose_name="autre moitié du transfert",
+    )
+
+    # Frais de transfert : l'opération (transfert, achat, règlement) qui les
+    # a causés. Annuler cette opération annule aussi ses frais.
+    fee_for = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fees",
+        verbose_name="frais de l'opération",
     )
 
     # Annulation façon comptable : on ne supprime jamais une écriture, on

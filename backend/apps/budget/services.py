@@ -29,7 +29,7 @@ def _spent(budget: Budget, start: date, end: date) -> Decimal:
         activity__owner_id=budget.owner_id,
         voided_at__isnull=True,
         direction=Transaction.Direction.OUT,
-        kind=Transaction.Kind.SIMPLE,
+        kind__in=(Transaction.Kind.SIMPLE, Transaction.Kind.FEE),
         occurred_on__gte=start,
         occurred_on__lte=end,
         activity__is_archived=False,

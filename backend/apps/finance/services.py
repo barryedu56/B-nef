@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from apps.currencies.services import convert, get_rate
 
-from .models import Transaction
+from .models import Category, Transaction
 
 
 def compute_amounts(
@@ -97,3 +97,39 @@ def recompute_snapshot(txn: Transaction) -> Transaction:
         setattr(txn, field, value)
     txn.save(update_fields=list(amounts.keys()) + ["updated_at"])
     return txn
+
+
+FEE_CATEGORY = "Frais de transfert"
+
+
+def fee_category(owner) -> Category:
+    """Catégorie système « Frais de transfert » (commune à toutes les
+    activités), pour retrouver d'un coup ce que coûtent les transferts."""
+    category, _ = Category.objects.get_or_create(
+        owner=owner, activity=None, name=FEE_CATEGORY, direction=Transaction.Direction.OUT,
+        defaults={"is_system": True},
+    )
+    return category
+
+
+def add_fee(parent: Transaction, amount, note: str = "") -> Transaction | None:
+    """Frais prélevés par l'opérateur sur `parent` (transfert, achat payé,
+    règlement) : une charge de l'activité de `parent`, sortie de la même
+    caisse, dans la même devise et à la même date. Rien si le montant est nul."""
+    amount = Decimal(amount or 0)
+    if amount <= 0:
+        return None
+    if parent.is_credit and parent.kind != Transaction.Kind.SETTLEMENT:
+        raise ValueError("Des frais ne s'ajoutent qu'à une opération payée tout de suite.")
+    return create_transaction(
+        activity=parent.activity,
+        direction=Transaction.Direction.OUT,
+        amount=amount,
+        currency=parent.currency_id,
+        occurred_on=parent.occurred_on,
+        kind=Transaction.Kind.FEE,
+        payment_method=parent.payment_method,
+        category=fee_category(parent.activity.owner),
+        fee_for=parent,
+        note=note or f"Frais — {parent.note}"[:255],
+    )

@@ -100,6 +100,7 @@ class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
     is_voided = serializers.BooleanField(read_only=True)
     kind_display = serializers.CharField(source="get_kind_display", read_only=True)
     remaining_amount = serializers.DecimalField(max_digits=20, decimal_places=2, read_only=True)
+    fees_total = serializers.SerializerMethodField()
 
     class Meta:
         model = Transaction
@@ -108,12 +109,17 @@ class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
             "amount_activity", "amount_base", "fx_rate_to_base", "fx_date",
             "category", "payment_method", "party", "occurred_on", "note",
             "is_credit", "settled_amount", "remaining_amount", "is_settled", "settles", "created_at",
-            "voided_at", "voided_reason", "is_voided",
+            "voided_at", "voided_reason", "is_voided", "fee_for", "fees_total",
         )
         read_only_fields = (
             "id", "amount_activity", "amount_base", "fx_rate_to_base", "fx_date", "created_at",
-            "settled_amount", "is_settled", "settles", "voided_at", "voided_reason",
+            "settled_amount", "is_settled", "settles", "voided_at", "voided_reason", "fee_for",
         )
+
+    def get_fees_total(self, obj) -> str:
+        """Frais (non annulés) payés en plus de cette opération."""
+        total = sum((f.amount for f in obj.fees.all() if f.voided_at is None), Decimal("0"))
+        return str(total.quantize(Decimal("0.01")))
 
     def validate_activity(self, activity):
         if activity.owner_id != self.context["request"].user.id:
@@ -198,6 +204,10 @@ class SettleTransactionSerializer(serializers.Serializer):
     payment_method = serializers.IntegerField(required=False, allow_null=True)
     occurred_on = serializers.DateField(required=False)
     note = serializers.CharField(required=False, allow_blank=True, default="")
+    fee = serializers.DecimalField(
+        max_digits=20, decimal_places=2, required=False, allow_null=True, min_value=Decimal("0"),
+        help_text="Frais de l'opérateur (Orange Money, banque…) payés en plus : enregistrés comme une charge.",
+    )
 
 
 # --- Endpoints composites ------------------------------------------------
@@ -264,6 +274,10 @@ class PurchaseInputSerializer(serializers.Serializer):
         help_text="Nouveau prix de vente à appliquer au produit (proposé automatiquement à partir du coût rendu + marge).",
     )
     note = serializers.CharField(required=False, allow_blank=True, default="")
+    fee = serializers.DecimalField(
+        max_digits=20, decimal_places=2, required=False, allow_null=True, min_value=Decimal("0"),
+        help_text="Frais de l'opérateur (Orange Money, banque…) payés en plus : enregistrés comme une charge.",
+    )
 
     def validate(self, attrs):
         if attrs.get("amount_paid_now") and not attrs.get("is_credit"):
@@ -305,6 +319,10 @@ class TransferInputSerializer(serializers.Serializer):
     currency = serializers.CharField(required=False, allow_null=True)
     occurred_on = serializers.DateField(required=False)
     note = serializers.CharField(required=False, allow_blank=True, default="")
+    fee = serializers.DecimalField(
+        max_digits=20, decimal_places=2, required=False, allow_null=True, min_value=Decimal("0"),
+        help_text="Frais de l'opérateur (Orange Money, banque…) payés en plus : enregistrés comme une charge.",
+    )
 
 
 class CashCountInputSerializer(serializers.Serializer):

@@ -20,7 +20,7 @@ from django.utils import timezone
 from apps.currencies.services import try_convert
 
 from .models import CashCount, PaymentMethod, Transaction
-from .services import create_transaction
+from .services import add_fee, create_transaction
 
 Z = Decimal("0")
 CENTS = Decimal("0.01")
@@ -94,11 +94,15 @@ def transfer(
     currency: str | None = None,
     occurred_on: date | None = None,
     note: str = "",
+    fee: Decimal | None = None,
 ) -> tuple[Transaction, Transaction]:
     """Déplace de l'argent d'une caisse à une autre et/ou d'une activité à
     une autre (ex. 100 000 de la boutique vers la maison, ou des espèces
     déposées à la banque). Deux opérations liées, jamais un gain ni une
-    charge."""
+    charge.
+
+    `fee` : frais de l'opérateur, payés en plus par la caisse de départ — une
+    charge de l'activité de départ. `amount` est ce qui arrive à destination."""
     amount = Decimal(amount)
     if amount <= 0:
         raise AccountError("Le montant doit être positif.")
@@ -118,6 +122,7 @@ def transfer(
     )
     out.transfer_peer = inn
     out.save(update_fields=["transfer_peer", "updated_at"])
+    add_fee(out, fee, note=f"Frais du transfert {from_account.name} → {to_account.name}")
     return out, inn
 
 
@@ -168,6 +173,7 @@ OUT_GROUPS = {
     "supplier_payments": "Dettes payées aux fournisseurs",
     "withdrawals": "Retraits personnels",
     "transfers_out": "Transferts envoyés",
+    "fees": "Frais de transfert",
     "cash_shortage": "Manques constatés",
 }
 
@@ -180,7 +186,7 @@ def _flow_group(kind: str, direction: str) -> str:
         }.get(kind, "other_income")
     return {
         K.PURCHASE: "purchases", K.SETTLEMENT: "supplier_payments", K.WITHDRAWAL: "withdrawals",
-        K.TRANSFER: "transfers_out", K.CASH_ADJUSTMENT: "cash_shortage",
+        K.TRANSFER: "transfers_out", K.CASH_ADJUSTMENT: "cash_shortage", K.FEE: "fees",
     }.get(kind, "expenses")
 
 

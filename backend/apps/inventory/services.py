@@ -13,7 +13,7 @@ from django.utils import timezone
 from apps.currencies.services import convert
 from apps.finance.models import Transaction
 from apps.finance.ops import settle_transaction
-from apps.finance.services import create_transaction
+from apps.finance.services import add_fee, create_transaction
 
 from .models import Product, SaleLine, StockMovement
 
@@ -51,6 +51,7 @@ def restock(
     new_sale_price: Decimal | None = None,
     note: str = "",
     user=None,
+    payment_fee: Decimal | None = None,
 ) -> StockMovement:
     """Réapprovisionnement : entre du stock et enregistre l'achat.
 
@@ -72,6 +73,11 @@ def restock(
     règlement immédiat de `amount_paid_now` est créé dans la foulée — la
     caisse bouge tout de suite pour cette part, et il reste 20 000 de dette
     à régler plus tard (symétrique à l'acompte côté vente).
+
+    `payment_fee` : frais de l'opérateur pour payer le fournisseur (Orange
+    Money, virement…). Contrairement à `extra_fees`, ce n'est pas un coût de
+    la marchandise mais une charge, rattachée au paiement (l'achat payé, ou
+    l'acompte s'il est à crédit).
     """
     occurred_on = occurred_on or timezone.localdate()
     quantity = Decimal(quantity)
@@ -142,17 +148,21 @@ def restock(
         note=note,
     )
 
-    if is_credit and amount_paid_now:
-        amount_paid_now = Decimal(amount_paid_now)
-        if amount_paid_now > 0:
-            settle_transaction(
-                txn,
-                user,
-                amount=amount_paid_now,
-                payment_method=payment_method,
-                occurred_on=occurred_on,
-                note="Acompte versé au réapprovisionnement",
-            )
+    paid_now = Decimal(amount_paid_now or 0)
+    if is_credit and payment_fee and paid_now <= 0:
+        raise ValueError("Des frais ne s'ajoutent qu'à un paiement : rien n'est payé tout de suite.")
+    if is_credit and paid_now > 0:
+        settle_transaction(
+            txn,
+            user,
+            amount=paid_now,
+            payment_method=payment_method,
+            occurred_on=occurred_on,
+            note="Acompte versé au réapprovisionnement",
+            fee=payment_fee,
+        )
+    elif not is_credit:
+        add_fee(txn, payment_fee, note=f"Frais du paiement — réappro {product.name}")
 
     return movement
 

@@ -110,7 +110,7 @@ def _flows(txns, amount_field: str, group: str | None = None) -> dict:
         kind, direction = row["kind"], row["direction"]
         if direction == D.IN and kind in (K.SIMPLE, K.SALE):
             bucket["revenue"] += total
-        elif direction == D.OUT and kind == K.SIMPLE:
+        elif direction == D.OUT and kind in (K.SIMPLE, K.FEE):
             bucket["expenses"] += total
         elif kind == K.ADJUSTMENT:
             bucket["stock_losses"] += total if direction == D.OUT else -total
