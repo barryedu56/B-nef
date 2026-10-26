@@ -122,7 +122,7 @@ export default function ActivityDashboardScreen() {
           />
           {act.has_inventory ? (
             <ActionButton
-              label="+ Réappro"
+              label="Produits & stock"
               onPress={() => router.push({ pathname: '/activity/[id]/products', params: { id } })}
             />
           ) : null}
@@ -260,17 +260,20 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: fontSize.md, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.sm },
   actionsRow: { flexDirection: 'row', gap: spacing.sm },
   actionButton: {
-    flex: 1,
-    minHeight: 44,
+    // Largeur selon le texte (« Produits & stock » est plus long que
+    // « + Vente »), l'espace restant partagé : chaque libellé tient sur une ligne.
+    flexGrow: 1,
+    flexBasis: 'auto',
+    minHeight: 48,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: spacing.md,
   },
   actionButtonPrimary: { backgroundColor: colors.accent, borderColor: colors.accent },
-  actionButtonLabel: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
+  actionButtonLabel: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary, textAlign: 'center' },
   actionButtonLabelPrimary: { color: colors.white },
   listHeader: { marginBottom: 2 },
   txnRow: {
