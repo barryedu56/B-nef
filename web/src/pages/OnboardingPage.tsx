@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { downloadProductTemplate, parseProductFile, submitOnboarding } from '@/api/activities';
 import { ApiError } from '@/api/client';
 import type { OnboardingInput, OnboardingResult, ProductImport } from '@/api/types';
-import { UNIT_OPTIONS } from '@/components/UnitSelect';
+import { UnitSelect } from '@/components/UnitSelect';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { AmountText } from '@/components/ui/AmountText';
 import { Button } from '@/components/ui/Button';
@@ -353,17 +353,12 @@ function ProductsStep({
         </div>
       ) : null}
 
-      <datalist id="onboarding-units">
-        {UNIT_OPTIONS.map((u) => (
-          <option key={u.value} value={u.value} label={u.label} />
-        ))}
-      </datalist>
       <div className="table-wrap" style={{ marginTop: 10 }}>
         <table className="table onboarding-table">
           <thead>
             <tr>
               <th style={{ minWidth: 180 }}>Produit</th>
-              <th style={{ minWidth: 100 }}>Unité</th>
+              <th style={{ minWidth: 150 }}>Unité</th>
               <th style={{ minWidth: 90 }}>Quantité</th>
               <th style={{ minWidth: 120 }}>Coût unitaire</th>
               <th style={{ minWidth: 120 }}>Prix de vente</th>
@@ -376,7 +371,7 @@ function ProductsStep({
             {products.map((p) => (
               <tr key={p.key}>
                 <td><TextInput value={p.name} onChange={(e) => updateRow(setProducts, p.key, { name: e.target.value })} placeholder="ex. Sac de riz 25 kg" aria-label="Produit" /></td>
-                <td><TextInput value={p.unit} onChange={(e) => updateRow(setProducts, p.key, { unit: e.target.value })} list="onboarding-units" aria-label="Unité" /></td>
+                <td><UnitSelect compact value={p.unit} onChange={(v) => updateRow(setProducts, p.key, { unit: v })} /></td>
                 <td><TextInput value={p.quantity} onChange={(e) => updateRow(setProducts, p.key, { quantity: e.target.value })} inputMode="decimal" placeholder="0" aria-label="Quantité" /></td>
                 <td><AmountInput value={p.unitCost} onChange={(v) => updateRow(setProducts, p.key, { unitCost: v })} placeholder="0" aria-label="Coût unitaire" /></td>
                 <td><AmountInput value={p.salePrice} onChange={(v) => updateRow(setProducts, p.key, { salePrice: v })} placeholder="0" aria-label="Prix de vente" /></td>
