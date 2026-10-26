@@ -105,6 +105,11 @@ export function TransactionDetailModal({ transactionId, onClose }: TransactionDe
           {t.is_credit ? (
             <span style={{ fontSize: 11.5, color: 'var(--warning)', fontWeight: 600 }}>{creditStatusLabel(t)}</span>
           ) : null}
+          {Number(t.fees_total ?? 0) > 0 ? (
+            <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
+              + {formatAmount(t.fees_total ?? '0', t.currency)} de frais de transfert
+            </span>
+          ) : null}
           {t.is_voided ? (
             <span style={{ fontSize: 11.5, color: 'var(--negative)', fontWeight: 600 }}>
               Annulée{t.voided_reason ? ` — ${t.voided_reason}` : ''}

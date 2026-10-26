@@ -2,6 +2,7 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   Calculator,
+  Tag,
   CircleMinus,
   CirclePlus,
   ArrowUpRight,
@@ -39,6 +40,8 @@ export function kindLabel(kind: TransactionKind | string, direction: Direction) 
       return direction === 'in' ? 'Transfert reçu' : 'Transfert envoyé';
     case 'cash_adjustment':
       return direction === 'in' ? 'Écart de caisse (surplus)' : 'Écart de caisse (manque)';
+    case 'fee':
+      return 'Frais de transfert';
     default:
       return direction === 'in' ? 'Entrée' : 'Dépense';
   }
@@ -55,6 +58,7 @@ const ICONS: Partial<Record<TransactionKind, LucideIcon>> = {
   withdrawal: CircleMinus,
   transfer: ArrowLeftRight,
   cash_adjustment: Calculator,
+  fee: Tag,
 };
 
 /** Icône (verte pour une entrée, rouge pour une sortie) + libellé du type. */

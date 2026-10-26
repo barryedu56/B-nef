@@ -89,6 +89,7 @@ export type TransactionKind =
   | 'withdrawal'
   | 'transfer'
   | 'cash_adjustment'
+  | 'fee'
 
 export interface Transaction {
   id: number
@@ -116,6 +117,10 @@ export interface Transaction {
   voided_at: string | null
   voided_reason: string
   is_voided: boolean
+  /** Frais de transfert : l'opération qui les a causés. */
+  fee_for?: number | null
+  /** Frais (Orange Money, banque…) payés en plus de cette opération. */
+  fees_total?: string
 }
 
 export interface Product {

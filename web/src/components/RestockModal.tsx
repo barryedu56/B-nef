@@ -41,6 +41,7 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
   const [isCredit, setIsCredit] = useState(false);
   const [partyId, setPartyId] = useState<string | null>(null);
   const [amountPaidNow, setAmountPaidNow] = useState('');
+  const [fee, setFee] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const qty = Number(quantity.replace(',', '.')) || 0;
@@ -49,6 +50,11 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
   const landedUnitCost = qty > 0 ? cost + fees / qty : cost;
   const total = qty > 0 && cost >= 0 ? qty * cost + fees : 0;
   const paidNowValue = amountPaidNow ? Number(amountPaidNow.replace(',', '.')) : 0;
+  // Frais de l'opérateur : seulement si de l'argent part tout de suite, et
+  // pas en espèces.
+  const method = (paymentMethods.data ?? []).find((m) => String(m.id) === paymentMethodId);
+  const showFee = !!method && !method.is_cash && (!isCredit || paidNowValue > 0);
+  const feeValue = showFee ? Number(fee.replace(',', '.')) || 0 : 0;
 
   const margin = Number(marginPct.replace(',', '.'));
   const derivedPrice = landedUnitCost > 0 && !Number.isNaN(margin) ? Math.round(landedUnitCost * (1 + margin / 100)) : 0;
@@ -89,6 +95,7 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
         party: isCredit && partyId ? Number(partyId) : null,
         is_credit: isCredit,
         amount_paid_now: isCredit && paidNowValue > 0 ? String(paidNowValue) : undefined,
+        fee: feeValue > 0 ? String(feeValue) : undefined,
         sale_price: salePriceValue > 0 ? String(salePriceValue) : undefined,
       });
       onClose();
@@ -162,6 +169,14 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
               <AmountInput value={amountPaidNow} onChange={setAmountPaidNow} placeholder="0" />
             </Field>
           </>
+        ) : null}
+
+        {showFee ? (
+          <Field
+            label="Frais de transfert (facultatif)"
+            hint="Ce que l'opérateur prend pour payer le fournisseur. Compté comme une dépense, pas dans le coût du produit.">
+            <AmountInput value={fee} onChange={setFee} placeholder="0" />
+          </Field>
         ) : null}
 
         {error ? <span className="error-text">{error}</span> : null}

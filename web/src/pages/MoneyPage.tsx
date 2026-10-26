@@ -255,6 +255,7 @@ function TransferModal({ accounts, onClose }: { accounts: AccountOverviewRow[]; 
   const [toActivity, setToActivity] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [fee, setFee] = useState('');
   const [error, setError] = useState<string | null>(null);
   const from = accounts.find((a) => String(a.id) === fromId);
   const fromAct = fromActivity || (acts[0] ? String(acts[0].id) : '');
@@ -275,6 +276,7 @@ function TransferModal({ accounts, onClose }: { accounts: AccountOverviewRow[]; 
         amount: String(value),
         currency: from?.effective_currency,
         note: note.trim(),
+        fee: Number(fee.replace(',', '.')) > 0 ? String(Number(fee.replace(',', '.'))) : undefined,
       });
       onClose();
     } catch (err) {
@@ -293,9 +295,14 @@ function TransferModal({ accounts, onClose }: { accounts: AccountOverviewRow[]; 
             <Select options={accountOptions(accounts)} value={toId} onChange={setToId} />
           </Field>
         </div>
-        <Field label={`Montant${from ? ` (${from.effective_currency})` : ''}`}>
-          <AmountInput value={amount} onChange={setAmount} placeholder="0" autoFocus />
-        </Field>
+        <div className="form-grid" style={{ gap: 12 }}>
+          <Field label={`Montant qui arrive${from ? ` (${from.effective_currency})` : ''}`}>
+            <AmountInput value={amount} onChange={setAmount} placeholder="0" autoFocus />
+          </Field>
+          <Field label="Frais de transfert (facultatif)" hint={`Payés en plus par ${from?.name ?? 'la caisse de départ'}.`}>
+            <AmountInput value={fee} onChange={setFee} placeholder="0" />
+          </Field>
+        </div>
         {acts.length > 1 ? (
           <div className="form-grid" style={{ gap: 12 }}>
             <Field label="Activité qui donne">
@@ -309,7 +316,10 @@ function TransferModal({ accounts, onClose }: { accounts: AccountOverviewRow[]; 
         <Field label="Note (facultatif)">
           <TextInput value={note} onChange={(e) => setNote(e.target.value)} placeholder="ex. dépôt à la banque" />
         </Field>
-        <span className="field-hint">Un transfert n'est ni un gain ni une dépense : ton bénéfice ne change pas.</span>
+        <span className="field-hint">
+          Un transfert n'est ni un gain ni une dépense : seule la répartition de ton argent bouge. Seuls les frais comptent comme une
+          dépense, pour l'activité qui envoie.
+        </span>
         {error ? <div className="alert error">{error}</div> : null}
         <div className="form-actions">
           <Button type="button" variant="secondary" onClick={onClose}>

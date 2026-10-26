@@ -23,9 +23,14 @@ export function SettleForm({ txn, onDone, onCancel }: SettleFormProps) {
   const settle = useSettleTransaction();
   const [amount, setAmount] = useState(txn.remaining_amount);
   const [paymentMethodId, setPaymentMethodId] = useState('');
+  const [fee, setFee] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const remaining = Number(txn.remaining_amount);
+  // Les frais (Orange Money, virement…) ne concernent pas les espèces.
+  const method = (paymentMethods.data ?? []).find((m) => String(m.id) === paymentMethodId);
+  const showFee = !!method && !method.is_cash;
+  const feeValue = showFee ? Number(fee.replace(',', '.')) || 0 : 0;
 
   const onConfirm = async () => {
     const value = Number(amount.replace(',', '.'));
@@ -41,7 +46,11 @@ export function SettleForm({ txn, onDone, onCancel }: SettleFormProps) {
     try {
       await settle.mutateAsync({
         id: txn.id,
-        input: { amount: String(value), payment_method: paymentMethodId ? Number(paymentMethodId) : null },
+        input: {
+          amount: String(value),
+          payment_method: paymentMethodId ? Number(paymentMethodId) : null,
+          fee: feeValue > 0 ? String(feeValue) : undefined,
+        },
       });
       onDone?.();
     } catch (err) {
@@ -65,6 +74,11 @@ export function SettleForm({ txn, onDone, onCancel }: SettleFormProps) {
           placeholder="Aucun"
         />
       </Field>
+      {showFee ? (
+        <Field label="Frais de transfert (facultatif)" hint="Ce que l'opérateur prend en plus. Compté comme une dépense.">
+          <AmountInput value={fee} onChange={setFee} placeholder="0" />
+        </Field>
+      ) : null}
       {error ? <span className="error-text">{error}</span> : null}
       <div className="form-actions">
         {onCancel ? (
