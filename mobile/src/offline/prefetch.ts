@@ -8,6 +8,7 @@
 import { onlineManager } from '@tanstack/react-query';
 
 import * as activitiesApi from '@/api/activities';
+import * as budgetsApi from '@/api/budgets';
 import * as financeApi from '@/api/finance';
 import * as inventoryApi from '@/api/inventory';
 import * as partiesApi from '@/api/parties';
@@ -35,6 +36,10 @@ async function run() {
     });
     const jobs: Promise<unknown>[] = [
       queryClient.prefetchQuery({ queryKey: ['payment-methods'], queryFn: financeApi.listPaymentMethods }),
+      queryClient.prefetchQuery({
+        queryKey: ['budgets', 'status', undefined],
+        queryFn: () => budgetsApi.fetchBudgetsStatus({ activity: undefined }),
+      }),
       ...([undefined, 'in', 'out'] as const).map((direction) =>
         queryClient.prefetchQuery({
           queryKey: ['categories', direction],

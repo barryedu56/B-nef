@@ -1,9 +1,11 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { updateMe } from '@/api/auth';
 import type { Period } from '@/api/types';
 import { AmountText } from '@/components/ui/AmountText';
+import { BudgetProgress } from '@/components/BudgetProgress';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { ErrorView, LoadingView } from '@/components/ui/QueryState';
@@ -12,6 +14,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { useAuth } from '@/context/AuthContext';
 import { formatPeriodLabel, todayISO } from '@/lib/dates';
 import { useFormatMoney } from '@/lib/money';
+import { useBudgetsStatus } from '@/hooks/useBudgets';
 import { useGlobalSummary } from '@/hooks/useReports';
 import { SyncBanner } from '@/components/SyncBanner';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -96,6 +99,8 @@ export default function GlobalViewScreen() {
           </View>
         </Card>
 
+        <BudgetAlertsCard />
+
         {data.by_activity.length > 0 ? (
           <Card style={styles.breakdownCard}>
             <Text style={styles.cardTitle}>Résultat par activité</Text>
@@ -173,6 +178,31 @@ function Row({
       <Text style={styles.rowLabel}>{label}</Text>
       <Text style={[styles.rowValue, { color }]}>{prefixed}</Text>
     </View>
+  );
+}
+
+/** Budgets en alerte (≥ 80 %) ou dépassés, avec un accès à tous les budgets. */
+function BudgetAlertsCard() {
+  const budgets = useBudgetsStatus();
+  const alerts = (budgets.data ?? []).filter((b) => b.status !== 'ok');
+  return (
+    <Card style={styles.breakdownCard}>
+      <View style={styles.breakdownRow}>
+        <Text style={styles.cardTitle}>{alerts.length > 0 ? 'Budgets à surveiller' : 'Budgets'}</Text>
+        <Pressable onPress={() => router.push('/budgets')} hitSlop={8}>
+          <Text style={{ fontSize: fontSize.sm, fontWeight: '600', color: colors.accent }}>
+            {(budgets.data ?? []).length > 0 ? 'Voir tout' : 'Créer'}
+          </Text>
+        </Pressable>
+      </View>
+      {alerts.length > 0 ? (
+        alerts.slice(0, 3).map((b) => <BudgetProgress key={b.id} budget={b} />)
+      ) : (
+        <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary }}>
+          {(budgets.data ?? []).length > 0 ? 'Tous les budgets sont sous contrôle.' : 'Aucun budget : fixe un plafond de dépenses pour être alerté.'}
+        </Text>
+      )}
+    </Card>
   );
 }
 

@@ -135,6 +135,26 @@ export interface Budget {
   starts_on: string
 }
 
+export type BudgetStatusLevel = 'ok' | 'warning' | 'over'
+
+/** Dépensé / prévu d'un budget sur sa période en cours (`/budgets/status/`). */
+export interface BudgetStatus {
+  id: number
+  activity: number | null
+  activity_name: string | null
+  category: number | null
+  category_name: string | null
+  period: Budget['period']
+  period_start: string
+  period_end: string
+  currency: string
+  planned: string
+  spent: string
+  remaining: string
+  ratio: string
+  status: BudgetStatusLevel
+}
+
 export interface Me {
   id: number
   username: string

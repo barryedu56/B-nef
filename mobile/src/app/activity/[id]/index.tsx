@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Period, Transaction } from '@/api/types';
 import { AmountText } from '@/components/ui/AmountText';
+import { BudgetProgress } from '@/components/BudgetProgress';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorView, LoadingView } from '@/components/ui/QueryState';
@@ -12,6 +13,7 @@ import { Screen } from '@/components/ui/Screen';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { TopBar } from '@/components/ui/TopBar';
 import { useActivity } from '@/hooks/useActivities';
+import { useBudgetsStatus } from '@/hooks/useBudgets';
 import { useActivitySummary } from '@/hooks/useReports';
 import { useCategories, usePaymentMethods, useTransactions } from '@/hooks/useTransactions';
 import { formatPeriodLabel, formatRelativeDate, shiftAnchor, todayISO } from '@/lib/dates';
@@ -141,6 +143,8 @@ export default function ActivityDashboardScreen() {
           ) : null}
         </View>
 
+        {act.has_budget ? <ActivityBudgetsCard activityId={act.id} /> : null}
+
         <View>
           <View style={styles.listHeader}>
             <Text style={styles.cardTitle}>Dernières opérations</Text>
@@ -163,6 +167,28 @@ export default function ActivityDashboardScreen() {
         </View>
       </View>
     </Screen>
+  );
+}
+
+function ActivityBudgetsCard({ activityId }: { activityId: number }) {
+  const budgets = useBudgetsStatus(activityId);
+  const rows = budgets.data ?? [];
+  return (
+    <Card>
+      <View style={styles.listHeader}>
+        <Text style={styles.cardTitle}>Budgets</Text>
+        <Pressable
+          hitSlop={8}
+          onPress={() => router.push({ pathname: '/budgets', params: { activity: String(activityId) } })}>
+          <Text style={styles.budgetLink}>{rows.length > 0 ? 'Gérer' : 'Créer'}</Text>
+        </Pressable>
+      </View>
+      {rows.length > 0 ? (
+        rows.map((b) => <BudgetProgress key={b.id} budget={b} />)
+      ) : (
+        <Text style={styles.budgetEmpty}>Aucun budget pour cette activité.</Text>
+      )}
+    </Card>
   );
 }
 
@@ -245,6 +271,8 @@ function kindLabel(txn: Transaction, categoryName?: string) {
 }
 
 const styles = StyleSheet.create({
+  budgetLink: { fontSize: fontSize.sm, fontWeight: '600', color: colors.accent },
+  budgetEmpty: { fontSize: fontSize.xs, color: colors.textTertiary },
   iconButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   content: { padding: spacing.lg, gap: spacing.md },
   periodBlock: { gap: spacing.sm },

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import type { Period } from '@/api/types';
+import { BudgetProgress } from '@/components/BudgetProgress';
 import { AmountText } from '@/components/ui/AmountText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -14,6 +15,7 @@ import { NewSaleModal } from '@/components/NewSaleModal';
 import { NewTransactionModal } from '@/components/NewTransactionModal';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
 import { useActivity, useUpdateActivity } from '@/hooks/useActivities';
+import { useBudgetsStatus } from '@/hooks/useBudgets';
 import { useActivitySummary } from '@/hooks/useReports';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatPeriodLabel, formatRelativeDate, shiftAnchor, todayISO } from '@/lib/dates';
@@ -156,6 +158,7 @@ export function ActivityDetailPage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {act.has_budget ? <ActivityBudgetsCard activityId={act.id} /> : null}
           <Card>
             <span className="card-title">Modules</span>
             <Switch
@@ -219,4 +222,28 @@ function kindLabel(kind: string, direction: 'in' | 'out') {
   if (kind === 'opening_balance') return 'Solde initial';
   if (kind === 'personal_use') return 'Consommation personnelle';
   return direction === 'in' ? 'Entrée' : 'Sortie';
+}
+
+function ActivityBudgetsCard({ activityId }: { activityId: number }) {
+  const budgets = useBudgetsStatus(activityId);
+  const rows = budgets.data ?? [];
+  return (
+    <Card>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span className="card-title" style={{ margin: 0 }}>
+          Budgets
+        </span>
+        <Link to="/budgets" style={{ fontSize: 12 }}>
+          Gérer
+        </Link>
+      </div>
+      {budgets.isLoading ? (
+        <LoadingBlock />
+      ) : rows.length === 0 ? (
+        <EmptyState title="Aucun budget pour cette activité" />
+      ) : (
+        rows.map((b) => <BudgetProgress key={b.id} budget={b} compact />)
+      )}
+    </Card>
+  );
 }

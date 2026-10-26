@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { Period } from '@/api/types';
+import { BudgetProgress } from '@/components/BudgetProgress';
 import { AmountText } from '@/components/ui/AmountText';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -11,6 +12,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useActivities } from '@/hooks/useActivities';
+import { useBudgetsStatus } from '@/hooks/useBudgets';
 import { useGlobalSummary } from '@/hooks/useReports';
 import { useLowStockAcrossActivities } from '@/hooks/useProducts';
 import { useParties } from '@/hooks/useParties';
@@ -134,6 +136,7 @@ export function DashboardPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <BudgetAlertsCard />
             <Card>
               <span className="card-title">Alertes de stock</span>
               {lowStock.isLoading ? (
@@ -225,4 +228,26 @@ function kindLabel(kind: string, direction: 'in' | 'out') {
   if (kind === 'opening_balance') return 'Solde initial';
   if (kind === 'personal_use') return 'Consommation personnelle';
   return direction === 'in' ? 'Entrée' : 'Sortie';
+}
+
+/** Budgets en alerte (≥ 80 %) ou dépassés — rien si tout va bien. */
+function BudgetAlertsCard() {
+  const budgets = useBudgetsStatus();
+  const alerts = (budgets.data ?? []).filter((b) => b.status !== 'ok');
+  if (alerts.length === 0) return null;
+  return (
+    <Card>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span className="card-title" style={{ margin: 0 }}>
+          Budgets à surveiller
+        </span>
+        <Link to="/budgets" style={{ fontSize: 12 }}>
+          Voir tout
+        </Link>
+      </div>
+      {alerts.slice(0, 4).map((b) => (
+        <BudgetProgress key={b.id} budget={b} compact />
+      ))}
+    </Card>
+  );
 }
