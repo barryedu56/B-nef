@@ -14,5 +14,5 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(PasswordResetCode)
 class PasswordResetCodeAdmin(admin.ModelAdmin):
-    list_display = ("user", "code", "created_at", "used_at")
-    readonly_fields = ("user", "code", "created_at", "used_at")
+    list_display = ("user", "attempts", "created_at", "used_at")
+    readonly_fields = ("user", "attempts", "created_at", "used_at")

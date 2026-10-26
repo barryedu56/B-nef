@@ -11,12 +11,20 @@ import django
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 os.environ["DJANGO_ALLOWED_HOSTS"] = "localhost,127.0.0.1,testserver"
+# Le code n'est stocké qu'en empreinte : on le lit dans l'e-mail envoyé.
+os.environ["EMAIL_SEND_ASYNC"] = "False"
 django.setup()
+
+from django.conf import settings  # noqa: E402
+
+settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 from django.db import transaction  # noqa: E402
 from rest_framework.test import APIClient  # noqa: E402
 
-from apps.accounts.models import PasswordResetCode  # noqa: E402
+import re  # noqa: E402
+
+from django.core import mail  # noqa: E402
 
 
 class _Rollback(Exception):
@@ -37,13 +45,12 @@ def body():
         format="json",
     )
     print("register:", r.status_code)
-    user_id = r.json()["id"]
 
     # demande de code
     r = c.post("/api/auth/password-reset/request/", {"identifier": "resettest@example.com"}, format="json")
     print("request (email):", r.status_code, r.json())
 
-    code = PasswordResetCode.objects.filter(user_id=user_id).order_by("-created_at").first().code
+    code = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
     print("code généré :", code)
 
     # mauvais code -> doit échouer

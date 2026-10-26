@@ -190,7 +190,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # --- DRF ----------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "apps.accounts.authentication.PasswordAwareJWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
@@ -262,6 +262,11 @@ if env("EMAIL_HOST"):
     EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# E-mails de sécurité (code, alerte de changement de mot de passe) envoyés en
+# arrière-plan : la réponse ne trahit pas si le compte existe (voir
+# apps/accounts/services.py::_send_async). Les tests les envoient tout de suite.
+EMAIL_SEND_ASYNC = env_bool("EMAIL_SEND_ASYNC", True)
 
 # --- Sécurité HTTPS/cookies (prod uniquement) --------------------------
 # Tout ça casserait le dev local en http:// (redirection HTTPS, cookies

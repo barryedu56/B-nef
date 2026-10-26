@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, status
@@ -11,7 +13,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.common.throttling import ScopedRateThrottle
 
-from .models import PasswordResetCode
+from .authentication import PasswordAwareTokenObtainPairSerializer, tokens_for
+
 from .serializers import (
     AvatarUploadSerializer,
     PasswordResetConfirmSerializer,
@@ -19,14 +22,16 @@ from .serializers import (
     RegisterSerializer,
     UserSerializer,
 )
-from .services import delete_account, generate_reset_code, send_reset_email
+from .services import check_reset_code, delete_account, generate_reset_code, send_reset_email, set_new_password
 
 User = get_user_model()
 
 
 class ThrottledTokenObtainPairView(TokenObtainPairView):
-    """Connexion — throttlée pour empêcher un essai en masse de mots de passe."""
+    """Connexion — throttlée pour empêcher un essai en masse de mots de passe.
+    Les jetons portent l'empreinte du mot de passe (voir authentication.py)."""
 
+    serializer_class = PasswordAwareTokenObtainPairSerializer
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "login"
 
@@ -93,7 +98,8 @@ class PasswordResetRequestView(APIView):
         user = _find_user(serializer.validated_data["identifier"])
         if user and user.email:
             code = generate_reset_code(user)
-            send_reset_email(user, code)
+            if code is not None:  # sinon : trop de demandes récentes pour ce compte
+                send_reset_email(user, code)
         return Response(
             {
                 "detail": "Si ce compte existe et a une adresse e-mail enregistrée, "
@@ -112,24 +118,47 @@ class PasswordResetConfirmView(APIView):
         serializer.is_valid(raise_exception=True)
         v = serializer.validated_data
         user = _find_user(v["identifier"])
-        reset_code = None
-        if user:
-            reset_code = (
-                PasswordResetCode.objects.filter(user=user, code=v["code"], used_at__isnull=True)
-                .order_by("-created_at")
-                .first()
+        reset_code = check_reset_code(user, v["code"]) if user else None
+        if reset_code is None:
+            # Même message que le compte existe ou non.
+            raise ValidationError(
+                {"detail": "Code invalide ou expiré. Après 5 erreurs, le code est annulé : demandes-en un nouveau."}
             )
-        if not user or not reset_code or not reset_code.is_valid():
-            raise ValidationError({"detail": "Code invalide ou expiré."})
-
-        user.set_password(v["new_password"])
-        user.save(update_fields=["password"])
+        _validate_new_password(v["new_password"], user)
+        set_new_password(user, v["new_password"])
         reset_code.used_at = timezone.now()
         reset_code.save(update_fields=["used_at"])
-        # les autres codes en attente pour ce compte sont invalidés aussi
-        PasswordResetCode.objects.filter(user=user, used_at__isnull=True).delete()
-
         return Response({"detail": "Mot de passe mis à jour."}, status=status.HTTP_200_OK)
+
+
+def _validate_new_password(password: str, user) -> None:
+    # Validateurs Django avec le compte : refuse aussi un mot de passe trop
+    # proche du nom d'utilisateur ou de l'e-mail.
+    try:
+        validate_password(password, user)
+    except DjangoValidationError as exc:
+        raise ValidationError({"new_password": list(exc.messages)}) from exc
+
+
+class ChangePasswordView(APIView):
+    """Changer son mot de passe depuis l'app (ancien + nouveau). Coupe les
+    sessions ouvertes ailleurs, et renvoie de nouveaux jetons pour que cet
+    appareil-ci reste connecté."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
+
+    def post(self, request):
+        user = request.user
+        if not user.check_password(request.data.get("current_password") or ""):
+            raise ValidationError({"current_password": "Mot de passe actuel incorrect."})
+        new_password = request.data.get("new_password") or ""
+        if new_password == request.data.get("current_password"):
+            raise ValidationError({"new_password": "Choisis un mot de passe différent de l'actuel."})
+        _validate_new_password(new_password, user)
+        set_new_password(user, new_password)
+        return Response(tokens_for(user))
 
 
 class DeleteAccountView(APIView):

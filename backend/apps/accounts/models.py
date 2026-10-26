@@ -57,25 +57,30 @@ class User(AbstractUser):
 class PasswordResetCode(models.Model):
     """Code à 6 chiffres envoyé par e-mail pour réinitialiser le mot de passe.
 
-    Valable 15 minutes, à usage unique. En dev (sans serveur mail configuré),
-    le code atterrit dans la console `runserver` au lieu d'une vraie boîte mail.
+    Valable 15 minutes, à usage unique, 5 essais au plus. Seule une empreinte
+    (HMAC) est stockée : une fuite de la base ne donne pas de code utilisable.
+    En dev (sans serveur mail configuré), le code atterrit dans la console
+    `runserver` au lieu d'une vraie boîte mail. Voir apps/accounts/services.py.
     """
 
     VALIDITY = timedelta(minutes=15)
+    MAX_ATTEMPTS = 5
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reset_codes")
-    code = models.CharField("code", max_length=6)
+    code_hash = models.CharField("empreinte du code", max_length=64)
+    attempts = models.PositiveSmallIntegerField("essais ratés", default=0)
     created_at = models.DateTimeField("créé le", auto_now_add=True)
-    used_at = models.DateTimeField("utilisé le", null=True, blank=True)
+    # Code utilisé, remplacé par un plus récent, ou annulé après trop d'essais.
+    used_at = models.DateTimeField("utilisé / annulé le", null=True, blank=True)
 
     class Meta:
         verbose_name = "code de réinitialisation"
         verbose_name_plural = "codes de réinitialisation"
-        indexes = [models.Index(fields=["user", "code"])]
+        indexes = [models.Index(fields=["user", "created_at"], name="accounts_pa_user_id_reset_idx")]
         ordering = ["-created_at"]
 
     def is_valid(self) -> bool:
-        if self.used_at is not None:
+        if self.used_at is not None or self.attempts >= self.MAX_ATTEMPTS:
             return False
         return timezone.now() - self.created_at <= self.VALIDITY
 

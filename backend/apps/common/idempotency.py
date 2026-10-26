@@ -9,8 +9,10 @@ import json
 
 from django.db import IntegrityError
 from django.http import JsonResponse
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+
+from apps.accounts.authentication import PasswordAwareJWTAuthentication
 
 from .models import IdempotencyRecord
 
@@ -21,7 +23,7 @@ _MAX_KEY_LENGTH = 64
 class IdempotencyMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-        self._jwt = JWTAuthentication()
+        self._jwt = PasswordAwareJWTAuthentication()
 
     def __call__(self, request):
         key = request.headers.get("Idempotency-Key", "").strip()
@@ -60,7 +62,7 @@ class IdempotencyMiddleware:
     def _authenticate(self, request):
         try:
             result = self._jwt.authenticate(request)
-        except (InvalidToken, TokenError):
+        except (InvalidToken, TokenError, AuthenticationFailed):
             return None
         if result is not None:
             return result[0]

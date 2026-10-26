@@ -94,4 +94,6 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     identifier = serializers.CharField()
     code = serializers.CharField(min_length=6, max_length=6)
-    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+    # Validé dans la vue, avec le compte (refuse un mot de passe trop proche
+    # du nom d'utilisateur) et seulement après vérification du code.
+    new_password = serializers.CharField(write_only=True)

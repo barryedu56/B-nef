@@ -1,6 +1,6 @@
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import AccessToken
 
+from apps.accounts.authentication import tokens_for
 from apps.finance.models import Transaction
 
 from .testutils import ApiTestCase
@@ -12,7 +12,7 @@ class IdempotencyTests(ApiTestCase):
         # Passe par un vrai jeton JWT, comme l'app mobile (le middleware ne
         # voit pas force_authenticate).
         self.client = APIClient()
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(self.user)}")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens_for(self.user)['access']}")
 
     def sell(self, key, qty="1"):
         return self.client.post(
@@ -47,7 +47,7 @@ class IdempotencyTests(ApiTestCase):
         self.sell("partagee")
         other = self.make_user("autre")
         c = APIClient()
-        c.credentials(HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(other)}")
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens_for(other)['access']}")
         r = c.post(
             "/api/sales/",
             {"activity": self.shop.pk, "lines": [{"product": self.product.pk, "quantity": "1"}]},
