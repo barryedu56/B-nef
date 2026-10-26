@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { formatPeriodLabel, todayISO } from '@/lib/dates';
 import { useFormatMoney } from '@/lib/money';
 import { useGlobalSummary } from '@/hooks/useReports';
+import { SyncBanner } from '@/components/SyncBanner';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
 const PERIOD_OPTIONS: { value: Period; label: string }[] = [
@@ -58,6 +59,7 @@ export default function GlobalViewScreen() {
 
   return (
     <Screen onRefresh={() => summary.refetch()} refreshing={summary.isRefetching}>
+      <SyncBanner />
       <View style={styles.header}>
         <Text style={styles.title}>Vue globale</Text>
       </View>

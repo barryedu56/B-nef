@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SyncBanner } from '@/components/SyncBanner';
 import { colors, fontSize, spacing } from '@/theme';
 
 interface TopBarProps {
@@ -15,27 +16,30 @@ interface TopBarProps {
 
 export function TopBar({ title, subtitle, back, onBack, right }: TopBarProps) {
   return (
-    <View style={styles.bar}>
-      {back ? (
-        <Pressable
-          hitSlop={10}
-          onPress={onBack ?? (() => router.back())}
-          style={styles.iconButton}
-          accessibilityLabel="Retour">
-          <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
-        </Pressable>
-      ) : null}
-      <View style={styles.titleWrap}>
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {subtitle}
-          </Text>
+    <View>
+      <View style={styles.bar}>
+        {back ? (
+          <Pressable
+            hitSlop={10}
+            onPress={onBack ?? (() => router.back())}
+            style={styles.iconButton}
+            accessibilityLabel="Retour">
+            <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
+          </Pressable>
         ) : null}
+        <View style={styles.titleWrap}>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        {right ?? <View style={styles.iconButton} />}
       </View>
-      {right ?? <View style={styles.iconButton} />}
+      <SyncBanner />
     </View>
   );
 }

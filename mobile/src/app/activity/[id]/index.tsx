@@ -195,9 +195,12 @@ function TransactionRow({
   paymentName?: string;
 }) {
   const label = kindLabel(txn, categoryName);
+  // Numéro provisoire < 0 : saisie hors-ligne, pas encore sur le serveur.
+  const queued = txn.id < 0;
   const meta = [
     formatRelativeDate(txn.occurred_on),
     paymentName,
+    queued ? "en attente d'envoi" : null,
     txn.is_voided ? 'annulée' : txn.is_credit && !txn.is_settled ? 'à crédit' : null,
   ]
     .filter(Boolean)
@@ -205,6 +208,7 @@ function TransactionRow({
   return (
     <Pressable
       style={styles.txnRow}
+      disabled={queued}
       onPress={() => router.push({ pathname: '/transaction/[id]', params: { id: String(txn.id) } })}>
       <View style={styles.txnInfo}>
         <Text style={[styles.txnLabel, txn.is_voided && styles.txnLabelVoided]} numberOfLines={1}>

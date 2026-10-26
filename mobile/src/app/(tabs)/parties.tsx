@@ -12,6 +12,7 @@ import { Screen } from '@/components/ui/Screen';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { useAuth } from '@/context/AuthContext';
 import { useParties, usePartyTotals } from '@/hooks/useParties';
+import { SyncBanner } from '@/components/SyncBanner';
 import { colors, fontSize, spacing } from '@/theme';
 
 type Tab = 'all' | PartyKind;
@@ -25,6 +26,7 @@ export default function PartiesScreen() {
 
   return (
     <Screen onRefresh={() => { parties.refetch(); totals.refetch(); }} refreshing={parties.isRefetching}>
+      <SyncBanner />
       <View style={styles.header}>
         <Text style={styles.title}>Tiers & dettes</Text>
       </View>
@@ -81,7 +83,10 @@ export default function PartiesScreen() {
 
 function PartyRow({ party, currency }: { party: Party; currency: string }) {
   return (
-    <Pressable onPress={() => router.push({ pathname: '/parties/[id]', params: { id: String(party.id) } })}>
+    <Pressable
+      // Tiers créé hors-ligne (numéro provisoire < 0) : sa fiche n'existe pas encore sur le serveur.
+      disabled={party.id < 0}
+      onPress={() => router.push({ pathname: '/parties/[id]', params: { id: String(party.id) } })}>
       <Card style={styles.partyCard}>
         <View style={styles.partyInfo}>
           <Text style={styles.partyName}>{party.name}</Text>

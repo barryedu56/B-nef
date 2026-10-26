@@ -42,7 +42,7 @@ export function SettleForm({ txn, onDone, onCancel }: SettleFormProps) {
     setError(null);
     try {
       await settle.mutateAsync({
-        id: txn.id,
+        txn,
         input: { amount: String(value), payment_method: paymentMethodId ? Number(paymentMethodId) : null },
       });
       onDone?.();

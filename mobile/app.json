@@ -38,7 +38,8 @@
         {
           "photosPermission": "Bénef a besoin d'accéder à tes photos pour choisir ta photo de profil."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

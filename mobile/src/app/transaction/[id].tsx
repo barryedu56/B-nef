@@ -85,7 +85,7 @@ export default function TransactionDetailScreen() {
   const onConfirmVoid = async () => {
     setError(null);
     try {
-      await voidTxn.mutateAsync({ id: t.id, reason: voidReason.trim() });
+      await voidTxn.mutateAsync({ txn: t, reason: voidReason.trim() });
       setShowVoidForm(false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Impossible d'annuler cette opération.");

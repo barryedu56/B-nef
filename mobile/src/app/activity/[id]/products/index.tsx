@@ -42,11 +42,18 @@ export default function ProductsScreen() {
     Alert.alert(product.name, 'Que veux-tu faire ?', [
       { text: 'Réapprovisionner', onPress: () => setRestockTarget(product) },
       { text: 'Gardé pour moi', onPress: () => setPersonalUseTarget(product) },
-      {
-        text: 'Modifier',
-        onPress: () => router.push({ pathname: '/activity/[id]/products/[productId]', params: { id, productId: String(product.id) } }),
-      },
-      { text: 'Annuler', style: 'cancel' },
+      // Produit créé hors-ligne (numéro provisoire < 0) : pas encore de fiche
+      // sur le serveur à modifier.
+      ...(product.id > 0
+        ? [
+            {
+              text: 'Modifier',
+              onPress: () =>
+                router.push({ pathname: '/activity/[id]/products/[productId]', params: { id, productId: String(product.id) } }),
+            },
+          ]
+        : []),
+      { text: 'Annuler', style: 'cancel' as const },
     ]);
   };
 

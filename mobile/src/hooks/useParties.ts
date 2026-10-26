@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import * as partiesApi from '@/api/parties';
 import type { Party, PartyKind } from '@/api/types';
+import * as offline from '@/offline/actions';
+import { isQueued } from '@/offline/send';
 
 export function useParties(kind?: PartyKind) {
   return useQuery({
@@ -25,8 +27,10 @@ export function usePartyTotals() {
 export function useCreateParty() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: partiesApi.createParty,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['parties'] }),
+    mutationFn: offline.createParty,
+    onSuccess: (party) => {
+      if (!isQueued(party)) queryClient.invalidateQueries({ queryKey: ['parties'] });
+    },
   });
 }
 

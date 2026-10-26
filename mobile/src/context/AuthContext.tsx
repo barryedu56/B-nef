@@ -1,9 +1,16 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import * as authApi from '@/api/auth';
-import { clearTokens, getTokens } from '@/api/client';
+import { clearTokens, getTokens, isNetworkError } from '@/api/client';
 import type { Me } from '@/api/types';
+import { claimOutbox, clearOutbox } from '@/offline/outbox';
+import { warmOfflineCache } from '@/offline/prefetch';
+import { persister } from '@/offline/queryClient';
+
+// Dernier profil connu : permet d'ouvrir l'app sans réseau.
+const ME_KEY = 'benef-me';
 
 type Status = 'loading' | 'signedIn' | 'signedOut';
 
@@ -26,9 +33,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadUser = useCallback(async () => {
     try {
       const me = await authApi.fetchMe();
+      await claimOutbox(me.id);
+      await AsyncStorage.setItem(ME_KEY, JSON.stringify(me));
       setUser(me);
       setStatus('signedIn');
-    } catch {
+      void warmOfflineCache(true);
+    } catch (error) {
+      if (isNetworkError(error)) {
+        // Pas de réseau : la session reste valable, on travaille hors-ligne
+        // avec le dernier profil connu.
+        const cached = await AsyncStorage.getItem(ME_KEY);
+        if (cached) {
+          setUser(JSON.parse(cached) as Me);
+          setStatus('signedIn');
+          return;
+        }
+      }
       await clearTokens();
       setUser(null);
       setStatus('signedOut');
@@ -66,7 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await authApi.logout();
+    // Rien de ce compte ne doit rester sur le téléphone.
+    await clearOutbox();
+    await AsyncStorage.removeItem(ME_KEY);
     queryClient.clear();
+    await persister.removeClient();
     setUser(null);
     setStatus('signedOut');
   }, [queryClient]);

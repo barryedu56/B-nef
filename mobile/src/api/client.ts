@@ -1,4 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { onlineManager } from '@tanstack/react-query';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 // Adresse de l'API Django. En dev, mets l'IP locale de ton PC (celle que WAMP /
 // `runserver 0.0.0.0:8000` écoute) dans mobile/.env — "localhost" ne fonctionne
@@ -8,24 +11,53 @@ export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.141:
 const ACCESS_KEY = 'gf_access_token';
 const REFRESH_KEY = 'gf_refresh_token';
 
+// Les jetons donnent accès aux données des clients : rangés dans le
+// trousseau chiffré du téléphone (Keychain / Keystore), pas dans
+// AsyncStorage qui est en clair. Sur le web (expo start --web), pas de
+// trousseau : AsyncStorage (localStorage).
+const secure = {
+  get: (key: string) => (Platform.OS === 'web' ? AsyncStorage.getItem(key) : SecureStore.getItemAsync(key)),
+  set: (key: string, value: string) =>
+    Platform.OS === 'web' ? AsyncStorage.setItem(key, value) : SecureStore.setItemAsync(key, value),
+  remove: (key: string) => (Platform.OS === 'web' ? AsyncStorage.removeItem(key) : SecureStore.deleteItemAsync(key)),
+};
+
+/** Les versions précédentes rangeaient les jetons dans AsyncStorage : on les
+ * déplace une fois dans le trousseau pour ne pas déconnecter l'utilisateur. */
+async function migrateLegacyTokens() {
+  if (Platform.OS === 'web') return;
+  const [access, refresh] = await Promise.all([AsyncStorage.getItem(ACCESS_KEY), AsyncStorage.getItem(REFRESH_KEY)]);
+  if (!access && !refresh) return;
+  if (access) await secure.set(ACCESS_KEY, access);
+  if (refresh) await secure.set(REFRESH_KEY, refresh);
+  await Promise.all([AsyncStorage.removeItem(ACCESS_KEY), AsyncStorage.removeItem(REFRESH_KEY)]);
+}
+
+let migration: Promise<void> | null = null;
+
 export async function getTokens() {
-  const [access, refresh] = await Promise.all([
-    AsyncStorage.getItem(ACCESS_KEY),
-    AsyncStorage.getItem(REFRESH_KEY),
-  ]);
+  migration ??= migrateLegacyTokens().catch(() => {});
+  await migration;
+  const [access, refresh] = await Promise.all([secure.get(ACCESS_KEY), secure.get(REFRESH_KEY)]);
   return { access, refresh };
 }
 
 export async function setTokens(access: string, refresh: string) {
-  await Promise.all([AsyncStorage.setItem(ACCESS_KEY, access), AsyncStorage.setItem(REFRESH_KEY, refresh)]);
+  await Promise.all([secure.set(ACCESS_KEY, access), secure.set(REFRESH_KEY, refresh)]);
 }
 
 async function setAccessToken(access: string) {
-  await AsyncStorage.setItem(ACCESS_KEY, access);
+  await secure.set(ACCESS_KEY, access);
 }
 
 export async function clearTokens() {
-  await Promise.all([AsyncStorage.removeItem(ACCESS_KEY), AsyncStorage.removeItem(REFRESH_KEY)]);
+  await Promise.all([secure.remove(ACCESS_KEY), secure.remove(REFRESH_KEY)]);
+}
+
+/** Statut 0 = la requête n'a pas pu atteindre le serveur (pas de réseau,
+ * serveur injoignable). */
+export function isNetworkError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 0;
 }
 
 export class ApiError extends Error {
@@ -61,6 +93,7 @@ type RequestOptions = {
   body?: unknown;
   auth?: boolean;
   params?: Params;
+  headers?: Record<string, string>;
 };
 
 function buildUrl(path: string, params?: Params) {
@@ -81,24 +114,28 @@ let refreshPromise: Promise<string | null> | null = null;
 async function refreshAccessToken(): Promise<string | null> {
   const { refresh } = await getTokens();
   if (!refresh) return null;
+  let res: Response;
   try {
-    const res = await fetch(`${API_URL}/auth/token/refresh/`, {
+    res = await fetch(`${API_URL}/auth/token/refresh/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh }),
     });
-    if (!res.ok) throw new Error('refresh failed');
-    const data = (await res.json()) as { access: string };
-    await setAccessToken(data.access);
-    return data.access;
   } catch {
+    // Réseau coupé : le jeton est peut-être encore bon, on ne déconnecte pas.
+    return null;
+  }
+  if (!res.ok) {
     await clearTokens();
     return null;
   }
+  const data = (await res.json()) as { access: string };
+  await setAccessToken(data.access);
+  return data.access;
 }
 
 export async function apiRequest<T = unknown>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, auth = true, params } = opts;
+  const { method = 'GET', body, auth = true, params, headers: extraHeaders } = opts;
   const url = buildUrl(path, params);
 
   const isFormData = body instanceof FormData;
@@ -111,6 +148,7 @@ export async function apiRequest<T = unknown>(path: string, opts: RequestOptions
       ? { Accept: 'application/json' }
       : { 'Content-Type': 'application/json', Accept: 'application/json' };
     if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
+    Object.assign(headers, extraHeaders);
     let response: Response;
     try {
       response = await fetch(url, {
@@ -120,7 +158,9 @@ export async function apiRequest<T = unknown>(path: string, opts: RequestOptions
       });
     } catch {
       throw new ApiError(0, {
-        detail: `Impossible de joindre le serveur (${API_URL}). Vérifie que l'API tourne et que EXPO_PUBLIC_API_URL pointe vers la bonne adresse.`,
+        detail: onlineManager.isOnline()
+          ? `Impossible de joindre le serveur (${API_URL}). Vérifie ta connexion, ou que l'API tourne et que EXPO_PUBLIC_API_URL pointe vers la bonne adresse.`
+          : "Pas de connexion internet : cette action nécessite d'être en ligne.",
       });
     }
     return response;

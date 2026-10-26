@@ -11,6 +11,7 @@ import { ErrorView, LoadingView } from '@/components/ui/QueryState';
 import { Screen } from '@/components/ui/Screen';
 import { ACTIVITY_TYPE_OPTIONS } from '@/api/activities';
 import type { Activity } from '@/api/types';
+import { SyncBanner } from '@/components/SyncBanner';
 import { colors, fontSize, spacing } from '@/theme';
 
 export default function ActivitiesScreen() {
@@ -26,6 +27,7 @@ export default function ActivitiesScreen() {
 
   return (
     <Screen onRefresh={() => { activities.refetch(); summary.refetch(); }} refreshing={activities.isRefetching}>
+      <SyncBanner />
       <View style={styles.header}>
         <Text style={styles.title}>Mes activités</Text>
       </View>

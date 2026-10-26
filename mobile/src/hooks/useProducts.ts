@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import * as inventoryApi from '@/api/inventory';
 import type { Product } from '@/api/types';
+import * as offline from '@/offline/actions';
+import { isQueued } from '@/offline/send';
 import { invalidateAfterMoneyMove } from './useTransactions';
 
 export function useProducts(activityId: number | undefined, opts?: { lowStock?: boolean; archived?: boolean }) {
@@ -34,8 +36,10 @@ export function useSaleLines(transactionId: number | undefined, enabled: boolean
 export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: inventoryApi.createProduct,
-    onSuccess: (product) => queryClient.invalidateQueries({ queryKey: ['products', product.activity] }),
+    mutationFn: offline.createProduct,
+    onSuccess: (product) => {
+      if (!isQueued(product)) queryClient.invalidateQueries({ queryKey: ['products', product.activity] });
+    },
   });
 }
 
@@ -64,32 +68,33 @@ export function useUpdateProductInList(activityId: number) {
 export function useCreateSale(activityId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: inventoryApi.createSale,
-    onSuccess: () => invalidateAfterMoneyMove(queryClient, activityId),
+    mutationFn: offline.createSale,
+    onSuccess: (txn) => invalidateAfterMoneyMove(queryClient, activityId, txn),
   });
 }
 
 export function useCreatePurchase(activityId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: inventoryApi.createPurchase,
-    onSuccess: () => invalidateAfterMoneyMove(queryClient, activityId),
+    mutationFn: offline.createPurchase,
+    onSuccess: (result) => invalidateAfterMoneyMove(queryClient, activityId, result),
   });
 }
 
 export function useCreatePersonalUse(activityId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: inventoryApi.consumePersonalUse,
-    onSuccess: () => invalidateAfterMoneyMove(queryClient, activityId),
+    mutationFn: offline.consumePersonalUse,
+    onSuccess: (result) => invalidateAfterMoneyMove(queryClient, activityId, result),
   });
 }
 
 export function useAdjustStock(activityId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: inventoryApi.adjustStock,
-    onSuccess: () => {
+    mutationFn: offline.adjustStock,
+    onSuccess: (result) => {
+      if (isQueued(result)) return;
       queryClient.invalidateQueries({ queryKey: ['products', activityId] });
       queryClient.invalidateQueries({ queryKey: ['reports', 'activity', activityId] });
     },

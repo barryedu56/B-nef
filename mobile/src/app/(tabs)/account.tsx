@@ -12,6 +12,8 @@ import { Card } from '@/components/ui/Card';
 import { PickerField } from '@/components/ui/PickerField';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
+import { useOutbox } from '@/hooks/useOffline';
+import { SyncBanner } from '@/components/SyncBanner';
 import { colors, fontSize, spacing } from '@/theme';
 
 const CURRENCY_OPTIONS = [
@@ -23,6 +25,27 @@ const CURRENCY_OPTIONS = [
 
 export default function AccountScreen() {
   const { user, signOut, refreshUser } = useAuth();
+  const outbox = useOutbox();
+
+  const confirmSignOut = () => {
+    const waiting = outbox.pending.length + outbox.failed.length;
+    if (waiting === 0) {
+      void signOut();
+      return;
+    }
+    Alert.alert(
+      'Opérations non envoyées',
+      `${waiting} opération${waiting > 1 ? 's' : ''} saisie${waiting > 1 ? 's' : ''} hors-ligne n'${
+        waiting > 1 ? 'ont' : 'a'
+      } pas encore été envoyée${waiting > 1 ? 's' : ''} au serveur. Si tu te déconnectes maintenant, elle${
+        waiting > 1 ? 's seront perdues' : ' sera perdue'
+      }. Reconnecte-toi à internet et attends la synchronisation avant de te déconnecter.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Se déconnecter quand même', style: 'destructive', onPress: () => void signOut() },
+      ]
+    );
+  };
   const [saving, setSaving] = useState<'base' | 'display' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
@@ -106,6 +129,7 @@ export default function AccountScreen() {
 
   return (
     <Screen>
+      <SyncBanner />
       <View style={styles.header}>
         <Text style={styles.title}>Réglages</Text>
       </View>
@@ -180,7 +204,7 @@ export default function AccountScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Button label="Se déconnecter" variant="danger" onPress={signOut} />
+        <Button label="Se déconnecter" variant="danger" onPress={confirmSignOut} />
       </View>
     </Screen>
   );
