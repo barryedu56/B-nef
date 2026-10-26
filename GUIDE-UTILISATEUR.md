@@ -135,7 +135,7 @@ en barres — pour voir la tendance d'un coup d'œil.
 **Boutons d'action** :
 - **+ Vente** *(si Inventaire)* → vend un ou plusieurs produits, le stock baisse tout seul
 - **+ Opération** → enregistre une entrée ou une sortie d'argent simple (loyer, transport, une prestation, etc.)
-- **+ Réappro** *(si Inventaire, web seulement en direct)* → t'envoie vers Produits & stock
+- **Produits & stock** *(si Inventaire)* → ouvre la liste de tes produits pour réapprovisionner, ajuster ou en créer
 
 **Dernières opérations** : les mouvements d'argent les plus récents de cette
 activité, avec un badge *« à crédit »* si pas encore payé. **Touche une opération**
