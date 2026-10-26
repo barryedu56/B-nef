@@ -20,7 +20,8 @@ from apps.accounts.services import delete_account
 from apps.activities.models import Activity
 from apps.budget.models import Budget
 from apps.contacts.models import Party
-from apps.finance.models import Category, PaymentMethod
+from apps.finance import accounts
+from apps.finance.models import Category, PaymentMethod, Transaction
 from apps.finance.services import create_transaction
 from apps.inventory.models import Product
 from apps.inventory.services import register_sale, restock
@@ -59,11 +60,18 @@ class Command(BaseCommand):
 
         shop = Activity.objects.create(
             owner=user, name="Boutique Madina", type=Activity.Type.COMMERCE, currency_id="GNF",
-            has_inventory=True, has_debts=True, has_budget=True, opening_balance=Decimal("15000000"),
+            has_inventory=True, has_debts=True, has_budget=True,
         )
         Activity.objects.create(owner=user, name="Maison", type=Activity.Type.HOUSEHOLD, currency_id="GNF")
         cash = PaymentMethod.objects.get(owner=user, name="Espèces")
         om = PaymentMethod.objects.get(owner=user, name="Orange Money")
+        bank = PaymentMethod.objects.get(owner=user, name="Banque")
+        # Argent de départ, réparti comme dans la vraie vie : un peu
+        # d'espèces, l'essentiel à la banque (qui paie les gros achats).
+        for account, amount in ((cash, 1_500_000), (bank, 18_000_000)):
+            create_transaction(activity=shop, direction="in", amount=Decimal(amount), currency="GNF",
+                               occurred_on=start, kind=Transaction.Kind.CONTRIBUTION, payment_method=account,
+                               note="Somme de départ")
         client = Party.objects.create(owner=user, name="Mariama Diallo", phone="622000001", kind="client")
         supplier = Party.objects.create(owner=user, name="Grossiste Kaloum", phone="628000002", kind="supplier")
         transport = Category.objects.get(owner=user, name="Transport")
@@ -75,7 +83,7 @@ class Command(BaseCommand):
                 activity=shop, name=name, sale_price=Decimal(price), low_stock_threshold=Decimal(5)
             )
             restock(product=product, quantity=Decimal(20), unit_cost=Decimal(cost), occurred_on=start,
-                    payment_method=cash, party=supplier, user=user)
+                    payment_method=bank, party=supplier, user=user)
             products.append(product)
 
         for offset in range(days):
@@ -88,11 +96,21 @@ class Command(BaseCommand):
                     if product.stock_quantity < qty + product.low_stock_threshold:
                         cost = next(c for n, c, _ in PRODUCTS if n == product.name)
                         restock(product=product, quantity=Decimal(30), unit_cost=Decimal(cost), occurred_on=day,
-                                payment_method=cash, party=supplier, user=user)
+                                payment_method=bank, party=supplier, user=user)
                         product.refresh_from_db()
                     lines.append({"product": product, "quantity": qty})
                 register_sale(activity=shop, lines=lines, occurred_on=day,
                               payment_method=rnd.choice([cash, om]), user=user)
+            if offset % 7 == 6:
+                # Chaque semaine, l'argent au-delà d'un fonds de caisse part à
+                # la banque (espèces déposées, Orange Money viré).
+                balances = accounts.balances(user)
+                for account, keep, label in ((cash, 1_000_000, "Dépôt des espèces"), (om, 500_000, "Virement Orange Money")):
+                    surplus = balances[account.pk] - Decimal(keep)
+                    if surplus > 0:
+                        accounts.transfer(user=user, from_account=account, to_account=bank, amount=surplus,
+                                          from_activity=shop, to_activity=shop, occurred_on=day,
+                                          note=f"{label} à la banque")
             if offset % 7 == 0:
                 create_transaction(activity=shop, direction="out", amount=Decimal(rnd.randint(3, 8) * 10000),
                                    currency="GNF", occurred_on=day, category=transport, payment_method=cash,

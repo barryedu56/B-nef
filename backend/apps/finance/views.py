@@ -127,10 +127,16 @@ class TransactionViewSet(viewsets.ModelViewSet):
     ordering_fields = ("occurred_on", "created_at", "amount_base")
 
     def get_queryset(self):
-        return (
+        qs = (
             Transaction.objects.filter(activity__owner=self.request.user)
             .select_related("activity", "currency", "category", "payment_method", "party")
         )
+        # ?cash_only=1 : seulement les opérations qui ont réellement fait
+        # bouger l'argent (mouvements d'une caisse) — pas une vente à crédit,
+        # dont seul le règlement fait entrer l'argent.
+        if self.request.query_params.get("cash_only") in ("1", "true"):
+            qs = qs.filter(accounts.AFFECTS_CASH)
+        return qs
 
     def get_serializer_class(self):
         if self.action in ("update", "partial_update"):

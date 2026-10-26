@@ -63,6 +63,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="money"
+        options={{
+          title: 'Argent',
+          tabBarIcon: tabIcon('wallet-outline'),
+        }}
+      />
+      <Tabs.Screen
         name="global"
         options={{
           title: 'Vue globale',

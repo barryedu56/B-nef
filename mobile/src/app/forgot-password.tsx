@@ -91,7 +91,7 @@ export default function ForgotPasswordScreen() {
 
       {step === 'confirm' ? (
         <View style={styles.form}>
-          {info ? <Alert tone="info" message={`${info} Il est valable 15 minutes. Pense à regarder dans les spams.`} /> : null}
+          {info ? <Alert tone="info" icon="mail-unread-outline" message={`${info} Il est valable 15 minutes. Pense à regarder dans les spams.`} /> : null}
           <TextField
             label="Code à 6 chiffres"
             icon="keypad-outline"

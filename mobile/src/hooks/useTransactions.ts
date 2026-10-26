@@ -105,4 +105,5 @@ export function invalidateAfterMoneyMove(
   queryClient.invalidateQueries({ queryKey: ['products'] });
   queryClient.invalidateQueries({ queryKey: ['parties'] });
   queryClient.invalidateQueries({ queryKey: ['budgets'] });
+  queryClient.invalidateQueries({ queryKey: ['accounts'] });
 }

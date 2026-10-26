@@ -88,7 +88,7 @@ export default function GlobalViewScreen() {
 
         <Card style={styles.patrimoineCard}>
           <Text style={styles.cardTitle}>Patrimoine</Text>
-          <Row label="Argent en caisse" amount={data.cash_balance} currency={data.currency} formatMoney={formatMoney} />
+          <Row label="Argent (toutes caisses)" amount={data.cash_balance} currency={data.currency} formatMoney={formatMoney} />
           <Row label="Valeur du stock" amount={data.stock_value} currency={data.currency} formatMoney={formatMoney} />
           <Row label="On me doit (créances)" amount={data.receivable} currency={data.currency} formatMoney={formatMoney} tone="positive" />
           <Row label="Je dois (dettes)" amount={data.payable} currency={data.currency} formatMoney={formatMoney} tone="negative" negate />

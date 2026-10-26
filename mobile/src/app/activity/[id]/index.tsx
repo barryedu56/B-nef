@@ -7,7 +7,7 @@ import type { Period, Transaction } from '@/api/types';
 import { AmountText } from '@/components/ui/AmountText';
 import { BudgetProgress } from '@/components/BudgetProgress';
 import { Card } from '@/components/ui/Card';
-import { TxnIcon } from '@/components/TxnIcon';
+import { kindLabel, TxnIcon } from '@/components/TxnIcon';
 import { HeroCard, HeroStat } from '@/components/ui/HeroCard';
 import { KpiTile } from '@/components/ui/KpiTile';
 import { ProfitChart } from '@/components/ui/ProfitChart';
@@ -196,7 +196,7 @@ function TransactionRow({
   categoryName?: string;
   paymentName?: string;
 }) {
-  const label = kindLabel(txn, categoryName);
+  const label = kindLabel(txn.kind, txn.direction, categoryName);
   // Numéro provisoire < 0 : saisie hors-ligne, pas encore sur le serveur.
   const queued = txn.id < 0;
   const meta = [
@@ -226,25 +226,6 @@ function TransactionRow({
       )}
     </Pressable>
   );
-}
-
-function kindLabel(txn: Transaction, categoryName?: string) {
-  switch (txn.kind) {
-    case 'sale':
-      return 'Vente';
-    case 'purchase':
-      return 'Réapprovisionnement';
-    case 'settlement':
-      return 'Règlement';
-    case 'adjustment':
-      return 'Ajustement de stock';
-    case 'opening_balance':
-      return 'Solde initial';
-    case 'personal_use':
-      return 'Consommation personnelle';
-    default:
-      return categoryName ?? (txn.direction === 'in' ? 'Entrée' : 'Sortie');
-  }
 }
 
 const styles = StyleSheet.create({

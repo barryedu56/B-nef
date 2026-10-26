@@ -162,3 +162,13 @@ class CashAccountsMigrationTests(ApiTestCase):
         start = Transaction.objects.get(activity=legacy, kind="contribution")
         self.assertEqual((start.amount, start.payment_method.name), (75000, "Espèces"))
         self.assertEqual(self.summary(f"/api/reports/activity/{legacy.pk}/")["cash_balance"], 74000)
+
+
+class CashOnlyMovementsTests(ApiTestCase):
+    def test_vente_a_credit_absente_des_mouvements_de_caisse(self):
+        cash = PaymentMethod.objects.get(owner=self.user, name="Espèces")
+        self.client.post("/api/sales/", {"activity": self.shop.pk, "is_credit": True, "amount_paid_now": "1000",
+                                         "payment_method": cash.pk, "party": self.party().pk,
+                                         "lines": [{"product": self.product.pk, "quantity": "2"}]}, format="json")
+        rows = self.client.get("/api/transactions/", {"payment_method": cash.pk, "cash_only": 1}).json()["results"]
+        self.assertEqual([(r["kind"], r["amount"]) for r in rows], [("settlement", "1000.00")])

@@ -36,6 +36,7 @@ async function run() {
     });
     const jobs: Promise<unknown>[] = [
       queryClient.prefetchQuery({ queryKey: ['payment-methods'], queryFn: financeApi.listPaymentMethods }),
+      queryClient.prefetchQuery({ queryKey: ['accounts', 'overview'], queryFn: financeApi.fetchAccountsOverview }),
       queryClient.prefetchQuery({
         queryKey: ['budgets', 'status', undefined],
         queryFn: () => budgetsApi.fetchBudgetsStatus({ activity: undefined }),

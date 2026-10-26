@@ -12,6 +12,7 @@ import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { TopBar } from '@/components/ui/TopBar';
 import { useCreateActivity } from '@/hooks/useActivities';
+import { usePaymentMethods } from '@/hooks/useTransactions';
 import { useAuth } from '@/context/AuthContext';
 import { colors, fontSize, spacing } from '@/theme';
 
@@ -33,6 +34,8 @@ export default function NewActivityScreen() {
   const [hasDebts, setHasDebts] = useState(false);
   const [hasBudget, setHasBudget] = useState(false);
   const [openingBalance, setOpeningBalance] = useState('0');
+  const [openingAccountId, setOpeningAccountId] = useState<string | null>(null);
+  const paymentMethods = usePaymentMethods();
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async () => {
@@ -50,6 +53,7 @@ export default function NewActivityScreen() {
         has_debts: hasDebts,
         has_budget: hasBudget,
         opening_balance: openingBalance || '0',
+        opening_account: openingAccountId ? Number(openingAccountId) : null,
       });
       router.replace({ pathname: '/activity/[id]', params: { id: String(activity.id) } });
     } catch (e) {
@@ -65,11 +69,22 @@ export default function NewActivityScreen() {
         <PickerField label="Type" value={type} options={ACTIVITY_TYPE_OPTIONS} onChange={(v) => setType(v as typeof type)} />
         <PickerField label="Devise" value={currency} options={CURRENCY_OPTIONS} onChange={setCurrency} />
         <AmountField
-          label="Solde de caisse initial (facultatif)"
+          label="Argent de départ (facultatif)"
           value={openingBalance}
           onChangeText={setOpeningBalance}
           suffix={currency}
         />
+        {Number(openingBalance.replace(',', '.')) > 0 ? (
+          <PickerField
+            label="Où se trouve cet argent ?"
+            value={openingAccountId ?? (paymentMethods.data?.[0] ? String(paymentMethods.data[0].id) : null)}
+            options={(paymentMethods.data ?? []).map((m) => ({ value: String(m.id), label: m.name }))}
+            onChange={setOpeningAccountId}
+          />
+        ) : null}
+        <Text style={styles.hint}>
+          L'argent que tu as déjà pour cette activité. Il compte dans ta caisse, pas dans ton bénéfice.
+        </Text>
 
         <Card style={styles.modulesCard}>
           <Text style={styles.modulesTitle}>Modules</Text>
@@ -124,6 +139,7 @@ function ModuleRow({
 }
 
 const styles = StyleSheet.create({
+  hint: { fontSize: fontSize.xs, color: colors.textTertiary, marginTop: -spacing.sm, lineHeight: 16 },
   content: { padding: spacing.lg, gap: spacing.md },
   modulesCard: { gap: spacing.md },
   modulesTitle: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.4 },

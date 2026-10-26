@@ -1,7 +1,7 @@
 /** Versions « utilisables hors-ligne » des opérations du quotidien. Les
  * autres (créer une activité, réglages du compte, photo…) restent en ligne
  * uniquement. */
-import type { TransactionInput, SettleInput } from '@/api/finance';
+import type { SettleInput, TransactionInput, TransferInput } from '@/api/finance';
 import type {
   PersonalUseInput,
   ProductInput,
@@ -288,5 +288,19 @@ export async function createProduct(input: ProductInput): Promise<Product> {
       addCachedProduct(product);
       return product;
     },
+  });
+}
+
+/** Transfert d'une caisse à l'autre (et/ou d'une activité à l'autre). Hors
+ * ligne : mis en file ; les soldes se recalculent à la synchronisation. */
+export async function createTransfer(input: TransferInput): Promise<{ out?: Transaction; in?: Transaction }> {
+  const body = { ...input, occurred_on: input.occurred_on || todayISO() };
+  return sendOrQueue<{ out?: Transaction; in?: Transaction }>({
+    label: withActivityName('Transfert', input.from_activity),
+    method: 'POST',
+    path: '/transfers/',
+    body,
+    activityId: input.from_activity,
+    optimistic: () => ({}),
   });
 }
