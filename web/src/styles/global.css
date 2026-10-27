@@ -1414,3 +1414,23 @@ input[type='password']::-ms-clear {
   font-size: 13px;
   font-weight: 600;
 }
+
+.due-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--warning);
+  background: var(--warning-soft);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  text-decoration: none;
+}
+.due-banner svg {
+  color: var(--warning);
+  flex-shrink: 0;
+}
+.due-banner:hover {
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.12);
+}

@@ -9,6 +9,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ActivitiesPage } from '@/pages/ActivitiesPage';
 import { ActivityDetailPage } from '@/pages/ActivityDetailPage';
 import { BudgetsPage } from '@/pages/BudgetsPage';
+import { RecurringPage } from '@/pages/RecurringPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { InventoryPage } from '@/pages/InventoryPage';
@@ -64,6 +65,7 @@ function App() {
                 <Route path="/parties" element={<PartiesPage />} />
                 <Route path="/parties/:id" element={<PartyDetailPage />} />
                 <Route path="/budgets" element={<BudgetsPage />} />
+                <Route path="/recurring" element={<RecurringPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>

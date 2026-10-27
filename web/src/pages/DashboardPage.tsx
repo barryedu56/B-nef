@@ -9,6 +9,7 @@ import { TxnType } from '@/components/TxnType';
 import { AmountText } from '@/components/ui/AmountText';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
+import { DueBanner } from '@/components/DueBanner';
 import { KpiTile } from '@/components/ui/KpiTile';
 import { EmptyState, ErrorBlock, LoadingBlock } from '@/components/ui/QueryState';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
@@ -81,6 +82,7 @@ export function DashboardPage() {
       />
 
       <div className="content">
+        <DueBanner />
         <div className="kpi-grid">
           <KpiTile label="Bénéfice net" amount={data.net_profit} currency={data.currency} highlight icon={<TrendingUp size={18} />} />
           <KpiTile label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} sign="neutral" icon={<Banknote size={18} />} tone="positive" />

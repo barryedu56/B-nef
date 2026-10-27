@@ -371,6 +371,19 @@ téléchargeable (« Télécharger en PDF ») — pas une impression de navigate
 
 ## 13. Questions fréquentes
 
+**Le budget débite-t-il mon loyer automatiquement ?**
+Non : un budget est un **plafond de suivi** (dépensé / prévu sur la
+période), il n'enregistre rien. Pour le loyer, le salaire d'un employé ou un
+abonnement, utilise les **Dépenses fixes** (Réglages → Dépenses fixes sur
+mobile, menu « Dépenses fixes » sur le web) : tu indiques le montant
+habituel, la fréquence (semaine, mois, année) et la première échéance. Le
+jour venu, Bénef prépare l'opération, t'envoie un rappel sur le téléphone
+(à 8 h, même sans internet) et l'affiche sur l'accueil : tu **confirmes** —
+en changeant le montant, la caisse ou en ajoutant des frais si besoin — ou
+tu choisis **« Pas cette fois »**. Rien n'est enregistré sans ta
+confirmation. Si plusieurs échéances sont en retard, on y répond dans
+l'ordre, de la plus ancienne à la plus récente.
+
 **L'application marche-t-elle sans internet ?**
 Oui, l'**application du téléphone** (Android et iPhone) : tu peux consulter
 tes chiffres et enregistrer ventes, dépenses, achats, règlements,

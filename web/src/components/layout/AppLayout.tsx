@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   PiggyBank,
   Receipt,
+  Repeat,
   Settings,
   Store,
   Users,
@@ -25,6 +26,7 @@ const NAV_ITEMS: { to: string; label: string; icon: LucideIcon; end?: boolean }[
   { to: '/inventory', label: 'Inventaire', icon: Boxes },
   { to: '/parties', label: 'Tiers & dettes', icon: Users },
   { to: '/budgets', label: 'Budgets', icon: PiggyBank },
+  { to: '/recurring', label: 'Dépenses fixes', icon: Repeat },
   { to: '/reports', label: 'Rapports', icon: FileChartColumn },
   { to: '/settings', label: 'Paramètres', icon: Settings },
 ];

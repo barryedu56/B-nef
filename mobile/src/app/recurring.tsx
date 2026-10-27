@@ -50,7 +50,11 @@ export default function RecurringScreen() {
           <>
             <Text style={styles.sectionTitle}>À confirmer ({dueRows.length})</Text>
             {dueRows.map((d) => (
-              <DueCard key={`${d.recurring.id}-${d.due_date}`} due={d} />
+              <DueCard
+                key={`${d.recurring.id}-${d.due_date}`}
+                due={d}
+                waitFor={dueRows.find((o) => o.recurring.id === d.recurring.id && o.due_date < d.due_date)?.due_date}
+              />
             ))}
           </>
         ) : null}
@@ -107,7 +111,7 @@ export default function RecurringScreen() {
   );
 }
 
-function DueCard({ due }: { due: DueOperation }) {
+function DueCard({ due, waitFor }: { due: DueOperation; waitFor?: string }) {
   const r = due.recurring;
   const answer = useAnswerDue();
   const paymentMethods = usePaymentMethods();
@@ -173,9 +177,18 @@ function DueCard({ due }: { due: DueOperation }) {
         />
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {waitFor ? <Text style={styles.meta}>Réponds d'abord à l'échéance du {formatLongDate(waitFor).toLowerCase()}.</Text> : null}
       <View style={styles.dueActions}>
-        <Button label="Pas cette fois" variant="secondary" fullWidth={false} style={{ flex: 1 }} onPress={() => run('skip')} />
-        <Button label="Confirmer" icon="checkmark-circle-outline" fullWidth={false} style={{ flex: 1 }} onPress={() => run('confirm')} loading={answer.isPending} />
+        <Button label="Pas cette fois" variant="secondary" fullWidth={false} style={{ flex: 1 }} onPress={() => run('skip')} disabled={!!waitFor} />
+        <Button
+          label="Confirmer"
+          icon="checkmark-circle-outline"
+          fullWidth={false}
+          style={{ flex: 1 }}
+          onPress={() => run('confirm')}
+          loading={answer.isPending}
+          disabled={!!waitFor}
+        />
       </View>
     </Card>
   );
