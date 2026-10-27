@@ -130,3 +130,10 @@ export function patchCachedTransaction(id: number, patch: Partial<Transaction>) 
       : data
   );
 }
+
+/** Retire une échéance de dépense fixe de la liste « à confirmer ». */
+export function removeCachedDue(recurringId: number, dueDate: string) {
+  queryClient.setQueriesData<{ due_date: string; recurring: { id: number } }[]>({ queryKey: ['recurring', 'due'] }, (rows) =>
+    rows ? rows.filter((r) => !(r.recurring.id === recurringId && r.due_date === dueDate)) : rows
+  );
+}

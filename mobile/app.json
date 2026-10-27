@@ -53,7 +53,14 @@
         }
       ],
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false,
+          "color": "#4f46e5"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

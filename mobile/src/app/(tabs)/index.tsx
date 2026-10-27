@@ -14,6 +14,7 @@ import { ErrorView, LoadingView } from '@/components/ui/QueryState';
 import { Screen } from '@/components/ui/Screen';
 import { ACTIVITY_TYPE_OPTIONS } from '@/api/activities';
 import type { Activity } from '@/api/types';
+import { DueBanner } from '@/components/DueBanner';
 import { SyncBanner } from '@/components/SyncBanner';
 import { useAuth } from '@/context/AuthContext';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -42,6 +43,7 @@ export default function ActivitiesScreen() {
       </View>
 
       <View style={styles.content}>
+        <DueBanner />
         {summary.data ? (
           <HeroCard label="Bénéfice net ce mois · toutes activités" amount={summary.data.net_profit} currency={summary.data.currency}>
             <HeroStat label="Chiffre d'affaires" amount={summary.data.revenue} currency={summary.data.currency} />

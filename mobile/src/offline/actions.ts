@@ -11,6 +11,7 @@ import type {
   StockAdjustmentInput,
 } from '@/api/inventory';
 import type { PartyInput } from '@/api/parties';
+import type { ConfirmDueInput, DueOperation } from '@/api/recurring';
 import type { Party, Product, Transaction } from '@/api/types';
 import { todayISO } from '@/lib/dates';
 import {
@@ -21,6 +22,7 @@ import {
   cachedProduct,
   patchCachedTransaction,
   pendingTransaction,
+  removeCachedDue,
   updateCachedStock,
 } from './optimistic';
 import { nextTempId } from './outbox';
@@ -306,5 +308,45 @@ export async function createTransfer(input: TransferInput): Promise<{ out?: Tran
     body,
     activityId: input.from_activity,
     optimistic: () => ({}),
+  });
+}
+
+/** Confirmer (ou passer) une échéance de dépense fixe. Hors ligne : mise en
+ * file et retirée tout de suite de la liste « à confirmer » ; le serveur
+ * refuse une échéance déjà traitée, donc pas de doublon au renvoi. */
+export async function answerDue(
+  due: DueOperation,
+  action: 'confirm' | 'skip',
+  input: Omit<ConfirmDueInput, 'due_date'> = {}
+): Promise<unknown> {
+  const rec = due.recurring;
+  const body = { ...input, due_date: due.due_date };
+  const tempId = await nextTempId();
+  return sendOrQueue<unknown>({
+    label: `${action === 'confirm' ? 'Dépense fixe' : 'Échéance passée'} — ${rec.label}`,
+    method: 'POST',
+    path: `/recurring/${rec.id}/${action}/`,
+    body,
+    activityId: rec.activity,
+    optimistic: () => {
+      removeCachedDue(rec.id, due.due_date);
+      if (action === 'confirm') {
+        const txn = pendingTransaction({
+          id: tempId,
+          activity: rec.activity,
+          direction: rec.direction,
+          kind: 'simple',
+          amount: Number(input.amount ?? rec.amount),
+          currency: rec.currency,
+          occurred_on: due.due_date,
+          category: rec.category,
+          payment_method: input.payment_method ?? rec.payment_method,
+          note: rec.label,
+        });
+        addCachedTransaction(txn);
+        return txn;
+      }
+      return {};
+    },
   });
 }

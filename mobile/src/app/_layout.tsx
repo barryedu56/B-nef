@@ -14,6 +14,7 @@ import { WebFrame } from '@/components/WebFrame';
 import { AuthProvider } from '@/context/AuthContext';
 import { OFFLINE_CACHE_MAX_AGE, persister, queryClient } from '@/offline/queryClient';
 import { startOutboxSync } from '@/offline/sync';
+import { setupReminders } from '@/lib/reminders';
 
 // Garde le splash affiché tant que les polices d'icônes ne sont pas prêtes —
 // sur Android via Expo Go, elles se chargent après le premier rendu, ce qui
@@ -26,6 +27,8 @@ export default function RootLayout() {
 
   // Envoie les opérations saisies hors-ligne dès que le réseau revient.
   useEffect(() => startOutboxSync(), []);
+  // Rappels des dépenses fixes : affichage et ouverture de l'écran au toucher.
+  useEffect(() => setupReminders(), []);
 
   const ready = fontsLoaded || !!fontsError;
 
