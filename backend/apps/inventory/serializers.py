@@ -17,6 +17,10 @@ class ProductSerializer(serializers.ModelSerializer):
     initial_unit_cost = serializers.DecimalField(
         max_digits=20, decimal_places=2, required=False, write_only=True, min_value=Decimal("0")
     )
+    initial_extra_fees = serializers.DecimalField(
+        max_digits=20, decimal_places=2, required=False, write_only=True, min_value=Decimal("0"),
+        help_text="Frais pour tout ce stock (transport, douane…), répartis sur la quantité.",
+    )
     margin = serializers.DecimalField(max_digits=20, decimal_places=2, read_only=True)
     stock_value = serializers.DecimalField(max_digits=20, decimal_places=2, read_only=True)
     is_low_stock = serializers.BooleanField(read_only=True)
@@ -27,7 +31,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "id", "activity", "name", "sku", "unit",
             "purchase_price", "sale_price", "stock_quantity", "low_stock_threshold",
             "category", "is_archived", "margin", "stock_value", "is_low_stock",
-            "initial_quantity", "initial_unit_cost",
+            "initial_quantity", "initial_unit_cost", "initial_extra_fees",
         )
         read_only_fields = ("id", "purchase_price", "stock_quantity")
 
@@ -48,9 +52,11 @@ class ProductSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         qty = validated_data.pop("initial_quantity", None) or Decimal("0")
         cost = validated_data.pop("initial_unit_cost", None) or Decimal("0")
+        fees = validated_data.pop("initial_extra_fees", None) or Decimal("0")
         product = super().create(validated_data)
         if qty > 0:
-            set_initial_stock(product, qty, cost)
+            set_initial_stock(product, qty, cost, fees)
+            product.refresh_from_db()  # stock et coût mis à jour par le service
         return product
 
     def update(self, instance, validated_data):
@@ -58,6 +64,7 @@ class ProductSerializer(serializers.ModelSerializer):
         # ou ajustement.
         validated_data.pop("initial_quantity", None)
         validated_data.pop("initial_unit_cost", None)
+        validated_data.pop("initial_extra_fees", None)
         return super().update(instance, validated_data)
 
 

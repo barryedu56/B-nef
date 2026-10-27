@@ -39,8 +39,8 @@ def apply_onboarding(*, activity, cash: list[dict], products: list[dict], partie
             sale_price=row.get("sale_price") or Z, low_stock_threshold=row.get("low_stock_threshold"),
         )
         if row["quantity"] > 0:
-            set_initial_stock(product, row["quantity"], row["unit_cost"])
-            stock_value += row["quantity"] * row["unit_cost"]
+            movement = set_initial_stock(product, row["quantity"], row["unit_cost"], row.get("extra_fees") or Z)
+            stock_value += row["quantity"] * movement.unit_cost
 
     if parties and not activity.has_debts:
         activity.has_debts = True

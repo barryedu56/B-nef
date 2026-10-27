@@ -19,8 +19,12 @@ COLUMNS = {
     "unit_cost": ("cout", "prix d achat", "achat", "prix achat", "pa"),
     "sale_price": ("prix de vente", "vente", "prix vente", "pv", "prix"),
     "low_stock_threshold": ("seuil", "alerte", "stock minimum"),
+    "extra_fees": ("frais", "transport"),
 }
-TEMPLATE_HEADERS = ["Nom", "Unité", "Quantité en stock", "Coût d'achat unitaire", "Prix de vente", "Seuil d'alerte"]
+TEMPLATE_HEADERS = [
+    "Nom", "Unité", "Quantité en stock", "Coût d'achat unitaire", "Prix de vente", "Seuil d'alerte",
+    "Frais pour tout ce stock",
+]
 
 
 class ImportError_(Exception):
@@ -104,10 +108,11 @@ def parse_products(upload) -> dict:
             unit_cost = _number(cell("unit_cost"))
             sale_price = _number(cell("sale_price"))
             threshold = _number(cell("low_stock_threshold"))
+            fees = _number(cell("extra_fees")) or Decimal(0)
         except ValueError as exc:
             errors.append({"line": line_no, "name": name, "message": str(exc)})
             continue
-        if quantity < 0 or (unit_cost is not None and unit_cost < 0):
+        if quantity < 0 or fees < 0 or (unit_cost is not None and unit_cost < 0):
             errors.append({"line": line_no, "name": name, "message": "Valeur négative"})
             continue
         if quantity > 0 and not unit_cost:
@@ -120,6 +125,7 @@ def parse_products(upload) -> dict:
             "unit_cost": str(unit_cost) if unit_cost is not None else "0",
             "sale_price": str(sale_price) if sale_price is not None else "0",
             "low_stock_threshold": str(threshold) if threshold is not None else None,
+            "extra_fees": str(fees),
         })
     truncated = len(rows) - 1 > MAX_ROWS
     return {"products": products, "errors": errors, "truncated": truncated, "max_rows": MAX_ROWS}
@@ -130,9 +136,9 @@ def template_xlsx() -> bytes:
     ws = wb.active
     ws.title = "Produits"
     ws.append(TEMPLATE_HEADERS)
-    ws.append(["Sac de riz 25 kg", "sac", 20, 230000, 265000, 5])
-    ws.append(["Huile 5 L", "bidon", 12, 95000, 115000, 3])
-    for col, width in zip("ABCDEF", (28, 10, 18, 22, 16, 14)):
+    ws.append(["Sac de riz 25 kg", "sac", 20, 230000, 265000, 5, 40000])
+    ws.append(["Huile 5 L", "bidon", 12, 95000, 115000, 3, 0])
+    for col, width in zip("ABCDEFG", (28, 10, 18, 22, 16, 14, 24)):
         ws.column_dimensions[col].width = width
     out = io.BytesIO()
     wb.save(out)

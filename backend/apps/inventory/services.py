@@ -394,13 +394,20 @@ def consume_for_personal_use(
 
 
 @db_transaction.atomic
-def set_initial_stock(product: Product, quantity: Decimal, unit_cost: Decimal) -> StockMovement:
+def set_initial_stock(
+    product: Product, quantity: Decimal, unit_cost: Decimal, extra_fees: Decimal = Z
+) -> StockMovement:
     """Stock déjà en ta possession au moment de créer le produit (acheté
     avant d'utiliser Bénef). Il entre au coût indiqué — le coût des ventes
     sera juste — mais la caisse ne bouge pas : cet argent a été dépensé
-    avant, il n'est pas dans tes caisses Bénef."""
+    avant, il n'est pas dans tes caisses Bénef.
+
+    `extra_fees` : frais annexes payés pour TOUT ce stock (transport,
+    douane…), répartis sur la quantité comme pour un réapprovisionnement
+    (voir `restock`) : ils font partie du coût de revient de chaque unité."""
     quantity = Decimal(quantity)
-    unit_cost = _round2(Decimal(unit_cost))
+    extra_fees = Decimal(extra_fees or 0)
+    unit_cost = _round2(Decimal(unit_cost) + (extra_fees / quantity if quantity else Z))
     product = Product.objects.select_for_update().get(pk=product.pk)
     product.stock_quantity = quantity
     product.purchase_price = unit_cost
@@ -412,5 +419,5 @@ def set_initial_stock(product: Product, quantity: Decimal, unit_cost: Decimal) -
         unit_cost=unit_cost,
         stock_after=quantity,
         occurred_on=timezone.localdate(),
-        note="Stock initial",
+        note=f"Stock initial (dont {extra_fees} de frais)" if extra_fees > 0 else "Stock initial",
     )

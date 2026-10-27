@@ -39,6 +39,18 @@ class OnboardingTests(ApiTestCase):
         overview = {a["name"]: Decimal(a["balance"]) for a in self.client.get("/api/payment-methods/overview/").json()["accounts"]}
         self.assertEqual((overview["Espèces"], overview["Orange Money"]), (800000, 1200000))
 
+    def test_frais_du_stock_repartis_sur_le_cout_unitaire(self):
+        # 10 sacs à 230 000 + 40 000 de transport pour le lot → 234 000 le sac.
+        r = self.onboard(products=[{"name": "Riz", "unit": "sac", "quantity": "10", "unit_cost": "230000",
+                                    "sale_price": "265000", "extra_fees": "40000"}])
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["stock_value"], "2340000.00")
+        riz = Product.objects.get(activity=self.kiosk, name="Riz")
+        self.assertEqual(riz.purchase_price, Decimal("234000.00"))
+        # Les frais du stock d'avant ne sortent d'aucune caisse et ne sont pas une charge.
+        s = self.summary(f"/api/reports/activity/{self.kiosk.pk}/")
+        self.assertEqual((s["cash_balance"], s["expenses"]), (0, 0))
+
     def test_tout_ou_rien(self):
         r = self.onboard(
             cash=[{"account": self.cash.pk, "amount": "5000"}],
@@ -81,6 +93,14 @@ class ProductImportTests(ApiTestCase):
         self.assertEqual(data["products"][1]["unit"], "pièce")
         self.assertEqual(data["errors"][0]["line"], 4)
 
+    def test_creation_produit_avec_stock_initial_et_frais(self):
+        r = self.client.post("/api/products/", {
+            "activity": self.shop.pk, "name": "Ciment", "initial_quantity": "40",
+            "initial_unit_cost": "85000", "initial_extra_fees": "200000", "sale_price": "95000",
+        }, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["purchase_price"], "90000.00")
+
     def test_csv_point_virgule_virgule_decimale(self):
         content = "Nom;Quantité;Coût;Prix de vente\nSucre 1 kg;10;11000;14000\nLait;2,5;32000;40000\n".encode("latin-1")
         r = self.upload("stock.csv", content)
@@ -101,4 +121,5 @@ class ProductImportTests(ApiTestCase):
         data = self.upload("benef-modele-produits.xlsx", template).json()
         self.assertEqual([p["name"] for p in data["products"]], ["Sac de riz 25 kg", "Huile 5 L"])
         self.assertEqual((data["products"][0]["unit"], data["products"][0]["low_stock_threshold"]), ("sac", "5"))
+        self.assertEqual(data["products"][0]["extra_fees"], "40000")
         self.assertEqual(data["errors"], [])

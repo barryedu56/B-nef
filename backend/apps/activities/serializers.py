@@ -90,6 +90,8 @@ class _ProductRow(serializers.Serializer):
     quantity = serializers.DecimalField(max_digits=16, decimal_places=3, min_value=Decimal("0"), default=Decimal("0"))
     unit_cost = serializers.DecimalField(max_digits=20, decimal_places=2, min_value=Decimal("0"), default=Decimal("0"))
     sale_price = serializers.DecimalField(max_digits=20, decimal_places=2, min_value=Decimal("0"), default=Decimal("0"))
+    # Frais pour tout ce stock (transport, douane…) : répartis sur la quantité.
+    extra_fees = serializers.DecimalField(max_digits=20, decimal_places=2, min_value=Decimal("0"), default=Decimal("0"))
     low_stock_threshold = serializers.DecimalField(max_digits=16, decimal_places=3, required=False, allow_null=True)
 
     def validate(self, attrs):
