@@ -2,7 +2,7 @@ import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { deleteAccount, deleteAvatar, updateMe, uploadAvatar } from '@/api/auth';
@@ -10,6 +10,7 @@ import { API_URL, ApiError } from '@/api/client';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { TextField } from '@/components/ui/TextField';
 import { PickerField } from '@/components/ui/PickerField';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
@@ -274,14 +275,14 @@ function DeleteAccountCard({ onDeleted }: { onDeleted: () => void }) {
       </Text>
       {open ? (
         <>
-          <TextInput
+          <TextField
+            label="Mot de passe pour confirmer"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            autoCapitalize="none"
+            autoComplete="current-password"
             placeholder="Ton mot de passe"
-            placeholderTextColor={colors.textTertiary}
-            style={styles.passwordInput}
-            accessibilityLabel="Mot de passe pour confirmer"
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Button label="Supprimer définitivement" variant="danger" onPress={confirm} loading={busy} disabled={!password} />
@@ -297,15 +298,6 @@ function DeleteAccountCard({ onDeleted }: { onDeleted: () => void }) {
 const styles = StyleSheet.create({
   dangerCard: { gap: spacing.md, borderColor: colors.negative, marginTop: spacing.lg },
   legalLink: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', textDecorationLine: 'underline' },
-  passwordInput: {
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    fontSize: fontSize.sm,
-    color: colors.textPrimary,
-  },
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
   title: { fontSize: fontSize.xxl, fontWeight: '700', color: colors.textPrimary },
   content: { paddingHorizontal: spacing.lg, gap: spacing.md },

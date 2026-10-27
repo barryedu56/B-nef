@@ -72,12 +72,16 @@ export function TextField({
           style={[styles.input, multiline && styles.inputMultiline, inputStyle]}
         />
         {secureTextEntry ? (
+          // Zone de taille fixe qui ne se rétrécit jamais : sur Android, le
+          // champ texte (flex: 1) pouvait occuper toute la largeur et pousser
+          // l'œil hors du cadre.
           <Pressable
             onPress={() => setRevealed((v) => !v)}
-            hitSlop={10}
+            hitSlop={8}
+            style={styles.eye}
             accessibilityRole="button"
             accessibilityLabel={revealed ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>
-            <Ionicons name={revealed ? 'eye-off-outline' : 'eye-outline'} size={19} color={colors.textTertiary} />
+            <Ionicons name={revealed ? 'eye-off-outline' : 'eye-outline'} size={21} color={colors.textSecondary} />
           </Pressable>
         ) : null}
       </View>
@@ -106,12 +110,17 @@ const styles = StyleSheet.create({
   multiline: { minHeight: 88, alignItems: 'flex-start', paddingVertical: 10 },
   input: {
     flex: 1,
+    // Sans ça, Android peut donner au champ sa largeur « naturelle » et
+    // déborder sur ce qui le suit (l'œil du mot de passe).
+    flexShrink: 1,
+    minWidth: 0,
     fontSize: fontSize.md,
     color: colors.textPrimary,
     paddingVertical: 12,
     // Version web : le cadre coloré du champ suffit, pas de contour navigateur en plus.
     ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null),
   },
+  eye: { width: 36, height: 36, flexShrink: 0, alignItems: 'center', justifyContent: 'center', marginRight: -6 },
   inputMultiline: { textAlignVertical: 'top', paddingVertical: 0 },
   error: { fontSize: fontSize.xs, color: colors.negative },
   hint: { fontSize: fontSize.xs, color: colors.textTertiary, lineHeight: 16 },

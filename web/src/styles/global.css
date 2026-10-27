@@ -1380,3 +1380,9 @@ table.table tr.clickable:hover td {
     grid-column: 1 / -1;
   }
 }
+
+/* Edge ajoute son propre œil aux champs mot de passe : on garde seulement le nôtre. */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
+}
