@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.conf import settings
+from django.db import transaction as db_transaction
 from rest_framework import serializers
 
 from apps.common.phone import clean_guinea_phone
@@ -39,6 +40,23 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate_phone(self, value):
         return clean_guinea_phone(value)
+
+    @db_transaction.atomic
+    def update(self, instance, validated_data):
+        old_base = instance.base_currency_id
+        user = super().update(instance, validated_data)
+        if user.base_currency_id != old_base:
+            from apps.currencies.services import RateUnavailable
+            from apps.finance.services import rebase_amounts
+
+            try:
+                rebase_amounts(user)
+            except RateUnavailable as exc:
+                raise serializers.ValidationError({
+                    "base_currency": f"Pas de taux de change entre tes opérations et {user.base_currency_id} : "
+                    "impossible de convertir ton historique. Ajoute le taux puis réessaie.",
+                }) from exc
+        return user
 
 
 class AvatarUploadSerializer(serializers.ModelSerializer):

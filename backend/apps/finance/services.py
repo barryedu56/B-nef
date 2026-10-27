@@ -99,6 +99,26 @@ def recompute_snapshot(txn: Transaction) -> Transaction:
     return txn
 
 
+@db_transaction.atomic
+def rebase_amounts(user) -> int:
+    """Après un changement de devise principale : recalcule le montant de
+    chaque opération dans la nouvelle devise (au taux de la date de
+    l'opération, comme à la saisie). Sans ça, les totaux en devise
+    principale afficheraient les anciens montants sous le nouveau symbole.
+    Lève RateUnavailable s'il manque un taux : rien n'est modifié."""
+    base = user.base_currency_id
+    txns = list(Transaction.objects.filter(activity__owner=user).only(
+        "id", "amount", "currency_id", "occurred_on", "amount_base", "fx_rate_to_base",
+    ))
+    for txn in txns:
+        if txn.currency_id == base:
+            txn.amount_base, txn.fx_rate_to_base = txn.amount, Decimal(1)
+        else:
+            txn.amount_base = convert(txn.amount, txn.currency_id, base, txn.occurred_on)
+            txn.fx_rate_to_base = get_rate(txn.currency_id, base, txn.occurred_on)
+    Transaction.objects.bulk_update(txns, ["amount_base", "fx_rate_to_base"], batch_size=500)
+    return len(txns)
+
 FEE_CATEGORY = "Frais de transfert"
 
 

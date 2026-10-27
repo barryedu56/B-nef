@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
@@ -33,7 +34,14 @@ router.register("budgets", BudgetViewSet, basename="budget")
 router.register("currencies", CurrencyViewSet, basename="currency")
 router.register("exchange-rates", ExchangeRateViewSet, basename="exchangerate")
 
+def health(_request):
+    """Réponse minimale (pas de base de données, pas de connexion) : l'app
+    mobile s'en sert pour savoir si le serveur Bénef est joignable."""
+    return JsonResponse({"ok": True})
+
+
 api_patterns = [
+    path("health/", health, name="health"),
     path("auth/", include("apps.accounts.urls")),
     path("convert/", ConvertView.as_view(), name="currency-convert"),
     path("sales/", SaleView.as_view(), name="sale-create"),
