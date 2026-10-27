@@ -393,6 +393,37 @@ def consume_for_personal_use(
     )
 
 
+def initial_stock_editable(product: Product) -> bool:
+    """Le stock de départ se corrige directement tant que le produit n'a
+    aucun autre mouvement (ni vente, ni réappro, ni ajustement) : c'est une
+    erreur de saisie, pas une perte. Ensuite on passe par un inventaire."""
+    movements = list(product.movements.all()[:2])
+    return len(movements) == 0 or (
+        len(movements) == 1 and movements[0].type == StockMovement.Type.IN and movements[0].transaction_id is None
+    )
+
+
+@db_transaction.atomic
+def correct_initial_stock(product: Product, quantity: Decimal, unit_cost: Decimal, extra_fees: Decimal = Z) -> Product:
+    """Remplace le stock de départ (quantité, coût, frais) d'un produit qui
+    n'a encore aucun autre mouvement. Ni la caisse ni le bénéfice ne bougent."""
+    product = Product.objects.select_for_update().get(pk=product.pk)
+    if not initial_stock_editable(product):
+        raise ValueError(
+            "Ce produit a déjà des ventes ou des réapprovisionnements : corrige son stock avec un inventaire."
+        )
+    product.movements.all().delete()
+    quantity = Decimal(quantity or 0)
+    if quantity > 0:
+        set_initial_stock(product, quantity, unit_cost, extra_fees)
+    else:
+        product.stock_quantity = Z
+        product.purchase_price = Z
+        product.save(update_fields=["stock_quantity", "purchase_price", "updated_at"])
+    product.refresh_from_db()
+    return product
+
+
 @db_transaction.atomic
 def set_initial_stock(
     product: Product, quantity: Decimal, unit_cost: Decimal, extra_fees: Decimal = Z

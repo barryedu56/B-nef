@@ -4,7 +4,7 @@ from django.db import transaction as db_transaction
 from rest_framework import serializers
 
 from .models import Product, SaleLine, StockMovement
-from .services import set_initial_stock
+from .services import correct_initial_stock, initial_stock_editable, set_initial_stock
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -24,6 +24,9 @@ class ProductSerializer(serializers.ModelSerializer):
     margin = serializers.DecimalField(max_digits=20, decimal_places=2, read_only=True)
     stock_value = serializers.DecimalField(max_digits=20, decimal_places=2, read_only=True)
     is_low_stock = serializers.BooleanField(read_only=True)
+    # Vrai tant que le stock de départ peut être corrigé directement (aucune
+    # vente, aucun réappro) — ensuite : inventaire (ajustement de stock).
+    can_edit_initial_stock = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -31,9 +34,14 @@ class ProductSerializer(serializers.ModelSerializer):
             "id", "activity", "name", "sku", "unit",
             "purchase_price", "sale_price", "stock_quantity", "low_stock_threshold",
             "category", "is_archived", "margin", "stock_value", "is_low_stock",
-            "initial_quantity", "initial_unit_cost", "initial_extra_fees",
+            "initial_quantity", "initial_unit_cost", "initial_extra_fees", "can_edit_initial_stock",
         )
         read_only_fields = ("id", "purchase_price", "stock_quantity")
+
+    def get_can_edit_initial_stock(self, obj) -> bool:
+        if hasattr(obj, "movement_count"):  # annoté par la vue
+            return obj.movement_count == 0 or (obj.movement_count == 1 and obj.other_movement_count == 0)
+        return initial_stock_editable(obj)
 
     def validate_activity(self, activity):
         if activity.owner_id != self.context["request"].user.id:
@@ -59,13 +67,20 @@ class ProductSerializer(serializers.ModelSerializer):
             product.refresh_from_db()  # stock et coût mis à jour par le service
         return product
 
+    @db_transaction.atomic
     def update(self, instance, validated_data):
-        # Le stock initial ne se saisit qu'à la création ; ensuite : réappro
-        # ou ajustement.
-        validated_data.pop("initial_quantity", None)
-        validated_data.pop("initial_unit_cost", None)
-        validated_data.pop("initial_extra_fees", None)
-        return super().update(instance, validated_data)
+        # Correction du stock de départ (erreur de saisie) : seulement tant
+        # que le produit n'a aucun autre mouvement ; ensuite : inventaire.
+        qty = validated_data.pop("initial_quantity", None)
+        cost = validated_data.pop("initial_unit_cost", None)
+        fees = validated_data.pop("initial_extra_fees", None)
+        product = super().update(instance, validated_data)
+        if qty is not None:
+            try:
+                product = correct_initial_stock(product, qty, cost or Decimal("0"), fees or Decimal("0"))
+            except ValueError as exc:
+                raise serializers.ValidationError({"initial_quantity": str(exc)}) from exc
+        return product
 
 
 class StockMovementSerializer(serializers.ModelSerializer):

@@ -1,11 +1,12 @@
 from decimal import Decimal
 
+from django.db import transaction as db_transaction
 from rest_framework import serializers
 
 from apps.activities.models import Activity
 
 from .models import CashCount, Category, PaymentMethod, Transaction
-from .services import create_transaction
+from .services import add_fee, create_transaction
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -101,6 +102,11 @@ class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
     kind_display = serializers.CharField(source="get_kind_display", read_only=True)
     remaining_amount = serializers.DecimalField(max_digits=20, decimal_places=2, read_only=True)
     fees_total = serializers.SerializerMethodField()
+    # À la création seulement : frais de l'opérateur (Orange Money, banque…)
+    # payés en plus de cette dépense / ce retrait — enregistrés comme une charge.
+    fee = serializers.DecimalField(
+        max_digits=20, decimal_places=2, required=False, allow_null=True, write_only=True, min_value=Decimal("0"),
+    )
 
     class Meta:
         model = Transaction
@@ -109,7 +115,7 @@ class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
             "amount_activity", "amount_base", "fx_rate_to_base", "fx_date",
             "category", "payment_method", "party", "occurred_on", "note",
             "is_credit", "settled_amount", "remaining_amount", "is_settled", "settles", "created_at",
-            "voided_at", "voided_reason", "is_voided", "fee_for", "fees_total",
+            "voided_at", "voided_reason", "is_voided", "fee_for", "fees_total", "fee",
         )
         read_only_fields = (
             "id", "amount_activity", "amount_base", "fx_rate_to_base", "fx_date", "created_at",
@@ -158,6 +164,11 @@ class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
                 )
             if attrs.get("is_credit"):
                 raise serializers.ValidationError({"is_credit": "Un apport ou un retrait ne se fait pas à crédit."})
+        if attrs.get("fee"):
+            if attrs.get("is_credit"):
+                raise serializers.ValidationError({"fee": "Pas de frais sur une opération à crédit : rien n'est payé tout de suite."})
+            if kind not in (None, Transaction.Kind.SIMPLE, Transaction.Kind.WITHDRAWAL):
+                raise serializers.ValidationError({"fee": "Des frais ne s'ajoutent qu'à une dépense, une entrée ou un retrait."})
         if kind == Transaction.Kind.OPENING_BALANCE and not (
             attrs.get("is_credit") and attrs.get("party")
         ):
@@ -166,10 +177,12 @@ class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
             )
         return attrs
 
+    @db_transaction.atomic
     def create(self, validated_data):
         activity = validated_data.pop("activity")
         currency = validated_data.pop("currency")
-        return create_transaction(
+        fee = validated_data.pop("fee", None)
+        txn = create_transaction(
             activity=activity,
             direction=validated_data.pop("direction"),
             amount=validated_data.pop("amount"),
@@ -178,6 +191,8 @@ class TransactionSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):
             kind=validated_data.pop("kind", Transaction.Kind.SIMPLE),
             **validated_data,
         )
+        add_fee(txn, fee, note=f"Frais — {txn.note or ('dépense' if txn.direction == Transaction.Direction.OUT else 'entrée')}")
+        return txn
 
 
 class TransactionUpdateSerializer(_OwnedRelationsMixin, serializers.ModelSerializer):

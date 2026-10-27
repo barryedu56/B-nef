@@ -123,3 +123,22 @@ class FeeTests(ApiTestCase):
             "amount": "100000", "fee": "-5",
         }, format="json")
         self.assertEqual(r.status_code, 400)
+
+    def test_depense_payee_par_orange_money_avec_frais(self):
+        r = self.client.post("/api/transactions/", {
+            "activity": self.shop.pk, "direction": "out", "amount": "50000", "currency": "GNF",
+            "payment_method": self.om.pk, "fee": "750", "note": "Loyer", "occurred_on": date.today().isoformat(),
+        }, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()["fees_total"], "750.00")
+        self.assertEqual(self.balances()["Orange Money"], 500000 - 50750)
+        self.assertEqual(self.shop_summary()["expenses"], 50750)
+        self.client.post(f"/api/transactions/{r.json()['id']}/void/", {}, format="json")
+        self.assertEqual(self.balances()["Orange Money"], 500000)
+
+    def test_pas_de_frais_sur_une_depense_a_credit(self):
+        r = self.client.post("/api/transactions/", {
+            "activity": self.shop.pk, "direction": "out", "amount": "50000", "currency": "GNF",
+            "is_credit": True, "party": self.party().pk, "fee": "750", "occurred_on": "2026-01-15",
+        }, format="json")
+        self.assertEqual(r.status_code, 400)

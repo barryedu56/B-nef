@@ -1,4 +1,5 @@
 from django.http import HttpResponse
+from django.db.models import Count, Q
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, ValidationError
@@ -19,7 +20,17 @@ class ProductViewSet(viewsets.ModelViewSet):
     ordering_fields = ("name", "stock_quantity", "sale_price")
 
     def get_queryset(self):
-        qs = Product.objects.filter(activity__owner=self.request.user).select_related("activity")
+        qs = (
+            Product.objects.filter(activity__owner=self.request.user)
+            .select_related("activity")
+            # Pour can_edit_initial_stock sans une requête par produit.
+            .annotate(
+                movement_count=Count("movements"),
+                other_movement_count=Count(
+                    "movements", filter=~Q(movements__type=StockMovement.Type.IN) | Q(movements__transaction__isnull=False)
+                ),
+            )
+        )
         if self.request.query_params.get("low_stock") in {"1", "true", "yes"}:
             ids = [p.pk for p in qs if p.is_low_stock]
             qs = qs.filter(pk__in=ids)

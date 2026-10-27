@@ -3,7 +3,7 @@ from decimal import Decimal
 from apps.common.testutils import ApiTestCase
 from apps.finance.models import Transaction
 
-from .models import Product
+from .models import Product, StockMovement
 
 
 class SaleTests(ApiTestCase):
@@ -123,3 +123,38 @@ class OfflineSaleTests(ApiTestCase):
             format="json",
         )
         self.assertEqual(r.status_code, 201, r.content)
+
+
+class InitialStockCorrectionTests(ApiTestCase):
+    def create(self, **extra):
+        r = self.client.post("/api/products/", {
+            "activity": self.shop.pk, "name": "Riz", "initial_quantity": "10", "initial_unit_cost": "200000",
+            "sale_price": "250000", **extra,
+        }, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        return r.json()["id"]
+
+    def test_correction_du_stock_de_depart_sans_toucher_au_benefice(self):
+        pid = self.create()
+        self.assertTrue(self.client.get(f"/api/products/{pid}/").json()["can_edit_initial_stock"])
+        r = self.client.patch(f"/api/products/{pid}/", {
+            "initial_quantity": "12", "initial_unit_cost": "210000", "initial_extra_fees": "24000",
+        }, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual((r.json()["stock_quantity"], r.json()["purchase_price"]), ("12.000", "212000.00"))
+        self.assertEqual(StockMovement.objects.filter(product_id=pid).count(), 1)
+        s = self.summary(f"/api/reports/activity/{self.shop.pk}/")
+        self.assertEqual((s["expenses"], s["net_profit"]), (0, 0))
+
+    def test_apres_une_vente_il_faut_un_inventaire(self):
+        pid = self.create()
+        self.client.post("/api/sales/", {"activity": self.shop.pk, "lines": [{"product": pid, "quantity": "1"}]}, format="json")
+        listed = {p["id"]: p for p in self.client.get("/api/products/", {"activity": self.shop.pk}).json()["results"]}
+        self.assertFalse(listed[pid]["can_edit_initial_stock"])
+        r = self.client.patch(f"/api/products/{pid}/", {"initial_quantity": "20", "initial_unit_cost": "1"}, format="json")
+        self.assertEqual(r.status_code, 400)
+        # Inventaire : 7 sacs comptés au lieu de 9 → perte de 2 × 200 000.
+        r = self.client.post("/api/stock-adjustments/", {"product": pid, "new_quantity": "7"}, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        s = self.summary(f"/api/reports/activity/{self.shop.pk}/")
+        self.assertEqual(s["stock_losses"], 400000)
