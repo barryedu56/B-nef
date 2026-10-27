@@ -22,6 +22,7 @@ import { useActivitySummary } from '@/hooks/useReports';
 import { useCategories, usePaymentMethods, useTransactions } from '@/hooks/useTransactions';
 import { formatPeriodLabel, formatRelativeDate, shiftAnchor, todayISO } from '@/lib/dates';
 import { colors, fontSize, radius, spacing } from '@/theme';
+import { setMoneyActivity } from '@/lib/moneyFilter';
 
 const PERIOD_OPTIONS: { value: Period; label: string }[] = [
   { value: 'day', label: 'Jour' },
@@ -87,7 +88,16 @@ export default function ActivityDashboardScreen() {
 
         <HeroCard label="Bénéfice net de la période" amount={data.net_profit} currency={data.currency}>
           <HeroStat label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} />
-          <HeroStat label="Caisse" amount={data.cash_balance} currency={data.currency} />
+          <HeroStat
+            label="Caisse"
+            amount={data.cash_balance}
+            currency={data.currency}
+            onPress={() => {
+              // « Mon argent » filtré sur cette activité : dans quelles caisses est son argent.
+              setMoneyActivity(act.id);
+              router.push('/(tabs)/money');
+            }}
+          />
         </HeroCard>
 
         <View style={styles.kpiGrid}>

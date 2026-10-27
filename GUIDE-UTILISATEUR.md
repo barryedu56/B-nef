@@ -494,6 +494,22 @@ séparé (un tiroir par boutique, un compte Orange Money pour le taxi), crée
 une caisse par activité dans Paramètres → Moyens de paiement, par exemple
 « Espèces boutique » et « Espèces taxi ».
 
+**Voir une seule activité.** En haut de « Mon argent » (puces sur mobile,
+liste déroulante sur le web), choisis une activité au lieu de « Toutes les
+activités ». Le total devient l'argent de cette activité (le même que
+« Caisse » sur son tableau de bord) et chaque caisse montre **sa part**,
+avec le solde réel de la caisse en petit. Les mouvements, vérifications et
+entrées/sorties ne montrent plus que cette activité ; Transférer, Apport et
+Retrait la proposent d'office. Raccourci : touche « Caisse › » sur le
+tableau de bord d'une activité. Ton choix est retenu pour la prochaine fois.
+Une part négative n'est pas une erreur : l'activité a dépensé de l'argent
+apporté dans cette caisse par une autre activité.
+
+**Vérifier en vue filtrée.** Choisis « Ce que tu comptes » : seulement
+l'argent de cette activité (ex. le tiroir de cette boutique — Bénef compare
+à sa part) ou toute la caisse (comme sans filtre). L'écart va à l'activité
+choisie.
+
 **Un solde négatif ?** C'est impossible dans la vraie vie : une opération a
 sûrement été enregistrée avec la mauvaise caisse (ex. un achat payé par
 Orange Money saisi en Espèces). Ouvre la caisse pour voir ses mouvements.

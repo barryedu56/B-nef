@@ -12,6 +12,7 @@ import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { TopBar } from '@/components/ui/TopBar';
 import { useActivities } from '@/hooks/useActivities';
+import { useMoneyActivity } from '@/lib/moneyFilter';
 import { useAccountsOverview } from '@/hooks/useAccounts';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { todayISO } from '@/lib/dates';
@@ -52,7 +53,8 @@ export default function PersonalMoneyScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const account = accounts.find((a) => String(a.id) === accountId) ?? accounts[0];
-  const activity = acts.find((a) => String(a.id) === activityId) ?? acts[0];
+  const filter = useMoneyActivity();
+  const activity = acts.find((a) => String(a.id) === activityId) ?? acts.find((a) => a.id === filter) ?? acts[0];
 
   const onSubmit = async () => {
     const value = Number(amount.replace(',', '.'));

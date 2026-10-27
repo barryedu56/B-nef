@@ -1386,3 +1386,18 @@ input[type='password']::-ms-reveal,
 input[type='password']::-ms-clear {
   display: none;
 }
+
+/* Tuile chiffre cliquable (ex. « Caisse » d'une activité → Mon argent filtré). */
+.kpi-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.kpi-link .kpi-tile {
+  height: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.kpi-link:hover .kpi-tile {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}

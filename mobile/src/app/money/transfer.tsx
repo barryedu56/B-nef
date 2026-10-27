@@ -12,6 +12,7 @@ import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { TopBar } from '@/components/ui/TopBar';
 import { useActivities } from '@/hooks/useActivities';
+import { useMoneyActivity } from '@/lib/moneyFilter';
 import { useAccountsOverview, useTransfer } from '@/hooks/useAccounts';
 import { formatAmount } from '@/lib/money';
 import { colors, fontSize, spacing } from '@/theme';
@@ -37,7 +38,9 @@ export default function TransferScreen() {
 
   const from = accounts.find((a) => String(a.id) === fromId) ?? accounts[0];
   const to = accounts.find((a) => String(a.id) === toId) ?? accounts.find((a) => a.id !== from?.id);
-  const fromAct = fromActivity || (acts[0] ? String(acts[0].id) : '');
+  const filter = useMoneyActivity();
+  const defaultAct = acts.find((a) => a.id === filter) ?? acts[0];
+  const fromAct = fromActivity || (defaultAct ? String(defaultAct.id) : '');
   const toAct = toActivity || fromAct;
   const accountOptions = accounts.map((a) => ({
     value: String(a.id),

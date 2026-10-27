@@ -18,10 +18,10 @@ const PERIOD_OPTIONS: { value: Period; label: string }[] = [
 
 /** D'où vient l'argent et où il est parti, sur une période : toutes caisses,
  * puis caisse par caisse (solde au début, entré, sorti, solde à la fin). */
-export function CashFlowCard() {
+export function CashFlowCard({ activity = null }: { activity?: number | null }) {
   const [period, setPeriod] = useState<Period>('month');
   const [anchor, setAnchor] = useState(todayISO());
-  const flow = useCashFlow(period, anchor);
+  const flow = useCashFlow(period, anchor, activity);
 
   return (
     <Card>

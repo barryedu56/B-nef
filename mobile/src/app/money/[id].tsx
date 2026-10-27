@@ -14,16 +14,19 @@ import { useActivities } from '@/hooks/useActivities';
 import { useAccountMovements, useAccountsOverview, useCashCounts } from '@/hooks/useAccounts';
 import { formatRelativeDate } from '@/lib/dates';
 import { formatAmount } from '@/lib/money';
+import { useMoneyActivity } from '@/lib/moneyFilter';
 import { colors, fontSize, spacing } from '@/theme';
 
 /** Une caisse : son solde, ses derniers mouvements, ses vérifications. */
 export default function AccountScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const accountId = Number(id);
-  const overview = useAccountsOverview();
-  const movements = useAccountMovements(accountId);
-  const counts = useCashCounts(accountId);
+  const filter = useMoneyActivity();
+  const overview = useAccountsOverview(filter);
+  const movements = useAccountMovements(accountId, filter);
+  const counts = useCashCounts(accountId, filter);
   const activities = useActivities();
+  const filtered = overview.data?.activity ?? null;
 
   const account = overview.data?.accounts.find((a) => a.id === accountId);
   if (overview.isLoading) return <LoadingView />;
@@ -34,13 +37,16 @@ export default function AccountScreen() {
 
   return (
     <Screen edges={['top']} onRefresh={() => { overview.refetch(); movements.refetch(); counts.refetch(); }} refreshing={overview.isRefetching}>
-      <TopBar title={account.name} back />
+      <TopBar title={account.name} subtitle={filtered ? filtered.name : undefined} back />
       <View style={styles.content}>
         <Card style={styles.balanceCard}>
           <AccountIcon account={account} size={48} />
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.label}>Solde actuel</Text>
+            <Text style={styles.label}>{filtered ? `Part de ${filtered.name}` : 'Solde actuel'}</Text>
             <AmountText amount={account.balance ?? '0'} currency={currency} size={24} weight="800" sign={Number(account.balance) < 0 ? 'negative' : 'neutral'} />
+            {filtered && account.account_balance !== undefined ? (
+              <Text style={styles.txnMeta}>Solde réel de la caisse : {formatAmount(account.account_balance, currency)}</Text>
+            ) : null}
           </View>
         </Card>
         <Button
@@ -86,7 +92,10 @@ export default function AccountScreen() {
                       <Text style={styles.txnLabel}>
                         {formatRelativeDate(c.created_at.slice(0, 10))} · compté {formatAmount(c.counted, c.currency)}
                       </Text>
-                      <Text style={styles.txnMeta}>Attendu {formatAmount(c.expected, c.currency)}</Text>
+                      <Text style={styles.txnMeta}>
+                        Attendu {formatAmount(c.expected, c.currency)}
+                        {c.activity_only ? ` · part de ${c.activity_name}` : ''}
+                      </Text>
                     </View>
                     <Text style={[styles.diff, { color: diff === 0 ? colors.positive : diff < 0 ? colors.negative : colors.warning }]}>
                       {diff === 0 ? 'Juste' : `${diff > 0 ? '+' : ''}${formatAmount(c.difference, c.currency)}`}

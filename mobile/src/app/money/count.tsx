@@ -9,34 +9,42 @@ import { AmountField } from '@/components/ui/AmountField';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { PickerField } from '@/components/ui/PickerField';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { TopBar } from '@/components/ui/TopBar';
 import { useActivities } from '@/hooks/useActivities';
 import { useAccountsOverview, useCountCash } from '@/hooks/useAccounts';
 import { formatAmount } from '@/lib/money';
+import { useMoneyActivity } from '@/lib/moneyFilter';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
 /** Vérification de caisse : on compte l'argent réellement présent, Bénef
  * compare au solde attendu et enregistre l'écart. */
 export default function CountCashScreen() {
   const params = useLocalSearchParams<{ account?: string }>();
-  const overview = useAccountsOverview();
+  const filter = useMoneyActivity();
+  // Vue filtrée sur une activité : on peut compter seulement son argent (ex.
+  // le tiroir de cette boutique) ou toute la caisse, comme sans filtre.
+  const [scope, setScope] = useState<'activity' | 'all'>(filter ? 'activity' : 'all');
+  const activityOnly = !!filter && scope === 'activity';
+  const overview = useAccountsOverview(activityOnly ? filter : null);
   const activities = useActivities();
   const countCash = useCountCash();
   const accounts = overview.data?.accounts ?? [];
   // Activités avec stock d'abord : c'est là que circule l'argent du commerce.
   const acts = [...(activities.data ?? [])].sort((x, y) => Number(y.has_inventory) - Number(x.has_inventory));
+  const filterAct = acts.find((a) => a.id === filter);
 
   const [accountId, setAccountId] = useState(params.account ?? '');
-  const [activityId, setActivityId] = useState('');
+  const [activityId, setActivityId] = useState(filter ? String(filter) : '');
   const [counted, setCounted] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CashCount | null>(null);
 
   const account = accounts.find((a) => String(a.id) === accountId) ?? accounts[0];
-  const activity = acts.find((a) => String(a.id) === activityId) ?? acts[0];
+  const activity = activityOnly ? filterAct : (acts.find((a) => String(a.id) === activityId) ?? acts[0]);
   const expected = Number(account?.balance ?? 0);
   const countedValue = counted ? Number(counted.replace(',', '.')) : null;
   const diff = countedValue !== null && !Number.isNaN(countedValue) ? countedValue - expected : null;
@@ -51,7 +59,7 @@ export default function CountCashScreen() {
     try {
       const record = await countCash.mutateAsync({
         accountId: account.id,
-        input: { counted: String(countedValue), activity: activity.id, note: note.trim() },
+        input: { counted: String(countedValue), activity: activity.id, note: note.trim(), activity_only: activityOnly },
       });
       setResult(record);
     } catch (e) {
@@ -85,6 +93,22 @@ export default function CountCashScreen() {
       <View style={styles.content}>
         <Text style={styles.help}>Compte l'argent réellement présent (tiroir, solde Orange Money, relevé de banque) et saisis-le.</Text>
         <Card style={styles.card}>
+          {filterAct ? (
+            <View style={{ gap: 6 }}>
+              <Text style={styles.expectedLabel}>Ce que tu comptes</Text>
+              <SegmentedControl
+                options={[
+                  { value: 'activity', label: filterAct.name },
+                  { value: 'all', label: 'Toute la caisse' },
+                ]}
+                value={scope}
+                onChange={(v) => {
+                  setScope(v);
+                  setCounted('');
+                }}
+              />
+            </View>
+          ) : null}
           <PickerField
             label="Caisse"
             value={account ? String(account.id) : null}
@@ -95,7 +119,9 @@ export default function CountCashScreen() {
             }}
           />
           <View style={styles.expected}>
-            <Text style={styles.expectedLabel}>Selon Bénef, tu devrais avoir</Text>
+            <Text style={styles.expectedLabel}>
+              {activityOnly && filterAct ? `Selon Bénef, ${filterAct.name} devrait avoir` : 'Selon Bénef, tu devrais avoir'}
+            </Text>
             <Text style={styles.expectedValue}>{formatAmount(expected, currency)}</Text>
           </View>
           <AmountField label="Montant compté" value={counted} onChangeText={setCounted} placeholder="0" suffix={currency} />
@@ -104,7 +130,7 @@ export default function CountCashScreen() {
               {diff === 0 ? '✓ Caisse juste' : `${diff < 0 ? 'Manque' : 'Surplus'} : ${formatAmount(Math.abs(diff), currency)}`}
             </Text>
           ) : null}
-          {acts.length > 1 && diff !== null && diff !== 0 ? (
+          {!activityOnly && acts.length > 1 && diff !== null && diff !== 0 ? (
             <PickerField
               label="Activité concernée par l'écart"
               value={activity ? String(activity.id) : null}

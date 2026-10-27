@@ -114,16 +114,25 @@ export function deletePaymentMethod(id: number) {
   return apiRequest<void>(`/payment-methods/${id}/`, { method: 'DELETE' });
 }
 
-export function fetchAccountsOverview() {
-  return apiRequest<AccountsOverview>('/payment-methods/overview/');
+/** `activity` : seulement la part de cette activité dans chaque caisse. */
+export function fetchAccountsOverview(activity?: number | null) {
+  return apiRequest<AccountsOverview>('/payment-methods/overview/', { params: { activity } });
 }
 
-export function countCash(accountId: number, input: { counted: string; activity: number; note?: string }) {
+export interface CountCashInput {
+  counted: string;
+  activity: number;
+  note?: string;
+  /** Vrai : on a compté seulement l'argent de cette activité dans la caisse. */
+  activity_only?: boolean;
+}
+
+export function countCash(accountId: number, input: CountCashInput) {
   return apiRequest<CashCount>(`/payment-methods/${accountId}/count/`, { method: 'POST', body: input });
 }
 
-export function listCashCounts(accountId: number) {
-  return apiRequest<CashCount[]>(`/payment-methods/${accountId}/counts/`);
+export function listCashCounts(accountId: number, activity?: number | null) {
+  return apiRequest<CashCount[]>(`/payment-methods/${accountId}/counts/`, { params: { activity } });
 }
 
 export interface TransferInput {
@@ -139,6 +148,6 @@ export interface TransferInput {
   fee?: string;
 }
 
-export function fetchCashFlow(params: { period: string; date?: string }) {
+export function fetchCashFlow(params: { period: string; date?: string; activity?: number | null }) {
   return apiRequest<CashFlow>('/payment-methods/flow/', { params });
 }

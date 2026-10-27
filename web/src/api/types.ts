@@ -53,6 +53,9 @@ export interface PaymentMethod {
 
 export interface AccountOverviewRow extends PaymentMethod {
   last_count: { at: string; difference: string } | null
+  /** Solde réel de la caisse (toutes activités) ; `balance` est la part de
+   * l'activité quand la vue est filtrée. */
+  account_balance?: string
 }
 
 /** Tout l'argent : total dans la devise principale (taux du jour). */
@@ -60,6 +63,8 @@ export interface AccountsOverview {
   currency: string
   total: string
   unassigned: string
+  /** Activité de filtrage (null : toutes). */
+  activity?: { id: number; name: string } | null
   accounts: AccountOverviewRow[]
 }
 
@@ -74,6 +79,8 @@ export interface CashCount {
   difference: string
   transaction: number | null
   note: string
+  /** Vrai : seule la part de l'activité dans la caisse a été comptée. */
+  activity_only?: boolean
   created_at: string
 }
 

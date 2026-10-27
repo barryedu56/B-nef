@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AmountText } from '@/components/ui/AmountText';
 import { colors, fontSize, radius, shadow, spacing } from '@/theme';
@@ -31,12 +31,21 @@ export function HeroCard({
 }
 
 /** Mini-stat blanche à placer dans une HeroCard. */
-export function HeroStat({ label, amount, currency }: { label: string; amount: string; currency: string }) {
-  return (
-    <View style={styles.stat}>
-      <Text style={styles.statLabel}>{label}</Text>
+export function HeroStat({ label, amount, currency, onPress }: { label: string; amount: string; currency: string; onPress?: () => void }) {
+  const content = (
+    <>
+      <Text style={styles.statLabel}>
+        {label}
+        {onPress ? ' ›' : ''}
+      </Text>
       <AmountText amount={amount} currency={currency} size={14} weight="700" sign="neutral" style={styles.statAmount} />
-    </View>
+    </>
+  );
+  if (!onPress) return <View style={styles.stat}>{content}</View>;
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.stat, pressed && { opacity: 0.8 }]} accessibilityRole="button">
+      {content}
+    </Pressable>
   );
 }
 

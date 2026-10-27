@@ -103,7 +103,10 @@ export function ActivityDetailPage() {
               <KpiTile label="Achats de marchandise" amount={data.purchases} currency={data.currency} sign="neutral" icon={<ShoppingCart size={18} />} tone="info" />
             ) : null}
             {act.has_inventory ? <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} sign="neutral" icon={<Boxes size={18} />} tone="warning" /> : null}
-            <KpiTile label="Caisse" amount={data.cash_balance} currency={data.currency} sign="neutral" icon={<Wallet size={18} />} tone="accent" />
+            {/* Dans quelles caisses se trouve l'argent de cette activité. */}
+            <Link to={`/money?activity=${act.id}`} className="kpi-link" title="Voir dans quelles caisses se trouve cet argent">
+              <KpiTile label="Caisse ›" amount={data.cash_balance} currency={data.currency} sign="neutral" icon={<Wallet size={18} />} tone="accent" />
+            </Link>
           </div>
 
           {data.timeseries.length > 0 ? (

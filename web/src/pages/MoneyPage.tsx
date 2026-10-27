@@ -1,5 +1,6 @@
 import { ArrowLeftRight, Banknote, Calculator, CircleMinus, CirclePlus, Landmark, Smartphone, Wallet, type LucideIcon } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
 import type { AccountOverviewRow, CashCount } from '@/api/types';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Field, Select, TextInput } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { EmptyState, ErrorBlock, LoadingBlock } from '@/components/ui/QueryState';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useActivities } from '@/hooks/useActivities';
@@ -29,8 +31,43 @@ export function accountIcon(account: { name: string; is_cash: boolean }): Lucide
 }
 
 /** « Mon argent » : combien j'ai réellement, et dans quelle caisse. */
+const FILTER_KEY = 'benef.money.activity';
+
+/** Activité choisie (null = toutes) : dans l'adresse (?activity=), pour
+ * qu'un lien depuis une activité ouvre directement sa vue, et retenue dans
+ * le navigateur pour la prochaine visite. */
+function useMoneyFilter(): [number | null, (id: number | null) => void] {
+  const [params, setParams] = useSearchParams();
+  const fromUrl = params.get('activity');
+  useEffect(() => {
+    if (fromUrl !== null) return;
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(FILTER_KEY);
+    } catch {
+      // stockage indisponible : on reste sur « Toutes »
+    }
+    if (saved) setParams({ activity: saved }, { replace: true });
+  }, [fromUrl, setParams]);
+  const set = (id: number | null) => {
+    try {
+      if (id === null) localStorage.removeItem(FILTER_KEY);
+      else localStorage.setItem(FILTER_KEY, String(id));
+    } catch {
+      // pas grave : le choix ne sera simplement pas retenu
+    }
+    setParams(id === null ? {} : { activity: String(id) }, { replace: true });
+  };
+  return [fromUrl ? Number(fromUrl) : null, set];
+}
+
 export function MoneyPage() {
-  const overview = useAccountsOverview();
+  const [filterParam, setFilter] = useMoneyFilter();
+  const activities = useActivities();
+  const acts = activities.data ?? [];
+  // Activité supprimée ou archivée entre-temps : retour à « Toutes ».
+  const filter = filterParam !== null && activities.data && !acts.some((a) => a.id === filterParam) ? null : filterParam;
+  const overview = useAccountsOverview(filter);
   const [modal, setModal] = useState<ModalKind>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [countAccount, setCountAccount] = useState<number | undefined>(undefined);
@@ -40,15 +77,25 @@ export function MoneyPage() {
     return <ErrorBlock message="Impossible de charger tes caisses." onRetry={() => overview.refetch()} />;
   }
   const data = overview.data;
+  const filtered = data.activity ?? null;
   const selected = data.accounts.find((a) => a.id === selectedId) ?? data.accounts[0];
 
   return (
     <>
       <PageHeader
         title="Mon argent"
-        subtitle="Combien tu as réellement, et dans quelle caisse."
+        subtitle={filtered ? `L'argent de ${filtered.name}, et dans quelle caisse il se trouve.` : 'Combien tu as réellement, et dans quelle caisse.'}
         actions={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {acts.length > 1 ? (
+              <Select
+                aria-label="Activité"
+                options={[{ value: 'all', label: 'Toutes les activités' }, ...acts.map((a) => ({ value: String(a.id), label: a.name }))]}
+                value={filter === null ? 'all' : String(filter)}
+                onChange={(v) => setFilter(v === 'all' ? null : Number(v))}
+                style={{ width: 'auto', minWidth: 190 }}
+              />
+            ) : null}
             <Button variant="secondary" onClick={() => setModal('transfer')}>
               <ArrowLeftRight size={16} /> Transférer
             </Button>
@@ -74,11 +121,13 @@ export function MoneyPage() {
             <span className="kpi-icon">
               <Wallet size={20} />
             </span>
-            <span className="kpi-label">Tout ton argent aujourd'hui</span>
+            <span className="kpi-label">{filtered ? `Argent de ${filtered.name}` : "Tout ton argent aujourd'hui"}</span>
           </div>
           <AmountText amount={data.total} currency={data.currency} size={34} sign="neutral" />
           <span className="kpi-label">
-            {data.accounts.length} caisse{data.accounts.length > 1 ? 's' : ''} · au taux de change du jour
+            {filtered
+              ? 'Sa part dans chaque caisse · les caisses sont communes à toutes tes activités'
+              : `${data.accounts.length} caisse${data.accounts.length > 1 ? 's' : ''} · au taux de change du jour`}
           </span>
         </div>
 
@@ -88,6 +137,7 @@ export function MoneyPage() {
               key={account.id}
               account={account}
               selected={account.id === selected?.id}
+              filtered={!!filtered}
               onSelect={() => setSelectedId(account.id)}
               onCount={() => {
                 setCountAccount(account.id);
@@ -97,9 +147,9 @@ export function MoneyPage() {
           ))}
         </div>
 
-        <CashFlowCard />
+        <CashFlowCard activity={filter} />
 
-        {selected ? <AccountDetail account={selected} /> : null}
+        {selected ? <AccountDetail account={selected} activity={filter} /> : null}
 
         <span className="field-hint">
           Chaque vente, dépense ou achat payé va dans la caisse choisie comme moyen de paiement (Espèces par défaut).
@@ -108,11 +158,11 @@ export function MoneyPage() {
         </span>
       </div>
 
-      {modal === 'transfer' ? <TransferModal accounts={data.accounts} onClose={() => setModal(null)} /> : null}
+      {modal === 'transfer' ? <TransferModal defaultActivity={filter} onClose={() => setModal(null)} /> : null}
       {modal === 'contribution' || modal === 'withdrawal' ? (
-        <PersonalModal kind={modal} accounts={data.accounts} onClose={() => setModal(null)} />
+        <PersonalModal kind={modal} defaultActivity={filter} onClose={() => setModal(null)} />
       ) : null}
-      {modal === 'count' ? <CountModal accounts={data.accounts} initialAccount={countAccount} onClose={() => setModal(null)} /> : null}
+      {modal === 'count' ? <CountModal filter={filter} initialAccount={countAccount} onClose={() => setModal(null)} /> : null}
     </>
   );
 }
@@ -120,11 +170,13 @@ export function MoneyPage() {
 function AccountCard({
   account,
   selected,
+  filtered,
   onSelect,
   onCount,
 }: {
   account: AccountOverviewRow;
   selected: boolean;
+  filtered: boolean;
   onSelect: () => void;
   onCount: () => void;
 }) {
@@ -144,9 +196,11 @@ function AccountCard({
         </span>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="activity-card-name">{account.name}</div>
-          <div className="activity-card-type" style={negative ? { color: 'var(--negative)' } : undefined}>
+          <div className="activity-card-type" style={negative ? { color: filtered ? 'var(--warning)' : 'var(--negative)' } : undefined}>
             {negative
-              ? 'Solde négatif : une opération est peut-être dans la mauvaise caisse'
+              ? filtered
+                ? "A utilisé de l'argent apporté par une autre activité"
+                : 'Solde négatif : une opération est peut-être dans la mauvaise caisse'
               : account.last_count
                 ? `Vérifiée ${formatRelativeDate(account.last_count.at.slice(0, 10)).toLowerCase()}`
                 : 'Jamais vérifiée'}
@@ -154,6 +208,9 @@ function AccountCard({
         </div>
       </div>
       <AmountText amount={account.balance ?? '0'} currency={account.effective_currency} size={24} sign={negative ? 'negative' : 'neutral'} />
+      {filtered && account.account_balance !== undefined ? (
+        <span className="field-hint">sur {formatAmount(account.account_balance, account.effective_currency)} dans la caisse</span>
+      ) : null}
       <div>
         <Button
           variant="ghost"
@@ -168,9 +225,9 @@ function AccountCard({
   );
 }
 
-function AccountDetail({ account }: { account: AccountOverviewRow }) {
-  const movements = useAccountMovements(account.id);
-  const counts = useCashCounts(account.id);
+function AccountDetail({ account, activity }: { account: AccountOverviewRow; activity: number | null }) {
+  const movements = useAccountMovements(account.id, activity);
+  const counts = useCashCounts(account.id, activity);
   const activities = useActivities();
   const activityName = new Map((activities.data ?? []).map((a) => [a.id, a.name]));
   const rows = movements.data?.results ?? [];
@@ -223,7 +280,11 @@ function AccountDetail({ account }: { account: AccountOverviewRow }) {
               <div key={c.id} className="switch-row" style={{ padding: '8px 0' }}>
                 <span style={{ fontSize: 12.5 }}>
                   {formatRelativeDate(c.created_at.slice(0, 10))}
-                  <span style={{ color: 'var(--text-tertiary)' }}> · compté {formatAmount(c.counted, c.currency)}</span>
+                  <span style={{ color: 'var(--text-tertiary)' }}>
+                    {' '}
+                    · compté {formatAmount(c.counted, c.currency)}
+                    {c.activity_only ? ` · part de ${c.activity_name}` : ''}
+                  </span>
                 </span>
                 <span className={`badge ${diff === 0 ? 'positive' : diff < 0 ? 'negative' : 'warning'}`}>
                   {diff === 0 ? 'Juste' : `${diff > 0 ? '+' : ''}${formatAmount(c.difference, c.currency)}`}
@@ -246,11 +307,15 @@ function useSortedActivities() {
 const accountOptions = (accounts: AccountOverviewRow[]) =>
   accounts.map((a) => ({ value: String(a.id), label: `${a.name} — ${formatAmount(a.balance ?? '0', a.effective_currency)}` }));
 
-function TransferModal({ accounts, onClose }: { accounts: AccountOverviewRow[]; onClose: () => void }) {
+function TransferModal({ defaultActivity, onClose }: { defaultActivity: number | null; onClose: () => void }) {
+  // Soldes réels des caisses (pas la part d'une activité) : c'est ce qui peut sortir.
+  const accounts = useAccountsOverview().data?.accounts ?? [];
   const acts = useSortedActivities();
   const transfer = useTransfer();
-  const [fromId, setFromId] = useState(accounts[0] ? String(accounts[0].id) : '');
-  const [toId, setToId] = useState(accounts[1] ? String(accounts[1].id) : '');
+  const [fromSel, setFromId] = useState('');
+  const [toSel, setToId] = useState('');
+  const fromId = fromSel || (accounts[0] ? String(accounts[0].id) : '');
+  const toId = toSel || (accounts.find((a) => String(a.id) !== fromId)?.id.toString() ?? '');
   const [fromActivity, setFromActivity] = useState('');
   const [toActivity, setToActivity] = useState('');
   const [amount, setAmount] = useState('');
@@ -258,7 +323,8 @@ function TransferModal({ accounts, onClose }: { accounts: AccountOverviewRow[]; 
   const [fee, setFee] = useState('');
   const [error, setError] = useState<string | null>(null);
   const from = accounts.find((a) => String(a.id) === fromId);
-  const fromAct = fromActivity || (acts[0] ? String(acts[0].id) : '');
+  const defaultAct = acts.find((a) => a.id === defaultActivity) ?? acts[0];
+  const fromAct = fromActivity || (defaultAct ? String(defaultAct.id) : '');
   const toAct = toActivity || fromAct;
 
   const onSubmit = async (e: FormEvent) => {
@@ -349,23 +415,26 @@ const PERSONAL_COPY = {
 
 function PersonalModal({
   kind,
-  accounts,
+  defaultActivity,
   onClose,
 }: {
   kind: 'contribution' | 'withdrawal';
-  accounts: AccountOverviewRow[];
+  defaultActivity: number | null;
   onClose: () => void;
 }) {
+  const accounts = useAccountsOverview().data?.accounts ?? [];
   const copy = PERSONAL_COPY[kind];
   const acts = useSortedActivities();
   const create = useCreateTransaction();
-  const [accountId, setAccountId] = useState(accounts[0] ? String(accounts[0].id) : '');
+  const [accountSel, setAccountId] = useState('');
+  const accountId = accountSel || (accounts[0] ? String(accounts[0].id) : '');
   const [activityId, setActivityId] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const account = accounts.find((a) => String(a.id) === accountId);
-  const activity = activityId || (acts[0] ? String(acts[0].id) : '');
+  const defaultAct = acts.find((a) => a.id === defaultActivity) ?? acts[0];
+  const activity = activityId || (defaultAct ? String(defaultAct.id) : '');
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -423,24 +492,31 @@ function PersonalModal({
 }
 
 function CountModal({
-  accounts,
+  filter,
   initialAccount,
   onClose,
 }: {
-  accounts: AccountOverviewRow[];
+  filter: number | null;
   initialAccount?: number;
   onClose: () => void;
 }) {
   const acts = useSortedActivities();
+  const filterAct = acts.find((a) => a.id === filter);
+  // Vue filtrée sur une activité : on peut compter seulement son argent (ex.
+  // le tiroir de cette boutique) ou toute la caisse, comme sans filtre.
+  const [scope, setScope] = useState<'activity' | 'all'>(filterAct ? 'activity' : 'all');
+  const activityOnly = !!filterAct && scope === 'activity';
+  const accounts = useAccountsOverview(activityOnly ? filter : null).data?.accounts ?? [];
   const countCash = useCountCash();
-  const [accountId, setAccountId] = useState(String(initialAccount ?? accounts[0]?.id ?? ''));
-  const [activityId, setActivityId] = useState('');
+  const [accountSel, setAccountId] = useState(initialAccount ? String(initialAccount) : '');
+  const accountId = accountSel || (accounts[0] ? String(accounts[0].id) : '');
+  const [activityId, setActivityId] = useState(filter ? String(filter) : '');
   const [counted, setCounted] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CashCount | null>(null);
   const account = accounts.find((a) => String(a.id) === accountId);
-  const activity = activityId || (acts[0] ? String(acts[0].id) : '');
+  const activity = activityOnly && filterAct ? String(filterAct.id) : activityId || (acts[0] ? String(acts[0].id) : '');
   const expected = Number(account?.balance ?? 0);
   const countedValue = counted ? Number(counted.replace(',', '.')) : null;
   const diff = countedValue !== null && !Number.isNaN(countedValue) ? countedValue - expected : null;
@@ -454,7 +530,7 @@ function CountModal({
     setError(null);
     try {
       setResult(
-        await countCash.mutateAsync({ accountId: account.id, input: { counted: String(countedValue), activity: Number(activity), note: note.trim() } })
+        await countCash.mutateAsync({ accountId: account.id, input: { counted: String(countedValue), activity: Number(activity), note: note.trim(), activity_only: activityOnly } })
       );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Vérification impossible.');
@@ -481,6 +557,21 @@ function CountModal({
     <Modal title="Vérifier une caisse" onClose={onClose}>
       <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <span className="field-hint">Compte l'argent réellement présent (tiroir, solde Orange Money, relevé de banque) et saisis-le.</span>
+        {filterAct ? (
+          <Field label="Ce que tu comptes">
+            <SegmentedControl
+              options={[
+                { value: 'activity', label: filterAct.name },
+                { value: 'all', label: 'Toute la caisse' },
+              ]}
+              value={scope}
+              onChange={(v) => {
+                setScope(v);
+                setCounted('');
+              }}
+            />
+          </Field>
+        ) : null}
         <Field label="Caisse">
           <Select
             options={accounts.map((a) => ({ value: String(a.id), label: a.name }))}
@@ -492,7 +583,9 @@ function CountModal({
           />
         </Field>
         <div className="card card-muted" style={{ padding: 14 }}>
-          <div className="kpi-label">Selon Bénef, tu devrais avoir</div>
+          <div className="kpi-label">
+            {activityOnly && filterAct ? `Selon Bénef, ${filterAct.name} devrait avoir` : 'Selon Bénef, tu devrais avoir'}
+          </div>
           <AmountText amount={String(expected)} currency={currency} size={20} sign="neutral" />
         </div>
         <Field label={`Montant compté (${currency})`}>
@@ -503,7 +596,7 @@ function CountModal({
             {diff === 0 ? '✓ Caisse juste' : `${diff < 0 ? 'Manque' : 'Surplus'} : ${formatAmount(Math.abs(diff), currency)}`}
           </strong>
         ) : null}
-        {acts.length > 1 && diff !== null && diff !== 0 ? (
+        {!activityOnly && acts.length > 1 && diff !== null && diff !== 0 ? (
           <Field label="Activité concernée par l'écart">
             <Select options={acts.map((a) => ({ value: String(a.id), label: a.name }))} value={activity} onChange={setActivityId} />
           </Field>

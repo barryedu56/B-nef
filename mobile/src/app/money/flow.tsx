@@ -11,6 +11,8 @@ import { Screen } from '@/components/ui/Screen';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { TopBar } from '@/components/ui/TopBar';
 import { useCashFlow } from '@/hooks/useAccounts';
+import { useActivities } from '@/hooks/useActivities';
+import { useMoneyActivity } from '@/lib/moneyFilter';
 import { formatPeriodLabel, shiftAnchor, todayISO } from '@/lib/dates';
 import { colors, fontSize, spacing } from '@/theme';
 
@@ -25,11 +27,14 @@ const PERIOD_OPTIONS: { value: Period; label: string }[] = [
 export default function CashFlowScreen() {
   const [period, setPeriod] = useState<Period>('month');
   const [anchor, setAnchor] = useState(todayISO());
-  const flow = useCashFlow(period, anchor);
+  const filter = useMoneyActivity();
+  const flow = useCashFlow(period, anchor, filter);
+  const activities = useActivities();
+  const filterName = (activities.data ?? []).find((a) => a.id === filter)?.name;
 
   return (
     <Screen edges={['top']} onRefresh={() => flow.refetch()} refreshing={flow.isRefetching}>
-      <TopBar title="Entrées et sorties" back />
+      <TopBar title="Entrées et sorties" subtitle={filterName} back />
       <View style={styles.content}>
         <SegmentedControl options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
         <View style={styles.periodNav}>
