@@ -48,12 +48,20 @@ def default_cash_account(user) -> PaymentMethod:
     return account or PaymentMethod.objects.create(owner=user, name="Espèces", is_cash=True)
 
 
-def balances(user) -> dict[int | None, Decimal]:
+def balances(user, activity=None) -> dict[int | None, Decimal]:
     """{id de caisse: solde dans la devise de la caisse}. La clé None regroupe
-    l'argent d'opérations anciennes sans caisse (normalement vide)."""
+    l'argent d'opérations anciennes sans caisse (normalement vide).
+
+    Avec `activity` : seulement la part de cette activité dans chaque caisse
+    (ses opérations). Elle peut être négative si l'activité a dépensé de
+    l'argent apporté dans la caisse par une autre activité. La somme des
+    parts de toutes les activités est égale au solde de la caisse."""
     accounts = {a.pk: a for a in PaymentMethod.objects.filter(owner=user).select_related("owner")}
+    live = Transaction.objects.filter(AFFECTS_CASH, activity__owner=user, voided_at__isnull=True)
+    if activity is not None:
+        live = live.filter(activity=activity)
     rows = (
-        Transaction.objects.filter(AFFECTS_CASH, activity__owner=user, voided_at__isnull=True)
+        live
         .values("payment_method_id", "currency_id", "direction")
         .annotate(total=Sum("amount"))
         .order_by()
@@ -127,16 +135,21 @@ def transfer(
 
 
 @db_transaction.atomic
-def count_cash(*, user, account: PaymentMethod, activity, counted: Decimal, note: str = "") -> CashCount:
+def count_cash(
+    *, user, account: PaymentMethod, activity, counted: Decimal, note: str = "", activity_only: bool = False
+) -> CashCount:
     """Vérification de caisse : enregistre le montant compté et, s'il diffère
     du solde attendu, une opération « Écart de caisse » qui aligne le solde
     sur la réalité (un manque compte comme une charge, un surplus comme un
-    gain)."""
+    gain).
+
+    `activity_only` : on a compté seulement l'argent de `activity` dans cette
+    caisse (ex. un tiroir par boutique) ; le solde attendu est alors sa part."""
     counted = Decimal(counted)
     if counted < 0:
         raise AccountError("Le montant compté ne peut pas être négatif.")
     currency = account_currency(account)
-    expected = balances(user).get(account.pk, Z)
+    expected = balances(user, activity if activity_only else None).get(account.pk, Z)
     difference = (counted - expected).quantize(CENTS)
     txn = None
     if difference != 0:
@@ -153,6 +166,7 @@ def count_cash(*, user, account: PaymentMethod, activity, counted: Decimal, note
     return CashCount.objects.create(
         owner=user, payment_method=account, activity=activity, currency_id=currency,
         expected=expected, counted=counted, difference=difference, transaction=txn, note=note,
+        activity_only=activity_only,
     )
 
 
@@ -190,15 +204,18 @@ def _flow_group(kind: str, direction: str) -> str:
     }.get(kind, "expenses")
 
 
-def cash_flow(user, start: date, end: date) -> dict:
+def cash_flow(user, start: date, end: date, activity=None) -> dict:
     """Pour chaque caisse : solde au début de la période, entrées et sorties
     regroupées par nature, solde à la fin — et les mêmes totaux toutes
-    caisses confondues, dans la devise principale (taux du jour)."""
+    caisses confondues, dans la devise principale (taux du jour).
+    Avec `activity` : seulement les opérations de cette activité."""
     base = user.base_currency_id
     accounts = list(PaymentMethod.objects.filter(owner=user).select_related("owner").order_by("-is_cash", "name"))
     by_id = {a.pk: a for a in accounts}
     live = Transaction.objects.filter(AFFECTS_CASH, activity__owner=user, voided_at__isnull=True,
                                       payment_method__in=accounts)
+    if activity is not None:
+        live = live.filter(activity=activity)
 
     def to(value, source, target):
         return value if source == target else (try_convert(value, source, target) or value)

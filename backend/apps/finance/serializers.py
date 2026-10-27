@@ -329,6 +329,8 @@ class CashCountInputSerializer(serializers.Serializer):
     counted = serializers.DecimalField(max_digits=20, decimal_places=2)
     activity = serializers.IntegerField()
     note = serializers.CharField(required=False, allow_blank=True, default="")
+    # Vrai : on compte seulement la part de cette activité dans la caisse.
+    activity_only = serializers.BooleanField(required=False, default=False)
 
 
 class CashCountSerializer(serializers.ModelSerializer):
@@ -337,5 +339,5 @@ class CashCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = CashCount
         fields = ("id", "payment_method", "activity", "activity_name", "currency", "expected", "counted",
-                  "difference", "transaction", "note", "created_at")
+                  "difference", "transaction", "note", "activity_only", "created_at")
         read_only_fields = fields

@@ -238,6 +238,9 @@ class CashCount(TimeStampedModel):
         Transaction, on_delete=models.SET_NULL, null=True, blank=True, related_name="cash_count"
     )
     note = models.CharField("note", max_length=255, blank=True)
+    # Vrai : seule la part de `activity` dans la caisse a été comptée (vue
+    # « Mon argent » filtrée sur une activité). Faux : toute la caisse.
+    activity_only = models.BooleanField("part de l'activité seulement", default=False)
 
     class Meta:
         verbose_name = "vérification de caisse"

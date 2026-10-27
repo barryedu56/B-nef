@@ -68,27 +68,44 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
             context["balances"] = accounts.balances(self.request.user)
         return context
 
+    def _activity_filter(self, request):
+        """?activity=ID (facultatif) : la vue « Mon argent » filtrée sur une activité."""
+        activity_id = request.query_params.get("activity")
+        if not activity_id:
+            return None
+        return get_object_or_404(Activity, pk=activity_id, owner=request.user)
+
     @action(detail=False, methods=["get"])
     def overview(self, request):
         """Tout l'argent de l'utilisateur : total dans sa devise principale
         (taux du jour) et chaque caisse avec son solde et sa dernière
-        vérification."""
+        vérification.
+
+        ?activity=ID : `balance` et `total` deviennent la part de cette
+        activité ; `account_balance` garde le solde réel de la caisse."""
         user = request.user
-        per_account = accounts.balances(user)
+        activity = self._activity_filter(request)
+        full = accounts.balances(user)
+        per_account = accounts.balances(user, activity) if activity else full
         context = {**self.get_serializer_context(), "balances": per_account}
         rows = PaymentMethodSerializer(self.get_queryset(), many=True, context=context).data
+        counts = CashCount.objects.filter(owner=user)
+        if activity:
+            counts = counts.filter(activity=activity)
         last_counts = {}
-        for count in CashCount.objects.filter(owner=user).order_by("payment_method_id", "-created_at"):
+        for count in counts.order_by("payment_method_id", "-created_at"):
             last_counts.setdefault(count.payment_method_id, count)
         for row in rows:
             count = last_counts.get(row["id"])
             row["last_count"] = (
                 {"at": count.created_at, "difference": str(count.difference)} if count else None
             )
+            row["account_balance"] = str(full.get(row["id"], 0))
         return Response({
             "currency": user.base_currency_id,
             "total": str(accounts.total_in(user, user.base_currency_id, per_account)),
             "unassigned": str(per_account.get(None, 0)),
+            "activity": {"id": activity.pk, "name": activity.name} if activity else None,
             "accounts": rows,
         })
 
@@ -100,7 +117,7 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
 
         anchor = parse_date(request.query_params.get("date") or "") or timezone.localdate()
         start, end = resolve_period(request.query_params.get("period", "month"), anchor)
-        return Response(accounts.cash_flow(request.user, start, end))
+        return Response(accounts.cash_flow(request.user, start, end, self._activity_filter(request)))
 
     @action(detail=True, methods=["post"])
     def count(self, request, pk=None):
@@ -112,6 +129,7 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
             record = accounts.count_cash(
                 user=request.user, account=account, activity=activity,
                 counted=data.validated_data["counted"], note=data.validated_data["note"],
+                activity_only=data.validated_data["activity_only"],
             )
         except accounts.AccountError as exc:
             raise ValidationError({"detail": str(exc)}) from exc
@@ -120,7 +138,11 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def counts(self, request, pk=None):
         account = self.get_object()
-        return Response(CashCountSerializer(account.counts.select_related("activity")[:50], many=True).data)
+        counts = account.counts.select_related("activity")
+        activity = self._activity_filter(request)
+        if activity:
+            counts = counts.filter(activity=activity)
+        return Response(CashCountSerializer(counts[:50], many=True).data)
 
     def destroy(self, request, *args, **kwargs):
         method = self.get_object()
