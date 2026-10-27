@@ -230,7 +230,7 @@ export interface PartyStatement {
 
 export interface OnboardingInput {
   cash: { account: number; amount: string }[];
-  products: { name: string; unit?: string; quantity: string; unit_cost: string; sale_price: string }[];
+  products: { name: string; unit?: string; quantity: string; unit_cost: string; sale_price: string; extra_fees?: string }[];
   parties: { name: string; phone?: string; direction: 'in' | 'out'; amount: string }[];
 }
 

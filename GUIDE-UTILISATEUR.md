@@ -483,6 +483,17 @@ Ils ne font pas partie du coût de la marchandise, et le fournisseur ne les
 reçoit pas : ce que tu lui dois baisse seulement du montant réglé. Annuler
 l'opération annule aussi ses frais.
 
+**Plusieurs activités.** Les caisses sont **communes à toutes tes
+activités** : la caisse Espèces contient l'argent liquide de la boutique,
+du taxi, etc. réunis, comme ton vrai tiroir ou ton vrai compte Orange Money.
+Le chiffre « Caisse » sur le tableau de bord d'une activité, lui, est
+l'argent **de cette activité**, quelle que soit la caisse où il se trouve.
+La somme des « Caisse » de toutes tes activités est égale à « Tout ton
+argent aujourd'hui ». Si tu gardes l'argent de chaque activité vraiment
+séparé (un tiroir par boutique, un compte Orange Money pour le taxi), crée
+une caisse par activité dans Paramètres → Moyens de paiement, par exemple
+« Espèces boutique » et « Espèces taxi ».
+
 **Un solde négatif ?** C'est impossible dans la vraie vie : une opération a
 sûrement été enregistrée avec la mauvaise caisse (ex. un achat payé par
 Orange Money saisi en Espèces). Ouvre la caisse pour voir ses mouvements.
@@ -494,7 +505,8 @@ Erreur de montant ? Annule cet apport et saisis-en un nouveau.
 
 **Stock déjà en ta possession.** À la création d'un produit, active
 « J'ai déjà ce produit en stock » et indique la quantité, le coût d'achat de
-chaque unité et le prix de vente. Ce stock est compté à son coût (pour un
+chaque unité, les frais du lot (facultatif, répartis sur chaque unité) et le
+prix de vente. Ce stock est compté à son coût (pour un
 bénéfice juste quand tu le vendras) **sans toucher ta caisse**, puisqu'il a
 été payé avant Bénef.
 
@@ -511,8 +523,10 @@ démarrage » sur la fiche de l'activité (web).
 1. **Mon argent** — combien tu as dans chaque caisse (compte le tiroir,
    regarde tes soldes Orange Money, banque…).
 2. **Ma marchandise** — fais le tour de ton stock : pour chaque produit, la
-   quantité, ce qu'il t'a coûté (le dernier prix d'achat) et ton prix de
-   vente. Sur le **web**, tu peux tout importer d'un **fichier Excel ou CSV** :
+   quantité, ce qu'il t'a coûté (le dernier prix d'achat), les **frais payés
+   pour tout le lot** (transport, douane… — facultatif) et ton prix de
+   vente. Comme au réapprovisionnement, les frais sont répartis sur chaque
+   unité : 10 sacs à 230 000 + 40 000 de transport = 234 000 le sac. Sur le **web**, tu peux tout importer d'un **fichier Excel ou CSV** :
    télécharge le **modèle**, remplis-le (une ligne par produit), puis
    « Importer un fichier ». Les colonnes sont reconnues même écrites
    autrement (« Désignation », « Qté », « Prix d'achat »…). Les lignes à

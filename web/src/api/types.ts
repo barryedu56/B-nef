@@ -308,6 +308,8 @@ export interface OnboardingProduct {
   quantity: string
   unit_cost: string
   sale_price: string
+  /** Frais pour tout ce stock (transport, douane…), répartis sur la quantité. */
+  extra_fees?: string
   low_stock_threshold?: string | null
 }
 

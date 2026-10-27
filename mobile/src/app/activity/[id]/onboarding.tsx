@@ -16,6 +16,7 @@ import { Card } from '@/components/ui/Card';
 import { LoadingView } from '@/components/ui/QueryState';
 import { Screen } from '@/components/ui/Screen';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { PhoneField } from '@/components/ui/PhoneField';
 import { TextField } from '@/components/ui/TextField';
 import { TopBar } from '@/components/ui/TopBar';
 import { useActivity } from '@/hooks/useActivities';
@@ -33,6 +34,7 @@ interface ProductRow {
   quantity: string;
   unitCost: string;
   salePrice: string;
+  fees: string;
 }
 
 interface PartyRow {
@@ -45,7 +47,7 @@ interface PartyRow {
 
 const num = (v: string) => Number((v || '0').replace(/\s/g, '').replace(',', '.')) || 0;
 let nextKey = 1;
-const emptyProduct = (): ProductRow => ({ key: nextKey++, name: '', unit: 'pièce', quantity: '', unitCost: '', salePrice: '' });
+const emptyProduct = (): ProductRow => ({ key: nextKey++, name: '', unit: 'pièce', quantity: '', unitCost: '', salePrice: '', fees: '' });
 const emptyParty = (direction: 'in' | 'out' = 'in'): PartyRow => ({ key: nextKey++, name: '', phone: '', direction, amount: '' });
 
 /** Assistant « Je démarre avec Bénef » : pour un commerce qui existait avant
@@ -74,7 +76,8 @@ export default function OnboardingScreen() {
   const filledProducts = products.filter((p) => p.name.trim());
   const filledParties = parties.filter((p) => p.name.trim());
   const cashTotal = Object.values(cash).reduce((s, v) => s + num(v), 0);
-  const stockTotal = filledProducts.reduce((s, p) => s + num(p.quantity) * num(p.unitCost), 0);
+  // Valeur au coût de revient : prix d'achat + frais du lot (transport…).
+  const stockTotal = filledProducts.reduce((s, p) => s + (num(p.quantity) > 0 ? num(p.quantity) * num(p.unitCost) + num(p.fees) : 0), 0);
   const receivable = filledParties.filter((p) => p.direction === 'in').reduce((s, p) => s + num(p.amount), 0);
   const payable = filledParties.filter((p) => p.direction === 'out').reduce((s, p) => s + num(p.amount), 0);
 
@@ -115,6 +118,7 @@ export default function OnboardingScreen() {
         quantity: String(num(p.quantity)),
         unit_cost: String(num(p.unitCost)),
         sale_price: String(num(p.salePrice)),
+        extra_fees: String(num(p.fees)),
       })),
       parties: filledParties.map((p) => ({ name: p.name.trim(), phone: p.phone.trim(), direction: p.direction, amount: String(num(p.amount)) })),
     };
@@ -201,6 +205,14 @@ export default function OnboardingScreen() {
                     <AmountField label="Coût unitaire" value={p.unitCost} onChangeText={(v) => updateRow(setProducts, p.key, { unitCost: v })} placeholder="0" />
                   </View>
                 </View>
+                <AmountField
+                  label="Frais pour tout ce lot (facultatif)"
+                  value={p.fees}
+                  onChangeText={(v) => updateRow(setProducts, p.key, { fees: v })}
+                  placeholder="0"
+                  suffix={currency}
+                  hint="Transport, douane… : répartis sur chaque unité, comme au réapprovisionnement."
+                />
                 <AmountField label="Prix de vente" value={p.salePrice} onChangeText={(v) => updateRow(setProducts, p.key, { salePrice: v })} placeholder="0" suffix={currency} />
               </Card>
             ))}
@@ -235,7 +247,7 @@ export default function OnboardingScreen() {
                 />
                 <TextField label="Nom" value={p.name} onChangeText={(v) => updateRow(setParties, p.key, { name: v })} placeholder={p.direction === 'in' ? 'ex. Mariama' : 'ex. Grossiste Kaloum'} />
                 <AmountField label="Montant" value={p.amount} onChangeText={(v) => updateRow(setParties, p.key, { amount: v })} placeholder="0" suffix={currency} />
-                <TextField label="Téléphone (facultatif)" value={p.phone} onChangeText={(v) => updateRow(setParties, p.key, { phone: v })} keyboardType="phone-pad" placeholder="ex. 622123456" />
+                <PhoneField value={p.phone} onChangeText={(v) => updateRow(setParties, p.key, { phone: v })} />
               </Card>
             ))}
             <Button label="+ Ajouter une personne" variant="secondary" onPress={() => setParties((rows) => [...rows, emptyParty()])} />

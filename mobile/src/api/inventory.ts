@@ -28,6 +28,8 @@ export interface ProductInput {
    * valorisé sans toucher la caisse. Seulement à la création. */
   initial_quantity?: string;
   initial_unit_cost?: string;
+  /** Frais pour tout ce stock (transport, douane…), répartis sur la quantité. */
+  initial_extra_fees?: string;
 }
 
 export function createProduct(input: ProductInput) {

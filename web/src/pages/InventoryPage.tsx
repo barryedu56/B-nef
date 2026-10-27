@@ -223,6 +223,7 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
   const [hasStock, setHasStock] = useState(false);
   const [initialQty, setInitialQty] = useState('');
   const [initialCost, setInitialCost] = useState('');
+  const [initialFees, setInitialFees] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -249,6 +250,7 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
           ? {
               initial_quantity: String(qty),
               initial_unit_cost: String(cost),
+              ...(Number(initialFees.replace(',', '.')) > 0 ? { initial_extra_fees: initialFees.replace(',', '.') } : {}),
               ...(salePrice ? { sale_price: salePrice.replace(',', '.') } : {}),
             }
           : {}),
@@ -285,6 +287,11 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
                 <AmountInput value={initialCost} onChange={setInitialCost} placeholder="0" />
               </Field>
             </div>
+            <Field
+              label="Frais pour tout ce stock (facultatif)"
+              hint="Transport, douane… payés pour ce stock : répartis sur chaque unité, comme au réapprovisionnement.">
+              <AmountInput value={initialFees} onChange={setInitialFees} placeholder="0" />
+            </Field>
             <Field label="Prix de vente">
               <AmountInput value={salePrice} onChange={setSalePrice} placeholder="0" />
             </Field>

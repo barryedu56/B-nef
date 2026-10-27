@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Field, TextInput } from '@/components/ui/Field';
 import { ErrorBlock, LoadingBlock } from '@/components/ui/QueryState';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useActivity } from '@/hooks/useActivities';
@@ -29,6 +30,7 @@ interface ProductRow {
   quantity: string;
   unitCost: string;
   salePrice: string;
+  fees: string;
   threshold: string;
 }
 
@@ -42,7 +44,7 @@ interface PartyRow {
 
 const num = (v: string) => Number((v || '0').replace(/\s/g, '').replace(',', '.')) || 0;
 let nextKey = 1;
-const emptyProduct = (): ProductRow => ({ key: nextKey++, name: '', unit: 'pièce', quantity: '', unitCost: '', salePrice: '', threshold: '' });
+const emptyProduct = (): ProductRow => ({ key: nextKey++, name: '', unit: 'pièce', quantity: '', unitCost: '', salePrice: '', fees: '', threshold: '' });
 const emptyParty = (direction: 'in' | 'out' = 'in'): PartyRow => ({ key: nextKey++, name: '', phone: '', direction, amount: '' });
 
 /** Assistant « Je démarre avec Bénef » : pour un commerce qui existait avant
@@ -74,7 +76,8 @@ export function OnboardingPage() {
   const filledProducts = products.filter((p) => p.name.trim());
   const filledParties = parties.filter((p) => p.name.trim());
   const cashTotal = Object.values(cash).reduce((s, v) => s + num(v), 0);
-  const stockTotal = filledProducts.reduce((s, p) => s + num(p.quantity) * num(p.unitCost), 0);
+  // Valeur au coût de revient : prix d'achat + frais du lot (transport…).
+  const stockTotal = filledProducts.reduce((s, p) => s + lineValue(p), 0);
   const receivable = filledParties.filter((p) => p.direction === 'in').reduce((s, p) => s + num(p.amount), 0);
   const payable = filledParties.filter((p) => p.direction === 'out').reduce((s, p) => s + num(p.amount), 0);
 
@@ -118,6 +121,7 @@ export function OnboardingPage() {
         quantity: String(num(p.quantity)),
         unit_cost: String(num(p.unitCost)),
         sale_price: String(num(p.salePrice)),
+        extra_fees: String(num(p.fees)),
         low_stock_threshold: p.threshold.trim() ? String(num(p.threshold)) : null,
       })),
       parties: filledParties.map((p) => ({ name: p.name.trim(), phone: p.phone.trim(), direction: p.direction, amount: String(num(p.amount)) })),
@@ -210,7 +214,7 @@ export function OnboardingPage() {
                   />
                   <TextInput value={p.name} onChange={(e) => updateRow(setParties, p.key, { name: e.target.value })} placeholder={p.direction === 'in' ? 'Nom du client' : 'Nom du fournisseur'} aria-label="Nom" />
                   <AmountInput value={p.amount} onChange={(v) => updateRow(setParties, p.key, { amount: v })} placeholder={`Montant (${currency})`} aria-label="Montant" />
-                  <TextInput value={p.phone} onChange={(e) => updateRow(setParties, p.key, { phone: e.target.value })} placeholder="Téléphone (facultatif)" aria-label="Téléphone" />
+                  <PhoneInput value={p.phone} onChange={(v) => updateRow(setParties, p.key, { phone: v })} placeholder="Téléphone (facultatif)" aria-label="Téléphone" />
                   <button className="icon-btn" onClick={() => setParties((rows) => (rows.length > 1 ? rows.filter((r) => r.key !== p.key) : [emptyParty()]))} aria-label="Retirer">
                     <Trash2 size={16} />
                   </button>
@@ -303,6 +307,7 @@ function ProductsStep({
         quantity: p.quantity === '0' ? '' : p.quantity,
         unitCost: p.unit_cost === '0' ? '' : p.unit_cost,
         salePrice: p.sale_price === '0' ? '' : p.sale_price,
+        fees: !p.extra_fees || Number(p.extra_fees) === 0 ? '' : p.extra_fees,
         threshold: p.low_stock_threshold ?? '',
       }));
       // Les lignes déjà saisies sont gardées ; les lignes vides sont remplacées.
@@ -320,7 +325,8 @@ function ProductsStep({
         <div>
           <span className="card-title">Ta marchandise déjà en stock</span>
           <p className="field-hint" style={{ marginTop: -6 }}>
-            Pour chaque produit : la quantité, ce qu'il t'a coûté (le dernier prix d'achat) et ton prix de vente.
+            Pour chaque produit : la quantité, ce qu'il t'a coûté (le dernier prix d'achat), les frais payés pour tout le lot
+            (transport, douane…) et ton prix de vente. Les frais sont répartis sur chaque unité, comme au réapprovisionnement.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -364,6 +370,7 @@ function ProductsStep({
               <th style={{ minWidth: 150 }}>Unité</th>
               <th style={{ minWidth: 90 }}>Quantité</th>
               <th style={{ minWidth: 120 }}>Coût unitaire</th>
+              <th style={{ minWidth: 110 }} title="Transport, douane… pour tout ce stock">Frais du lot</th>
               <th style={{ minWidth: 120 }}>Prix de vente</th>
               <th style={{ minWidth: 80 }}>Alerte</th>
               <th style={{ textAlign: 'right', minWidth: 110 }}>Valeur</th>
@@ -377,10 +384,11 @@ function ProductsStep({
                 <td><UnitSelect compact value={p.unit} onChange={(v) => updateRow(setProducts, p.key, { unit: v })} /></td>
                 <td><TextInput value={p.quantity} onChange={(e) => updateRow(setProducts, p.key, { quantity: e.target.value })} inputMode="decimal" placeholder="0" aria-label="Quantité" /></td>
                 <td><AmountInput value={p.unitCost} onChange={(v) => updateRow(setProducts, p.key, { unitCost: v })} placeholder="0" aria-label="Coût unitaire" /></td>
+                <td><AmountInput value={p.fees} onChange={(v) => updateRow(setProducts, p.key, { fees: v })} placeholder="0" aria-label="Frais du lot" /></td>
                 <td><AmountInput value={p.salePrice} onChange={(v) => updateRow(setProducts, p.key, { salePrice: v })} placeholder="0" aria-label="Prix de vente" /></td>
                 <td><TextInput value={p.threshold} onChange={(e) => updateRow(setProducts, p.key, { threshold: e.target.value })} inputMode="decimal" placeholder="—" aria-label="Seuil d'alerte" /></td>
                 <td style={{ textAlign: 'right' }}>
-                  <AmountText amount={num(p.quantity) * num(p.unitCost)} currency={currency} size={12.5} sign="neutral" />
+                  <AmountText amount={lineValue(p)} currency={currency} size={12.5} sign="neutral" />
                 </td>
                 <td>
                   <button className="icon-btn" onClick={() => setProducts((rows) => (rows.length > 1 ? rows.filter((r) => r.key !== p.key) : [emptyProduct()]))} aria-label="Retirer ce produit">
@@ -403,6 +411,8 @@ function ProductsStep({
     </Card>
   );
 }
+
+const lineValue = (p: ProductRow) => (num(p.quantity) > 0 ? num(p.quantity) * num(p.unitCost) + num(p.fees) : 0);
 
 function updateRow<T extends { key: number }>(setter: (fn: (rows: T[]) => T[]) => void, key: number, patch: Partial<T>) {
   setter((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));

@@ -269,20 +269,24 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     activityId: input.activity,
     tempId,
     optimistic: () => {
+      // Stock initial : même calcul que le serveur (frais du lot répartis).
+      const qty = Number(input.initial_quantity ?? 0);
+      const unitCost = qty > 0 ? Number(input.initial_unit_cost ?? 0) + Number(input.initial_extra_fees ?? 0) / qty : 0;
+      const salePrice = Number(input.sale_price ?? 0);
       const product: Product = {
         id: tempId,
         activity: input.activity,
         name: input.name,
         sku: input.sku ?? '',
         unit: input.unit ?? 'pièce',
-        purchase_price: '0.00',
+        purchase_price: unitCost.toFixed(2),
         sale_price: input.sale_price ?? '0.00',
-        stock_quantity: '0',
+        stock_quantity: String(qty),
         low_stock_threshold: input.low_stock_threshold ?? null,
         category: input.category ?? '',
         is_archived: false,
-        margin: '0.00',
-        stock_value: '0.00',
+        margin: (salePrice - unitCost).toFixed(2),
+        stock_value: (qty * unitCost).toFixed(2),
         is_low_stock: false,
       };
       addCachedProduct(product);
