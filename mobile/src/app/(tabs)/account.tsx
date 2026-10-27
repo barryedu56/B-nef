@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +27,7 @@ const CURRENCY_OPTIONS = [
 ];
 
 export default function AccountScreen() {
+  const queryClient = useQueryClient();
   const { user, signOut, refreshUser } = useAuth();
   const outbox = useOutbox();
 
@@ -109,6 +111,8 @@ export default function AccountScreen() {
     try {
       await updateMe({ base_currency: code });
       await refreshUser();
+      // Tous les montants déjà affichés sont recalculés dans la nouvelle devise.
+      await queryClient.invalidateQueries();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Échec de la mise à jour.');
     } finally {
@@ -122,6 +126,8 @@ export default function AccountScreen() {
     try {
       await updateMe({ display_currency: code });
       await refreshUser();
+      // Tous les montants déjà affichés sont recalculés dans la nouvelle devise.
+      await queryClient.invalidateQueries();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Échec de la mise à jour.');
     } finally {

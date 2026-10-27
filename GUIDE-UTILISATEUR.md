@@ -350,14 +350,29 @@ téléchargeable (« Télécharger en PDF ») — pas une impression de navigate
 - **Compte** : nom d'utilisateur, e-mail (nécessaire pour le mot de passe oublié — voir plus bas)
 - **Activités archivées** : la liste de tes activités archivées, avec un bouton
   « Réactiver » sur chacune
-- **Devise principale** : la devise de référence de ton compte
+- **Devise principale** : la devise de référence de ton compte. En la
+  changeant, tout ton historique est reconverti tout de suite (au taux de
+  la date de chaque opération) et tous les écrans affichent la nouvelle
+  devise. S'il manque un taux de change, le changement est refusé et rien
+  n'est modifié.
 - **Devise d'affichage** : dans quelle devise tu veux voir tes totaux (modifiable
-  aussi directement depuis la Vue globale)
+  aussi directement depuis la Vue globale) — s'applique immédiatement partout
 - Se déconnecter
 
 ---
 
 ## 13. Questions fréquentes
+
+**L'application marche-t-elle sans internet ?**
+Oui, l'**application du téléphone** (Android et iPhone) : tu peux consulter
+tes chiffres et enregistrer ventes, dépenses, achats, règlements,
+transferts, nouveaux produits et tiers. Un bandeau « Hors ligne ·
+N opérations en attente d'envoi » s'affiche ; tout part tout seul, dans
+l'ordre et sans doublon, dès que le serveur Bénef est de nouveau joignable
+(même si l'app a été fermée entre-temps). L'**app web** sur ordinateur, elle,
+a besoin de la connexion : un bandeau te prévient quand elle est coupée.
+Ce qui demande toujours le réseau : se connecter la première fois, créer
+une activité, changer ses réglages (devise, mot de passe, photo), exporter.
 
 **Pourquoi la Caisse ne bouge pas quand je passe de « Mois » à « Année » ?**
 Parce que la caisse n'est pas un total « sur la période » comme le chiffre

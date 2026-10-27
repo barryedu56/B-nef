@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useRef, useState, type FormEvent } from 'react';
 
 import { changePassword, deleteAccount, deleteAvatar, updateMe, uploadAvatar } from '@/api/auth';
@@ -24,6 +25,7 @@ const CURRENCY_OPTIONS = [
 ];
 
 export function SettingsPage() {
+  const queryClient = useQueryClient();
   const { user, signOut, refreshUser } = useAuth();
   const [saving, setSaving] = useState<'base' | 'display' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +80,8 @@ export function SettingsPage() {
     try {
       await updateMe({ [field]: value });
       await refreshUser();
+      // Tous les montants déjà affichés sont recalculés dans la nouvelle devise.
+      await queryClient.invalidateQueries();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Échec de la mise à jour.');
     } finally {

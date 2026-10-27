@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -33,7 +34,11 @@ const CURRENCY_CHOICES = ['GNF', 'XOF', 'USD', 'EUR'];
 export default function GlobalViewScreen() {
   const { user, refreshUser } = useAuth();
   const [period, setPeriod] = useState<Period>('month');
-  const [displayCurrency, setDisplayCurrency] = useState(user?.effective_display_currency ?? 'GNF');
+  const queryClient = useQueryClient();
+  // Devise choisie pendant l'enregistrement, sinon celle du compte : un
+  // changement fait dans Réglages s'applique ici aussi, tout de suite.
+  const [pendingCurrency, setPendingCurrency] = useState<string | null>(null);
+  const displayCurrency = pendingCurrency ?? user?.effective_display_currency ?? 'GNF';
   const [switching, setSwitching] = useState(false);
 
   const anchor = todayISO();
@@ -41,13 +46,15 @@ export default function GlobalViewScreen() {
   const formatMoney = useFormatMoney();
 
   const onPickCurrency = async (code: string) => {
-    setDisplayCurrency(code);
+    setPendingCurrency(code);
     setSwitching(true);
     try {
       await updateMe({ display_currency: code });
       await refreshUser();
+      await queryClient.invalidateQueries();
+      setPendingCurrency(null);
     } catch {
-      // la bascule d'affichage reste appliquée localement même si la sauvegarde échoue
+      // hors-ligne ou erreur : la bascule d'affichage reste appliquée sur cet écran
     } finally {
       setSwitching(false);
     }

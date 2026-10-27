@@ -36,9 +36,24 @@ export interface SendRequest<T> {
   optimistic: (op: OutboxOp) => T;
 }
 
+/** Identifiant unique de l'opération (sert d'Idempotency-Key). Dans un
+ * navigateur, `crypto.randomUUID` n'existe qu'en https ou sur localhost :
+ * ouverte via http://192.168…, l'app ne pouvait plus rien enregistrer. */
+export function newOperationId(): string {
+  try {
+    return Crypto.randomUUID();
+  } catch {
+    const bytes = Crypto.getRandomBytes(16);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // UUID v4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+}
+
 export async function sendOrQueue<T>(req: SendRequest<T>): Promise<T> {
   await loadOutbox();
-  const id = Crypto.randomUUID();
+  const id = newOperationId();
   let offline = !onlineManager.isOnline();
   // Une opération qui suit des opérations en attente (ou qui pointe vers un
   // élément créé hors-ligne) doit passer après elles, dans la file.

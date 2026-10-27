@@ -3,11 +3,22 @@ import NetInfo from '@react-native-community/netinfo';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { onlineManager, QueryClient } from '@tanstack/react-query';
 
-import { ApiError } from '@/api/client';
+import { API_URL, ApiError } from '@/api/client';
 
 /** Durée pendant laquelle les données téléchargées restent consultables
  * hors-ligne (listes, tableaux de bord, produits…). */
 export const OFFLINE_CACHE_MAX_AGE = 1000 * 60 * 60 * 24 * 14; // 14 jours
+
+// « En ligne » = le serveur Bénef répond, pas seulement « internet marche »
+// (par défaut NetInfo teste un site de Google) : avec du réseau mais un
+// serveur injoignable, les opérations partent dans la file au lieu d'échouer.
+NetInfo.configure({
+  reachabilityUrl: `${API_URL}/health/`,
+  reachabilityTest: async (response) => response.status === 200,
+  reachabilityShortTimeout: 5 * 1000,
+  reachabilityLongTimeout: 60 * 1000,
+  reachabilityRequestTimeout: 8 * 1000,
+});
 
 // React Query sait si l'appareil est en ligne grâce à NetInfo : hors-ligne,
 // il n'essaie même pas de recharger et garde les dernières données connues.

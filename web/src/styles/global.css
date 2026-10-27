@@ -1401,3 +1401,16 @@ input[type='password']::-ms-clear {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }
+
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 32px 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--warning-soft, #fff4e0);
+  color: var(--warning, #b45309);
+  font-size: 13px;
+  font-weight: 600;
+}

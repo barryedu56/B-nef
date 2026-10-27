@@ -8,8 +8,10 @@ import {
   Store,
   Users,
   Wallet,
+  WifiOff,
   type LucideIcon,
 } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { Avatar } from '@/components/ui/Avatar';
@@ -27,8 +29,18 @@ const NAV_ITEMS: { to: string; label: string; icon: LucideIcon; end?: boolean }[
   { to: '/settings', label: 'Paramètres', icon: Settings },
 ];
 
+function subscribeOnline(callback: () => void) {
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => {
+    window.removeEventListener('online', callback);
+    window.removeEventListener('offline', callback);
+  };
+}
+
 export function AppLayout() {
   const { user } = useAuth();
+  const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
 
   return (
     <div className="app-shell">
@@ -58,6 +70,13 @@ export function AppLayout() {
         </div>
       </aside>
       <div className="main">
+        {!online ? (
+          <div className="offline-banner" role="status">
+            <WifiOff size={16} />
+            Pas de connexion internet : l'app web a besoin du réseau. Pour travailler sans réseau, utilise l'application
+            sur ton téléphone — tout s'enverra au retour de la connexion.
+          </div>
+        ) : null}
         <Outlet />
       </div>
     </div>

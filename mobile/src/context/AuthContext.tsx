@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import * as authApi from '@/api/auth';
-import { clearTokens, getTokens, isNetworkError } from '@/api/client';
+import { ApiError, clearTokens, getTokens, isNetworkError } from '@/api/client';
 import type { Me } from '@/api/types';
 import { claimOutbox, clearOutbox } from '@/offline/outbox';
 import { warmOfflineCache } from '@/offline/prefetch';
@@ -39,9 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('signedIn');
       void warmOfflineCache(true);
     } catch (error) {
-      if (isNetworkError(error)) {
-        // Pas de réseau : la session reste valable, on travaille hors-ligne
-        // avec le dernier profil connu.
+      // Seule une session refusée (401/403) déconnecte. Pas de réseau, ou
+      // serveur en panne / en redémarrage (500, 502…) : la session reste
+      // valable, on travaille hors-ligne avec le dernier profil connu.
+      const sessionRejected = error instanceof ApiError && (error.status === 401 || error.status === 403);
+      if (isNetworkError(error) || !sessionRejected) {
         const cached = await AsyncStorage.getItem(ME_KEY);
         if (cached) {
           setUser(JSON.parse(cached) as Me);
