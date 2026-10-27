@@ -6,7 +6,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from apps.activities.views import ActivityViewSet
-from apps.budget.views import BudgetViewSet
+from apps.budget.views import BudgetViewSet, RecurringOperationViewSet
 from apps.contacts.views import PartyViewSet
 from apps.currencies.views import ConvertView, CurrencyViewSet, ExchangeRateViewSet
 from apps.finance.views import (
@@ -31,6 +31,7 @@ router.register("stock-movements", StockMovementViewSet, basename="stockmovement
 router.register("sale-lines", SaleLineViewSet, basename="saleline")
 router.register("parties", PartyViewSet, basename="party")
 router.register("budgets", BudgetViewSet, basename="budget")
+router.register("recurring", RecurringOperationViewSet, basename="recurring")
 router.register("currencies", CurrencyViewSet, basename="currency")
 router.register("exchange-rates", ExchangeRateViewSet, basename="exchangerate")
 
