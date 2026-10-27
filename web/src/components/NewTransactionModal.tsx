@@ -31,7 +31,14 @@ export function NewTransactionModal({ activity, onClose, defaultDirection = 'out
   const [isCredit, setIsCredit] = useState(false);
   const [partyId, setPartyId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [fee, setFee] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Frais de l'opérateur : seulement si l'argent passe par autre chose que
+  // les espèces et qu'il bouge tout de suite (pas à crédit).
+  const method = (paymentMethods.data ?? []).find((m) => String(m.id) === paymentMethodId);
+  const showFee = !!method && !method.is_cash && !isCredit;
+  const feeValue = showFee ? Number(fee.replace(',', '.')) || 0 : 0;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -53,6 +60,7 @@ export function NewTransactionModal({ activity, onClose, defaultDirection = 'out
         party: isCredit && partyId ? Number(partyId) : null,
         is_credit: isCredit,
         note,
+        ...(feeValue > 0 ? { fee: String(feeValue) } : {}),
       });
       onClose();
     } catch (err) {
@@ -97,6 +105,11 @@ export function NewTransactionModal({ activity, onClose, defaultDirection = 'out
             placeholder="Choisir un moyen de paiement"
           />
         </Field>
+        {showFee ? (
+          <Field label="Frais de transfert (facultatif)" hint={`Ce que ${method?.name ?? "l'opérateur"} prend en plus. Compté comme une dépense.`}>
+            <AmountInput value={fee} onChange={setFee} placeholder="0" />
+          </Field>
+        ) : null}
 
         <Field label="Date">
           <TextInput type="date" value={occurredOn} onChange={(e) => setOccurredOn(e.target.value)} />

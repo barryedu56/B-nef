@@ -20,6 +20,8 @@ export function useProduct(id: number | undefined) {
     queryKey: ['products', 'detail', id],
     queryFn: () => inventoryApi.fetchProduct(id as number),
     enabled: id !== undefined,
+    // Fiche à jour à chaque ouverture (stock, droit de corriger le stock de départ).
+    refetchOnMount: 'always',
   });
 }
 

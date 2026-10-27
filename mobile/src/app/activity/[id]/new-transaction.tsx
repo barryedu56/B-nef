@@ -37,11 +37,18 @@ export default function NewTransactionScreen() {
   const [isCredit, setIsCredit] = useState(false);
   const [partyId, setPartyId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [fee, setFee] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   if (activity.isLoading || !activity.data) return <LoadingView />;
   const act = activity.data;
   const currency = act.currency;
+
+  // Frais de l'opérateur : seulement si l'argent passe par autre chose que
+  // les espèces et qu'il bouge tout de suite (pas à crédit).
+  const method = (paymentMethods.data ?? []).find((m) => String(m.id) === paymentMethodId);
+  const showFee = !!method && !method.is_cash && !isCredit;
+  const feeValue = showFee ? Number(fee.replace(',', '.')) || 0 : 0;
 
   const occurredOn = dateChoice === 'today' ? todayISO() : dateChoice === 'yesterday' ? shiftedYesterday() : customDate;
 
@@ -64,6 +71,7 @@ export default function NewTransactionScreen() {
         party: isCredit && partyId ? Number(partyId) : null,
         is_credit: isCredit,
         note,
+        ...(feeValue > 0 ? { fee: String(feeValue) } : {}),
       });
       router.back();
     } catch (e) {
@@ -107,6 +115,17 @@ export default function NewTransactionScreen() {
           options={(paymentMethods.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))}
           onChange={setPaymentMethodId}
         />
+
+        {showFee ? (
+          <AmountField
+            label="Frais de transfert (facultatif)"
+            value={fee}
+            onChangeText={setFee}
+            placeholder="0"
+            suffix={currency}
+            hint={`Ce que ${method?.name ?? "l'opérateur"} prend en plus. Compté comme une dépense.`}
+          />
+        ) : null}
 
         <View style={styles.dateBlock}>
           <Text style={styles.label}>Date</Text>

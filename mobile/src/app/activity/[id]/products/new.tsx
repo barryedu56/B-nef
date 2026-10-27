@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
+import { ExtraFeesField, feesTotal, type FeesMode } from '@/components/ExtraFeesField';
 import { UnitField } from '@/components/UnitField';
 import { AmountField } from '@/components/ui/AmountField';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +27,7 @@ export default function NewProductScreen() {
   const [initialQty, setInitialQty] = useState('');
   const [initialCost, setInitialCost] = useState('');
   const [initialFees, setInitialFees] = useState('');
+  const [feesMode, setFeesMode] = useState<FeesMode>('unit');
   const [salePrice, setSalePrice] = useState('');
   const activity = useActivity(activityId);
   const currency = activity.data?.currency ?? '';
@@ -53,7 +55,7 @@ export default function NewProductScreen() {
           ? {
               initial_quantity: String(qty),
               initial_unit_cost: String(cost),
-              ...(Number(initialFees.replace(',', '.')) > 0 ? { initial_extra_fees: initialFees.replace(',', '.') } : {}),
+              ...(feesTotal(feesMode, initialFees, qty) > 0 ? { initial_extra_fees: String(feesTotal(feesMode, initialFees, qty)) } : {}),
               ...(salePrice ? { sale_price: salePrice.replace(',', '.') } : {}),
             }
           : {}),
@@ -88,13 +90,14 @@ export default function NewProductScreen() {
             <>
               <TextField label={`Quantité en stock (${unit || 'pièce'})`} value={initialQty} onChangeText={setInitialQty} keyboardType="numeric" placeholder="0" />
               <AmountField label="Coût d'achat de chaque unité" value={initialCost} onChangeText={setInitialCost} placeholder="0" suffix={currency} />
-              <AmountField
-                label="Frais pour tout ce stock (facultatif)"
+              <ExtraFeesField
                 value={initialFees}
-                onChangeText={setInitialFees}
-                placeholder="0"
-                suffix={currency}
-                hint="Transport, douane… : répartis sur chaque unité, comme au réapprovisionnement."
+                onChange={setInitialFees}
+                mode={feesMode}
+                onModeChange={setFeesMode}
+                quantity={Number(initialQty.replace(',', '.')) || 0}
+                currency={currency}
+                unit={unit || 'pièce'}
               />
               <AmountField label="Prix de vente" value={salePrice} onChangeText={setSalePrice} placeholder="0" suffix={currency} />
               <Text style={styles.hint}>

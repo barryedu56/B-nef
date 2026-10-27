@@ -7,6 +7,7 @@ import { downloadProductTemplate, parseProductFile, submitOnboarding } from '@/a
 import { ApiError } from '@/api/client';
 import { isValidGuineaPhone } from '@/lib/phone';
 import type { OnboardingInput, OnboardingResult, ProductImport } from '@/api/types';
+import { feesTotal, type FeesMode } from '@/components/ExtraFeesField';
 import { UnitSelect } from '@/components/UnitSelect';
 import { AmountInput } from '@/components/ui/AmountInput';
 import { AmountText } from '@/components/ui/AmountText';
@@ -61,6 +62,8 @@ export function OnboardingPage() {
   const [step, setStep] = useState<Step>(0);
   const [cash, setCash] = useState<Record<number, string>>({});
   const [products, setProducts] = useState<ProductRow[]>([emptyProduct()]);
+  // Frais annexes du tableau : saisis par unité (par défaut) ou pour tout le lot.
+  const [feesMode, setFeesMode] = useState<FeesMode>('unit');
   const [parties, setParties] = useState<PartyRow[]>([emptyParty()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +80,7 @@ export function OnboardingPage() {
   const filledParties = parties.filter((p) => p.name.trim());
   const cashTotal = Object.values(cash).reduce((s, v) => s + num(v), 0);
   // Valeur au coût de revient : prix d'achat + frais du lot (transport…).
-  const stockTotal = filledProducts.reduce((s, p) => s + lineValue(p), 0);
+  const stockTotal = filledProducts.reduce((s, p) => s + lineValue(p, feesMode), 0);
   const receivable = filledParties.filter((p) => p.direction === 'in').reduce((s, p) => s + num(p.amount), 0);
   const payable = filledParties.filter((p) => p.direction === 'out').reduce((s, p) => s + num(p.amount), 0);
 
@@ -121,7 +124,7 @@ export function OnboardingPage() {
         quantity: String(num(p.quantity)),
         unit_cost: String(num(p.unitCost)),
         sale_price: String(num(p.salePrice)),
-        extra_fees: String(num(p.fees)),
+        extra_fees: String(feesTotal(feesMode, p.fees, num(p.quantity))),
         low_stock_threshold: p.threshold.trim() ? String(num(p.threshold)) : null,
       })),
       parties: filledParties.map((p) => ({ name: p.name.trim(), phone: p.phone.trim(), direction: p.direction, amount: String(num(p.amount)) })),
@@ -192,7 +195,15 @@ export function OnboardingPage() {
         ) : null}
 
         {step === 1 ? (
-          <ProductsStep products={products} setProducts={setProducts} currency={currency} stockTotal={stockTotal} onError={setError} />
+          <ProductsStep
+            products={products}
+            setProducts={setProducts}
+            feesMode={feesMode}
+            setFeesMode={setFeesMode}
+            currency={currency}
+            stockTotal={stockTotal}
+            onError={setError}
+          />
         ) : null}
 
         {step === 2 ? (
@@ -276,12 +287,16 @@ const linkStyle = { background: 'none', border: 0, cursor: 'pointer', fontSize: 
 function ProductsStep({
   products,
   setProducts,
+  feesMode,
+  setFeesMode,
   currency,
   stockTotal,
   onError,
 }: {
   products: ProductRow[];
   setProducts: (fn: (rows: ProductRow[]) => ProductRow[]) => void;
+  feesMode: FeesMode;
+  setFeesMode: (mode: FeesMode) => void;
   currency: string;
   stockTotal: number;
   onError: (message: string | null) => void;
@@ -307,7 +322,14 @@ function ProductsStep({
         quantity: p.quantity === '0' ? '' : p.quantity,
         unitCost: p.unit_cost === '0' ? '' : p.unit_cost,
         salePrice: p.sale_price === '0' ? '' : p.sale_price,
-        fees: !p.extra_fees || Number(p.extra_fees) === 0 ? '' : p.extra_fees,
+        // Le fichier donne les frais pour tout le lot : ramenés à l'unité si
+        // le tableau est en « par unité ».
+        fees:
+          !p.extra_fees || Number(p.extra_fees) === 0
+            ? ''
+            : feesMode === 'unit' && Number(p.quantity) > 0
+              ? String(Math.round((Number(p.extra_fees) / Number(p.quantity)) * 100) / 100)
+              : p.extra_fees,
         threshold: p.low_stock_threshold ?? '',
       }));
       // Les lignes déjà saisies sont gardées ; les lignes vides sont remplacées.
@@ -325,8 +347,8 @@ function ProductsStep({
         <div>
           <span className="card-title">Ta marchandise déjà en stock</span>
           <p className="field-hint" style={{ marginTop: -6 }}>
-            Pour chaque produit : la quantité, ce qu'il t'a coûté (le dernier prix d'achat), les frais payés pour tout le lot
-            (transport, douane…) et ton prix de vente. Les frais sont répartis sur chaque unité, comme au réapprovisionnement.
+            Pour chaque produit : la quantité, ce qu'il t'a coûté (le dernier prix d'achat), les frais annexes (transport,
+            douane… — par unité ou pour tout le lot, au choix) et ton prix de vente.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -362,6 +384,17 @@ function ProductsStep({
         </div>
       ) : null}
 
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+        <span className="field-label" style={{ margin: 0 }}>Frais annexes (transport, douane…) saisis :</span>
+        <SegmentedControl
+          options={[
+            { value: 'unit', label: 'Par unité' },
+            { value: 'lot', label: 'Pour tout le lot' },
+          ]}
+          value={feesMode}
+          onChange={setFeesMode}
+        />
+      </div>
       <div className="table-wrap" style={{ marginTop: 10 }}>
         <table className="table onboarding-table">
           <thead>
@@ -370,7 +403,9 @@ function ProductsStep({
               <th style={{ minWidth: 150 }}>Unité</th>
               <th style={{ minWidth: 90 }}>Quantité</th>
               <th style={{ minWidth: 120 }}>Coût unitaire</th>
-              <th style={{ minWidth: 110 }} title="Transport, douane… pour tout ce stock">Frais du lot</th>
+              <th style={{ minWidth: 110 }} title="Transport, douane…">
+                {feesMode === 'unit' ? 'Frais / unité' : 'Frais du lot'}
+              </th>
               <th style={{ minWidth: 120 }}>Prix de vente</th>
               <th style={{ minWidth: 80 }}>Alerte</th>
               <th style={{ textAlign: 'right', minWidth: 110 }}>Valeur</th>
@@ -384,11 +419,11 @@ function ProductsStep({
                 <td><UnitSelect compact value={p.unit} onChange={(v) => updateRow(setProducts, p.key, { unit: v })} /></td>
                 <td><TextInput value={p.quantity} onChange={(e) => updateRow(setProducts, p.key, { quantity: e.target.value })} inputMode="decimal" placeholder="0" aria-label="Quantité" /></td>
                 <td><AmountInput value={p.unitCost} onChange={(v) => updateRow(setProducts, p.key, { unitCost: v })} placeholder="0" aria-label="Coût unitaire" /></td>
-                <td><AmountInput value={p.fees} onChange={(v) => updateRow(setProducts, p.key, { fees: v })} placeholder="0" aria-label="Frais du lot" /></td>
+                <td><AmountInput value={p.fees} onChange={(v) => updateRow(setProducts, p.key, { fees: v })} placeholder="0" aria-label={feesMode === 'unit' ? 'Frais par unité' : 'Frais du lot'} /></td>
                 <td><AmountInput value={p.salePrice} onChange={(v) => updateRow(setProducts, p.key, { salePrice: v })} placeholder="0" aria-label="Prix de vente" /></td>
                 <td><TextInput value={p.threshold} onChange={(e) => updateRow(setProducts, p.key, { threshold: e.target.value })} inputMode="decimal" placeholder="—" aria-label="Seuil d'alerte" /></td>
                 <td style={{ textAlign: 'right' }}>
-                  <AmountText amount={lineValue(p)} currency={currency} size={12.5} sign="neutral" />
+                  <AmountText amount={lineValue(p, feesMode)} currency={currency} size={12.5} sign="neutral" />
                 </td>
                 <td>
                   <button className="icon-btn" onClick={() => setProducts((rows) => (rows.length > 1 ? rows.filter((r) => r.key !== p.key) : [emptyProduct()]))} aria-label="Retirer ce produit">
@@ -412,7 +447,8 @@ function ProductsStep({
   );
 }
 
-const lineValue = (p: ProductRow) => (num(p.quantity) > 0 ? num(p.quantity) * num(p.unitCost) + num(p.fees) : 0);
+const lineValue = (p: ProductRow, mode: FeesMode) =>
+  num(p.quantity) > 0 ? num(p.quantity) * num(p.unitCost) + feesTotal(mode, p.fees, num(p.quantity)) : 0;
 
 function updateRow<T extends { key: number }>(setter: (fn: (rows: T[]) => T[]) => void, key: number, patch: Partial<T>) {
   setter((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));

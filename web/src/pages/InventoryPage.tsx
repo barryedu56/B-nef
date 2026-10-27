@@ -16,8 +16,9 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { PersonalUseModal } from '@/components/PersonalUseModal';
 import { RestockModal } from '@/components/RestockModal';
 import { useActivities } from '@/hooks/useActivities';
-import { useCreateProduct, useProducts, useUpdateProduct } from '@/hooks/useProducts';
+import { useAdjustStock, useCreateProduct, useProducts, useUpdateProduct } from '@/hooks/useProducts';
 import { formatAmount } from '@/lib/money';
+import { ExtraFeesField, feesTotal, type FeesMode } from '@/components/ExtraFeesField';
 import { formatStock, UnitSelect } from '@/components/UnitSelect';
 
 type Filter = 'all' | 'low' | 'out' | 'archived';
@@ -208,14 +209,14 @@ export function InventoryPage() {
         <PersonalUseModal product={personalUseTarget} currency={activity.currency} onClose={() => setPersonalUseTarget(null)} />
       ) : null}
       {editTarget && activity ? (
-        <EditProductModal product={editTarget} activityId={activity.id} onClose={() => setEditTarget(null)} />
+        <EditProductModal product={editTarget} activityId={activity.id} currency={activity.currency} onClose={() => setEditTarget(null)} />
       ) : null}
-      {showCreate && activity ? <CreateProductModal activityId={activity.id} onClose={() => setShowCreate(false)} /> : null}
+      {showCreate && activity ? <CreateProductModal activityId={activity.id} currency={activity.currency} onClose={() => setShowCreate(false)} /> : null}
     </>
   );
 }
 
-function CreateProductModal({ activityId, onClose }: { activityId: number; onClose: () => void }) {
+function CreateProductModal({ activityId, currency, onClose }: { activityId: number; currency: string; onClose: () => void }) {
   const createProduct = useCreateProduct();
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('pièce');
@@ -224,6 +225,7 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
   const [initialQty, setInitialQty] = useState('');
   const [initialCost, setInitialCost] = useState('');
   const [initialFees, setInitialFees] = useState('');
+  const [feesMode, setFeesMode] = useState<FeesMode>('unit');
   const [salePrice, setSalePrice] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -250,7 +252,7 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
           ? {
               initial_quantity: String(qty),
               initial_unit_cost: String(cost),
-              ...(Number(initialFees.replace(',', '.')) > 0 ? { initial_extra_fees: initialFees.replace(',', '.') } : {}),
+              ...(feesTotal(feesMode, initialFees, qty) > 0 ? { initial_extra_fees: String(feesTotal(feesMode, initialFees, qty)) } : {}),
               ...(salePrice ? { sale_price: salePrice.replace(',', '.') } : {}),
             }
           : {}),
@@ -287,11 +289,15 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
                 <AmountInput value={initialCost} onChange={setInitialCost} placeholder="0" />
               </Field>
             </div>
-            <Field
-              label="Frais pour tout ce stock (facultatif)"
-              hint="Transport, douane… payés pour ce stock : répartis sur chaque unité, comme au réapprovisionnement.">
-              <AmountInput value={initialFees} onChange={setInitialFees} placeholder="0" />
-            </Field>
+            <ExtraFeesField
+              value={initialFees}
+              onChange={setInitialFees}
+              mode={feesMode}
+              onModeChange={setFeesMode}
+              quantity={Number(initialQty.replace(',', '.')) || 0}
+              currency={currency}
+              unit={unit || 'pièce'}
+            />
             <Field label="Prix de vente">
               <AmountInput value={salePrice} onChange={setSalePrice} placeholder="0" />
             </Field>
@@ -320,8 +326,32 @@ function CreateProductModal({ activityId, onClose }: { activityId: number; onClo
   );
 }
 
-function EditProductModal({ product, activityId, onClose }: { product: Product; activityId: number; onClose: () => void }) {
+function EditProductModal({
+  product,
+  activityId,
+  currency,
+  onClose,
+}: {
+  product: Product;
+  activityId: number;
+  currency: string;
+  onClose: () => void;
+}) {
   const updateProduct = useUpdateProduct(activityId);
+  const adjust = useAdjustStock(activityId);
+  // Stock de départ (corrigeable tant qu'il n'y a ni vente ni réappro).
+  const [stockQty, setStockQty] = useState(String(Number(product.stock_quantity)));
+  const [stockCost, setStockCost] = useState(String(Number(product.purchase_price)));
+  const [stockFees, setStockFees] = useState('');
+  const [feesMode, setFeesMode] = useState<FeesMode>('unit');
+  const [stockDirty, setStockDirty] = useState(false);
+  // Inventaire (ensuite) : quantité réellement comptée.
+  const [counted, setCounted] = useState('');
+  const [countDone, setCountDone] = useState<string | null>(null);
+  const markStock = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setStockDirty(true);
+  };
   const [name, setName] = useState(product.name);
   const [unit, setUnit] = useState(product.unit);
   const [salePrice, setSalePrice] = useState(product.sale_price);
@@ -334,6 +364,13 @@ function EditProductModal({ product, activityId, onClose }: { product: Product; 
       setError('Donne un nom à ce produit.');
       return;
     }
+    const qty = Number(stockQty.replace(',', '.')) || 0;
+    const cost = Number(stockCost.replace(',', '.')) || 0;
+    const correctStock = !!product.can_edit_initial_stock && stockDirty;
+    if (correctStock && qty > 0 && cost <= 0) {
+      setError("Indique combien t'a coûté chaque unité de ce stock.");
+      return;
+    }
     setError(null);
     try {
       await updateProduct.mutateAsync({
@@ -343,6 +380,13 @@ function EditProductModal({ product, activityId, onClose }: { product: Product; 
           unit: unit.trim() || 'pièce',
           sale_price: salePrice || '0',
           low_stock_threshold: lowStockThreshold || null,
+          ...(correctStock
+            ? {
+                initial_quantity: String(qty),
+                initial_unit_cost: String(cost),
+                initial_extra_fees: String(feesTotal(feesMode, stockFees, qty)),
+              }
+            : {}),
         },
       });
       onClose();
@@ -374,10 +418,88 @@ function EditProductModal({ product, activityId, onClose }: { product: Product; 
         <Field label="Seuil d'alerte de stock (facultatif)">
           <TextInput value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} inputMode="numeric" />
         </Field>
-        <span className="field-hint">
-          Le prix d'achat (coût moyen) et le stock ne se modifient pas ici — ils se mettent à jour tout seuls avec les
-          réapprovisionnements et les ventes.
-        </span>
+        {product.can_edit_initial_stock ? (
+          <div className="card card-muted" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <strong style={{ fontSize: 13.5 }}>Stock de départ</strong>
+            <span className="field-hint">
+              Tu t'es trompé en le saisissant ? Corrige-le tant que le produit n'a ni vente ni réapprovisionnement : ni ta
+              caisse ni ton bénéfice ne bougent.
+            </span>
+            <div className="form-grid" style={{ gap: 12 }}>
+              <Field label={`Quantité en stock (${unit || 'pièce'})`}>
+                <TextInput value={stockQty} onChange={(e) => markStock(setStockQty)(e.target.value)} inputMode="decimal" />
+              </Field>
+              <Field label="Coût d'achat de chaque unité">
+                <AmountInput value={stockCost} onChange={markStock(setStockCost)} placeholder="0" />
+              </Field>
+            </div>
+            <ExtraFeesField
+              value={stockFees}
+              onChange={markStock(setStockFees)}
+              mode={feesMode}
+              onModeChange={setFeesMode}
+              quantity={Number(stockQty.replace(',', '.')) || 0}
+              currency={currency}
+              unit={unit || 'pièce'}
+            />
+          </div>
+        ) : (
+          <span className="field-hint">
+            Le coût d'achat moyen se met à jour tout seul avec les réapprovisionnements. Pour corriger la quantité, fais
+            un inventaire ci-dessous.
+          </span>
+        )}
+        {!product.can_edit_initial_stock ? (
+          <div className="card card-muted" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <strong style={{ fontSize: 13.5 }}>Inventaire</strong>
+            <span className="field-hint">
+              Compte ce que tu as vraiment. Selon Bénef : {formatStock(product.stock_quantity, product.unit)}. L'écart
+              (casse, vol, erreur) est enregistré comme une perte ou un surplus, au coût moyen (
+              {formatAmount(product.purchase_price, currency)}).
+            </span>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <Field label={`Quantité comptée (${product.unit})`}>
+                  <TextInput value={counted} onChange={(e) => setCounted(e.target.value)} inputMode="decimal" placeholder="0" />
+                </Field>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                loading={adjust.isPending}
+                onClick={async () => {
+                  const value = Number(counted.replace(',', '.'));
+                  if (counted === '' || Number.isNaN(value) || value < 0) {
+                    setError('Indique la quantité que tu as comptée.');
+                    return;
+                  }
+                  setError(null);
+                  try {
+                    await adjust.mutateAsync({ product: product.id, new_quantity: String(value) });
+                    setCountDone(`Stock mis à ${formatStock(value, product.unit)}.`);
+                    setCounted('');
+                  } catch (err) {
+                    setError(err instanceof ApiError ? err.message : "Impossible d'enregistrer l'inventaire.");
+                  }
+                }}>
+                Enregistrer l'inventaire
+              </Button>
+            </div>
+            {counted !== '' && !Number.isNaN(Number(counted.replace(',', '.'))) ? (
+              <strong style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                {(() => {
+                  const delta = Number(counted.replace(',', '.')) - Number(product.stock_quantity);
+                  if (delta === 0) return '✓ Le stock est juste';
+                  return `${delta < 0 ? 'Perte' : 'Surplus'} de ${formatStock(Math.abs(delta), product.unit)} · ${formatAmount(
+                    Math.abs(delta) * Number(product.purchase_price),
+                    currency
+                  )}`;
+                })()}
+              </strong>
+            ) : null}
+            {countDone ? <div className="alert success">{countDone}</div> : null}
+          </div>
+        ) : null}
         {error ? <span className="error-text">{error}</span> : null}
         <div className="form-actions" style={{ justifyContent: 'space-between' }}>
           <Button type="button" variant="danger" onClick={onArchive}>

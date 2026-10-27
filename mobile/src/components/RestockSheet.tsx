@@ -6,6 +6,7 @@ import { ApiError } from '@/api/client';
 import type { Product } from '@/api/types';
 import { PartyPicker } from './PartyPicker';
 import { AmountField } from './ui/AmountField';
+import { ExtraFeesField, feesTotal, type FeesMode } from './ExtraFeesField';
 import { Button } from './ui/Button';
 import { Chip } from './ui/Chip';
 import { TextField } from './ui/TextField';
@@ -40,6 +41,7 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
   const [quantity, setQuantity] = useState('');
   const [unitCost, setUnitCost] = useState('');
   const [extraFees, setExtraFees] = useState('');
+  const [feesMode, setFeesMode] = useState<FeesMode>('unit');
   const [marginPct, setMarginPct] = useState(() => defaultMargin(product));
   const [manualPrice, setManualPrice] = useState<string | null>(null);
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
 
   const qty = Number(quantity.replace(',', '.')) || 0;
   const cost = Number(unitCost.replace(',', '.')) || 0;
-  const fees = extraFees ? Number(extraFees.replace(',', '.')) || 0 : 0;
+  const fees = feesTotal(feesMode, extraFees, qty);
   const landedUnitCost = qty > 0 ? cost + fees / qty : cost;
   const total = qty > 0 && cost >= 0 ? qty * cost + fees : 0;
   const paidNowValue = amountPaidNow ? Number(amountPaidNow.replace(',', '.')) : 0;
@@ -136,16 +138,15 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
         </Text>
         <TextField label={`Quantité (${product.unit})`} value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
         <AmountField label="Coût d'achat unitaire" value={unitCost} onChangeText={setUnitCost} suffix={currency} />
-        <AmountField
-          label="Frais annexes (facultatif)"
+        <ExtraFeesField
           value={extraFees}
-          onChangeText={setExtraFees}
-          placeholder="0"
-          suffix={currency}
+          onChange={setExtraFees}
+          mode={feesMode}
+          onModeChange={setFeesMode}
+          quantity={qty}
+          currency={currency}
+          unit={product.unit}
         />
-        <Text style={styles.hint}>
-          Transport, douane… pour tout le lot (pas par unité) — réparti automatiquement sur la quantité.
-        </Text>
 
         {landedUnitCost > 0 ? (
           <View style={styles.priceBlock}>

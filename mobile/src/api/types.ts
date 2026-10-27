@@ -145,6 +145,8 @@ export interface Product {
   margin: string;
   stock_value: string;
   is_low_stock: boolean;
+  /** Vrai tant que le stock de départ peut être corrigé (ni vente ni réappro). */
+  can_edit_initial_stock?: boolean;
 }
 
 export interface SaleLine {

@@ -57,6 +57,8 @@ export interface TransactionInput {
   party?: number | null;
   note?: string;
   is_credit?: boolean;
+  /** Frais de l'opérateur (Orange Money, banque…) payés en plus : une charge. */
+  fee?: string;
 }
 
 export function createTransaction(input: TransactionInput) {

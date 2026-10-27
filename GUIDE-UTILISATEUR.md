@@ -233,8 +233,10 @@ un loyer payé, un salaire reçu, une prestation facturée, du transport, etc.
   **premier réapprovisionnement**
 - **Réapprovisionner** un produit : indique la quantité achetée, le **coût
   d'achat unitaire**, et les **frais annexes** de ce lot si besoin (transport,
-  douane… — un montant total pour tout le lot, pas par unité, réparti
-  automatiquement). Le **coût de revient** (achat + part de frais par unité)
+  douane… — à toi de choisir : **par unité** (ex. 2 000 par sac) ou **pour
+  tout le lot** (ex. 20 000 pour les 10 sacs) ; l'équivalent dans l'autre
+  sens s'affiche dessous). Même choix pour le stock de départ et dans
+  l'assistant de démarrage. Le **coût de revient** (achat + part de frais par unité)
   sert à deux choses :
   - il entre dans le **coût moyen pondéré** du produit, comme le prix d'achat
     seul le faisait avant (le transport pour amener la marchandise fait
@@ -250,11 +252,17 @@ un loyer payé, un salaire reçu, une prestation facturée, du transport, etc.
     et indique un **montant payé maintenant** si tu paies une partie tout de
     suite (le reste devient ta dette envers lui, réglable plus tard en une ou
     plusieurs fois depuis sa fiche dans Tiers & dettes)
-- **Modifier** un produit : nom, unité, prix de vente, seuil d'alerte — pour
-  corriger le prix de vente en dehors d'un réappro (ex. la concurrence a
-  changé ses prix). Le prix d'achat (coût moyen) et le stock ne se modifient
-  pas ici — ils se mettent à jour tout seuls avec les réapprovisionnements,
-  ventes et « Gardé pour moi »
+- **Modifier** un produit (« Modifier la fiche ») : nom, unité, prix de vente,
+  seuil d'alerte. Et pour le stock :
+  - **Stock de départ** : tant que le produit n'a eu ni vente ni réappro, tu
+    peux corriger directement la quantité, le coût unitaire et les frais
+    saisis à la création (erreur de saisie : ni la caisse ni le bénéfice ne
+    bougent)
+  - **Inventaire** : ensuite, compte ce que tu as vraiment et saisis la
+    quantité comptée. L'écart (casse, vol, erreur) est enregistré comme une
+    perte ou un surplus au coût moyen, et apparaît dans tes charges
+  - Le coût d'achat moyen, lui, se met à jour tout seul avec les
+    réapprovisionnements
 - **Archiver** un produit : comme pour une activité ou un tiers, un produit ne
   se **supprime** jamais (son historique de stock et de ventes doit rester
   consultable) — tu peux juste l'archiver pour qu'il disparaisse des listes
@@ -488,9 +496,10 @@ prend des frais, saisis-les dans le champ « Frais de transfert » :
   vers la banque avec 1 500 de frais : Orange Money −101 500, Banque
   +100 000. Si les frais ont été retirés de l'envoi (tu envoies 100 000, il
   arrive 98 500), saisis 98 500 et 1 500 de frais.
-- **Réapprovisionnement payé** (ou l'acompte d'un achat à crédit) et
-  **règlement d'une dette** : le champ apparaît quand le moyen de paiement
-  n'est pas les espèces.
+- **Nouvelle opération** (dépense ou entrée), **réapprovisionnement payé** (ou
+  l'acompte d'un achat à crédit) et **règlement d'une dette** : le champ
+  apparaît quand le moyen de paiement n'est pas les espèces (et pas sur une
+  opération à crédit, puisque rien n'est payé tout de suite).
 
 Les frais sont une **dépense** (catégorie « Frais de transfert ») de
 l'activité qui paie : ils baissent le bénéfice et comptent dans les budgets.

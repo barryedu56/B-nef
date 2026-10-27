@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { ApiError } from '@/api/client';
 import type { Product } from '@/api/types';
 import { PartyPicker } from './PartyPicker';
+import { ExtraFeesField, feesTotal, type FeesMode } from './ExtraFeesField';
 import { AmountInput } from './ui/AmountInput';
 import { Button } from './ui/Button';
 import { Field, Select, TextInput } from './ui/Field';
@@ -35,6 +36,7 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
   const [quantity, setQuantity] = useState('');
   const [unitCost, setUnitCost] = useState('');
   const [extraFees, setExtraFees] = useState('');
+  const [feesMode, setFeesMode] = useState<FeesMode>('unit');
   const [marginPct, setMarginPct] = useState(() => defaultMargin(product));
   const [manualPrice, setManualPrice] = useState<string | null>(null);
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
 
   const qty = Number(quantity.replace(',', '.')) || 0;
   const cost = Number(unitCost.replace(',', '.')) || 0;
-  const fees = extraFees ? Number(extraFees.replace(',', '.')) || 0 : 0;
+  const fees = feesTotal(feesMode, extraFees, qty);
   const landedUnitCost = qty > 0 ? cost + fees / qty : cost;
   const total = qty > 0 && cost >= 0 ? qty * cost + fees : 0;
   const paidNowValue = amountPaidNow ? Number(amountPaidNow.replace(',', '.')) : 0;
@@ -116,11 +118,15 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
         <Field label={`Coût d'achat unitaire (${currency})`}>
           <AmountInput value={unitCost} onChange={setUnitCost} />
         </Field>
-        <Field
-          label="Frais annexes (facultatif)"
-          hint="Transport, douane… pour tout le lot (pas par unité) — réparti automatiquement sur la quantité.">
-          <AmountInput value={extraFees} onChange={setExtraFees} placeholder="0" />
-        </Field>
+        <ExtraFeesField
+          value={extraFees}
+          onChange={setExtraFees}
+          mode={feesMode}
+          onModeChange={setFeesMode}
+          quantity={qty}
+          currency={currency}
+          unit={product.unit}
+        />
 
         {landedUnitCost > 0 ? (
           <div className="card card-muted" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
