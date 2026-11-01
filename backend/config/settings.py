@@ -85,7 +85,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -158,6 +158,10 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # --- International -------------------------------------------------------
+# Adresse de l'administration (sans « / ») : changer « admin » en un mot
+# connu de toi seul éloigne les robots qui testent /admin/. Voir DEPLOIEMENT.md.
+ADMIN_URL = env("DJANGO_ADMIN_URL", "admin").strip("/") or "admin"
+
 LANGUAGE_CODE = "fr"
 TIME_ZONE = env("DJANGO_TIME_ZONE", "Africa/Conakry")
 USE_I18N = True

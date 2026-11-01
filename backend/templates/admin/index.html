@@ -1,0 +1,6 @@
+{% extends "admin/index.html" %}
+{% load benef_admin %}
+{% block content %}
+{% benef_stats %}
+{{ block.super }}
+{% endblock %}

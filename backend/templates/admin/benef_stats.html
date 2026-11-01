@@ -1,0 +1,35 @@
+<div class="benef-stats">
+  {% for label, value, sub in cards %}
+    <div class="benef-card">
+      <div class="benef-label">{{ label }}</div>
+      <div class="benef-value">{{ value }}</div>
+      <div class="benef-sub">{{ sub }}</div>
+    </div>
+  {% endfor %}
+</div>
+<div class="module benef-latest">
+  <h2>Dernières inscriptions</h2>
+  <table>
+    <tbody>
+    {% for u in latest %}
+      <tr>
+        <th><a href="{% url 'admin:accounts_user_change' u.pk %}">{{ u.username }}</a></th>
+        <td>{{ u.email|default:"—" }}</td>
+        <td>{{ u.phone|default:"—" }}</td>
+        <td>{{ u.date_joined|date:"d/m/Y H:i" }}</td>
+      </tr>
+    {% empty %}
+      <tr><td>Aucun utilisateur pour l'instant.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<style>
+  .benef-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .benef-card { border: 1px solid var(--hairline-color); border-radius: 10px; padding: 14px 16px; background: var(--body-bg); }
+  .benef-label { font-size: 12px; color: var(--body-quiet-color); text-transform: uppercase; letter-spacing: .04em; }
+  .benef-value { font-size: 28px; font-weight: 700; color: #4f46e5; margin: 4px 0; }
+  .benef-sub { font-size: 12px; color: var(--body-quiet-color); }
+  .benef-latest { margin-bottom: 20px; }
+  .benef-latest table { width: 100%; }
+</style>

@@ -1,3 +1,4 @@
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -11,7 +12,9 @@ from .serializers import ActivitySerializer, OnboardingSerializer
 
 class ActivityViewSet(viewsets.ModelViewSet):
     serializer_class = ActivitySerializer
-    permission_classes = [IsOwner]
+    # IsAuthenticated d'abord : sinon une requête sans connexion arrivait
+    # jusqu'à la requête en base (erreur 500 au lieu de 401).
+    permission_classes = [IsAuthenticated, IsOwner]
     filterset_fields = ("type", "is_archived", "has_inventory")
     search_fields = ("name",)
     ordering_fields = ("created_at", "name")

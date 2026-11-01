@@ -55,7 +55,7 @@ api_patterns = [
 ]
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path(f"{settings.ADMIN_URL}/", admin.site.urls),
     path("api/", include((api_patterns, "api"))),
     path("api-auth/", include("rest_framework.urls")),
 ]

@@ -123,3 +123,12 @@ class ProductImportTests(ApiTestCase):
         self.assertEqual((data["products"][0]["unit"], data["products"][0]["low_stock_threshold"]), ("sac", "5"))
         self.assertEqual(data["products"][0]["extra_fees"], "40000")
         self.assertEqual(data["errors"], [])
+
+
+class AnonymousAccessTests(ApiTestCase):
+    def test_sans_connexion_401_et_pas_500(self):
+        from rest_framework.test import APIClient
+
+        anon = APIClient()
+        for path in ("/api/activities/", "/api/transactions/", "/api/payment-methods/overview/", "/api/recurring/due/"):
+            self.assertEqual(anon.get(path).status_code, 401, path)
