@@ -1,4 +1,4 @@
-import { ChartColumn, PiggyBank, ShieldCheck, WifiOff } from 'lucide-react';
+import { ChartColumn, ChevronRight, PiggyBank, ShieldCheck, Smartphone, WifiOff } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 const FEATURES = [
@@ -7,6 +7,13 @@ const FEATURES = [
   { icon: WifiOff, text: 'Fonctionne même sans internet sur ton téléphone' },
   { icon: ShieldCheck, text: 'Tes données restent privées et chiffrées' },
 ];
+
+/** Téléphone ou tablette : la version téléphone (installable, hors ligne)
+ * convient mieux que cette version ordinateur. */
+const ON_PHONE =
+  typeof navigator !== 'undefined' &&
+  (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+    (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1));
 
 /** Écran partagé des pages d'accès : panneau de marque à gauche (caché sur
  * petit écran), formulaire à droite. */
@@ -40,6 +47,17 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
             <img src="/logo.png" alt="" />
             Bénef
           </div>
+          {ON_PHONE ? (
+            <a className="phone-version" href="/app/">
+              <Smartphone size={20} />
+              <span style={{ flex: 1 }}>
+                <strong>Sur téléphone, utilise la version mobile</strong>
+                <br />
+                Plus pratique, installable sur l'écran d'accueil et utilisable sans internet.
+              </span>
+              <ChevronRight size={18} />
+            </a>
+          ) : null}
           <div>
             <h1 className="auth-title">{title}</h1>
             {subtitle ? <p className="auth-subtitle">{subtitle}</p> : null}

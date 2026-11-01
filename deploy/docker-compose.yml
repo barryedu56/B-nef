@@ -19,7 +19,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    # Jamais exposée sur Internet : seuls les autres conteneurs y accèdent.
+    # Jamais exposée sur Internet : accessible seulement depuis le serveur
+    # lui-même (127.0.0.1), pour t'y connecter via un tunnel SSH (DEPLOIEMENT.md).
+    ports:
+      - "127.0.0.1:5432:5432"
 
   backend:
     build: ../backend
@@ -35,6 +38,7 @@ services:
       CORS_ALLOWED_ORIGINS: https://${BENEF_DOMAIN}
       # Caddy fait déjà la redirection HTTP -> HTTPS.
       DJANGO_SECURE_SSL_REDIRECT: "False"
+      DJANGO_ADMIN_URL: ${BENEF_ADMIN_PATH:-admin}
     volumes:
       - media:/app/media
     depends_on:
@@ -48,6 +52,7 @@ services:
     restart: unless-stopped
     environment:
       BENEF_DOMAIN: ${BENEF_DOMAIN:?BENEF_DOMAIN manquant dans deploy/.env}
+      BENEF_ADMIN_PATH: ${BENEF_ADMIN_PATH:-admin}
     ports:
       - "80:80"
       - "443:443"

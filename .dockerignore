@@ -1,0 +1,14 @@
+# Contexte de construction de deploy/web.Dockerfile (racine du dépôt) :
+# les dépendances sont réinstallées dans l'image, jamais copiées d'ici.
+**/node_modules
+**/.venv
+**/__pycache__
+.git
+backend/db.sqlite3
+backend/media
+mobile/.env
+mobile/.expo
+mobile/dist
+web/dist
+deploy/.env
+deploy/backups

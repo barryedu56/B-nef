@@ -1434,3 +1434,21 @@ input[type='password']::-ms-clear {
 .due-banner:hover {
   box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.12);
 }
+
+/* Pages d'accès ouvertes sur un téléphone : lien vers la version mobile (/app/). */
+.phone-version {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.45;
+  text-decoration: none;
+}
+.phone-version svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}

@@ -1,15 +1,28 @@
-# Un seul domaine : l'app web à la racine, l'API sous /api.
+# Un seul domaine : l'app web à la racine, l'app téléphone (PWA) sous /app/,
+# l'API sous /api, l'administration sous /admin/ (ou BENEF_ADMIN_PATH).
 # Le certificat HTTPS est obtenu et renouvelé automatiquement.
 {$BENEF_DOMAIN} {
 	encode gzip zstd
 
-	@backend path /api/* /admin/* /api-auth/* /static/*
+	@backend path /api/* /{$BENEF_ADMIN_PATH:admin}/* /api-auth/* /static/*
 	handle @backend {
 		reverse_proxy backend:8000
 	}
 
 	handle_path /media/* {
 		root * /srv/media
+		file_server
+	}
+
+	# App téléphone installable (iPhone : Safari → Partager → « Sur l'écran d'accueil »).
+	redir /app /app/ 308
+	handle /app/* {
+		root * /srv/mobile
+		# Le service worker ne doit jamais rester en cache : sinon une mise à
+		# jour de l'app mettrait des jours à arriver.
+		@sw path /app/sw.js
+		header @sw Cache-Control "no-cache"
+		try_files {path} /app/index.html
 		file_server
 	}
 
