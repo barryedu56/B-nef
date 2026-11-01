@@ -4,13 +4,22 @@ interface FieldProps {
   label: string;
   hint?: string;
   error?: string;
+  /** Lien ou bouton à droite du libellé (ex. « Oublié ? »). */
+  labelAction?: ReactNode;
   children: ReactNode;
 }
 
-export function Field({ label, hint, error, children }: FieldProps) {
+export function Field({ label, hint, error, labelAction, children }: FieldProps) {
   return (
-    <div className="field">
-      <span className="field-label">{label}</span>
+    <div className={['field', error ? 'has-error' : ''].filter(Boolean).join(' ')}>
+      {labelAction ? (
+        <span className="field-label-row">
+          <span className="field-label">{label}</span>
+          {labelAction}
+        </span>
+      ) : (
+        <span className="field-label">{label}</span>
+      )}
       {children}
       {hint && !error ? <span className="field-hint">{hint}</span> : null}
       {error ? <span className="error-text">{error}</span> : null}

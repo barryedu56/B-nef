@@ -1,23 +1,41 @@
-import { Eye, EyeOff, Lock } from 'lucide-react';
-import { useState, type InputHTMLAttributes } from 'react';
+import { ArrowBigUp, Eye, EyeOff, Lock } from 'lucide-react';
+import { useState, type InputHTMLAttributes, type KeyboardEvent } from 'react';
 
-/** Champ mot de passe avec bouton afficher / masquer. */
+/** Champ mot de passe avec bouton afficher / masquer, et avertissement si
+ * la touche Majuscules (Verr. Maj) est activée — cause n°1 des « mot de
+ * passe incorrect ». */
 export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
   const [visible, setVisible] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
+  const checkCaps = (e: KeyboardEvent<HTMLInputElement>) => setCapsLock(e.getModifierState?.('CapsLock') ?? false);
   return (
-    <div className="input-group">
-      <span className="input-icon">
-        <Lock size={16} />
-      </span>
-      <input className="input has-action" type={visible ? 'text' : 'password'} {...props} />
-      <button
-        type="button"
-        className="input-action"
-        onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>
-        {visible ? <EyeOff size={16} /> : <Eye size={16} />}
-      </button>
-    </div>
+    <>
+      <div className="input-group">
+        <span className="input-icon">
+          <Lock size={16} />
+        </span>
+        <input
+          className="input has-action"
+          type={visible ? 'text' : 'password'}
+          onKeyUp={checkCaps}
+          onKeyDown={checkCaps}
+          onBlur={() => setCapsLock(false)}
+          {...props}
+        />
+        <button
+          type="button"
+          className="input-action"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>
+          {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+      {capsLock ? (
+        <span className="caps-hint" role="status">
+          <ArrowBigUp size={14} /> Majuscules activées
+        </span>
+      ) : null}
+    </>
   );
 }
 

@@ -171,6 +171,11 @@ class AuthMessagesTests(TestCase):
         self.assertEqual(unknown.json(), wrong.json())
         self.assertEqual(unknown.json()["detail"], "Nom d'utilisateur ou mot de passe incorrect.")
 
+    def test_connexion_sans_tenir_compte_des_majuscules(self):
+        r = self.login("Fatou", "MotDePasse123")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertIn("access", r.json())
+
     def test_compte_desactive_meme_message(self):
         get_user_model().objects.filter(username="fatou").update(is_active=False)
         self.assertEqual(self.login("fatou", "MotDePasse123").json()["detail"], "Nom d'utilisateur ou mot de passe incorrect.")

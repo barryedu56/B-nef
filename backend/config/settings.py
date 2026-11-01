@@ -150,6 +150,8 @@ else:
     }
 
 AUTH_USER_MODEL = "accounts.User"
+# Connexion insensible aux majuscules du nom d'utilisateur (voir backends.py).
+AUTHENTICATION_BACKENDS = ["apps.accounts.backends.CaseInsensitiveUsernameBackend"]
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

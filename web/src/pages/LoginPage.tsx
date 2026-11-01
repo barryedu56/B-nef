@@ -2,37 +2,40 @@ import { CircleAlert, ShieldCheck, User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
-import { ApiError } from '@/api/client';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { IconInput } from '@/components/ui/IconInput';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { useAuth } from '@/context/AuthContext';
+import { fieldErrors } from '@/lib/formErrors';
+
+type Errors = Partial<Record<'username' | 'password' | 'general', string>>;
 
 export function LoginPage() {
   const { status, signIn } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
 
   if (status === 'signedIn') return <Navigate to="/" replace />;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password) {
-      setError("Renseigne ton nom d'utilisateur et ton mot de passe.");
-      return;
-    }
-    setError(null);
+    const missing: Errors = {};
+    if (!username.trim()) missing.username = "Indique ton nom d'utilisateur.";
+    if (!password) missing.password = 'Indique ton mot de passe.';
+    setErrors(missing);
+    if (Object.keys(missing).length) return;
     setLoading(true);
     try {
       await signIn(username.trim(), password);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Impossible de se connecter.');
+      setErrors(fieldErrors(err, ['username', 'password'] as const));
+      setPassword('');
     } finally {
       setLoading(false);
     }
@@ -41,30 +44,36 @@ export function LoginPage() {
   return (
     <AuthLayout title="Bon retour 👋" subtitle="Connecte-toi pour retrouver tes activités et tes chiffres.">
       <form className="auth-form" onSubmit={onSubmit} noValidate>
-        <Field label="Nom d'utilisateur">
+        {errors.general ? (
+          <div className="alert error" role="alert">
+            <CircleAlert size={16} />
+            {errors.general}
+          </div>
+        ) : null}
+        <Field label="Nom d'utilisateur" error={errors.username}>
           <IconInput
             icon={<User size={16} />}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="ex. amadou"
+            aria-invalid={errors.username ? true : undefined}
             autoFocus
           />
         </Field>
-        <Field label="Mot de passe">
-          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+        <Field label="Mot de passe" error={errors.password} labelAction={<Link to="/forgot-password">Oublié ?</Link>}>
+          <PasswordInput
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            placeholder="Ton mot de passe"
+            aria-invalid={errors.password ? true : undefined}
+          />
         </Field>
-        <div className="auth-row">
-          <span />
-          <Link to="/forgot-password">Mot de passe oublié ?</Link>
-        </div>
-        {error ? (
-          <div className="alert error" role="alert">
-            <CircleAlert size={16} />
-            {error}
-          </div>
-        ) : null}
-        <Button type="submit" block loading={loading} className="btn-lg">
+        <Button type="submit" block loading={loading} loadingText="Connexion…" className="btn-lg">
           Se connecter
         </Button>
       </form>
