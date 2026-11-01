@@ -205,7 +205,7 @@ export default function AccountScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
           <Pressable style={styles.linkRow} onPress={() => router.push('/export')}>
-            <Text style={styles.linkLabel}>Export pour le comptable (Excel)</Text>
+            <Text style={styles.linkLabel}>Export pour le comptable (PDF, Excel)</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
         </Card>

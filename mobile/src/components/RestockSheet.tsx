@@ -42,7 +42,10 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
   const [unitCost, setUnitCost] = useState('');
   const [extraFees, setExtraFees] = useState('');
   const [feesMode, setFeesMode] = useState<FeesMode>('unit');
-  const [marginPct, setMarginPct] = useState(() => defaultMargin(product));
+  // null = la marge habituelle du produit. Calculée au rendu et non à la
+  // création de la fiche : le produit n'est pas toujours encore chargé à ce
+  // moment-là, et on proposait alors 30 % au lieu de garder son prix.
+  const [marginInput, setMarginInput] = useState<string | null>(null);
   const [manualPrice, setManualPrice] = useState<string | null>(null);
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
   const [isCredit, setIsCredit] = useState(false);
@@ -65,19 +68,20 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
   const showFee = !!method && !method.is_cash && (!isCredit || paidNowValue > 0);
   const feeValue = showFee ? Number(fee.replace(',', '.')) || 0 : 0;
 
+  const marginPct = marginInput ?? defaultMargin(product);
   const margin = Number(marginPct.replace(',', '.'));
   const derivedPrice = landedUnitCost > 0 && !Number.isNaN(margin) ? Math.round(landedUnitCost * (1 + margin / 100)) : 0;
   const salePrice = manualPrice !== null ? manualPrice : derivedPrice > 0 ? String(derivedPrice) : '';
 
   const onMarginChange = (v: string) => {
-    setMarginPct(v);
+    setMarginInput(v);
     setManualPrice(null);
   };
   const onPriceChange = (v: string) => {
     setManualPrice(v);
     const p = Number(v.replace(',', '.'));
     if (landedUnitCost > 0 && !Number.isNaN(p) && p >= 0) {
-      setMarginPct((((p - landedUnitCost) / landedUnitCost) * 100).toFixed(1));
+      setMarginInput((((p - landedUnitCost) / landedUnitCost) * 100).toFixed(1));
     }
   };
 
@@ -110,7 +114,7 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
       setUnitCost('');
       setExtraFees('');
       setManualPrice(null);
-      setMarginPct(DEFAULT_MARGIN);
+      setMarginInput(null); // prochain produit : sa propre marge
       setIsCredit(false);
       setPartyId(null);
       setAmountPaidNow('');
