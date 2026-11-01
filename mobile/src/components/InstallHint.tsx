@@ -7,6 +7,9 @@ import { colors, fontSize, radius, spacing } from '@/theme';
 
 const KEY = 'benef.installHintClosed';
 
+/** Chrome sur iPhone (« CriOS ») : le bouton Partager est en haut à droite. */
+const IN_IOS_CHROME = typeof navigator !== 'undefined' && /CriOS/.test(navigator.userAgent ?? '');
+
 function closedBefore() {
   try {
     return window.localStorage.getItem(KEY) === '1';
@@ -56,8 +59,9 @@ export function InstallHint() {
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={styles.title}>Installe Bénef sur ton iPhone</Text>
         <Text style={styles.text}>
-          Touche <Ionicons name="share-outline" size={13} color={colors.textSecondary} /> Partager en bas de Safari, puis
-          « Sur l'écran d'accueil ». Bénef s'ouvrira comme une app, même sans internet.
+          Touche <Ionicons name="share-outline" size={13} color={colors.textSecondary} /> Partager{' '}
+          {IN_IOS_CHROME ? 'en haut à droite de Chrome' : 'en bas de Safari'}, puis « Sur l'écran d'accueil ». Bénef s'ouvrira
+          comme une app, même sans internet.
         </Text>
       </View>
       <Pressable onPress={close} hitSlop={10} accessibilityRole="button" accessibilityLabel="Fermer">
