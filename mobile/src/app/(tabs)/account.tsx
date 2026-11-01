@@ -73,9 +73,8 @@ export default function AccountScreen() {
     setError(null);
     setAvatarBusy(true);
     try {
-      const uriParts = asset.uri.split('.');
-      const ext = uriParts.length > 1 ? uriParts[uriParts.length - 1] : 'jpg';
-      await uploadAvatar({ uri: asset.uri, name: `avatar.${ext}`, type: asset.mimeType ?? `image/${ext}` });
+      const { ext, type } = imageFormat(asset);
+      await uploadAvatar({ uri: asset.uri, name: `avatar.${ext}`, type });
       await refreshUser();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Impossible d'envoyer cette photo.");
@@ -324,3 +323,26 @@ const styles = StyleSheet.create({
   linkLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
   error: { fontSize: fontSize.sm, color: colors.negative },
 });
+
+/** Extension et type d'une photo choisie. Dans le navigateur, l'adresse est
+ * « blob:https://…/uuid » ou « data:image/jpeg;base64,… » : on ne peut pas
+ * lire l'extension après le dernier point (on obtenait « com/uuid », refusé
+ * par le serveur). On part du type de l'image. */
+function imageFormat(asset: { uri: string; mimeType?: string | null; fileName?: string | null }) {
+  const fromData = /^data:(image\/[a-z0-9.+-]+);/i.exec(asset.uri)?.[1];
+  const type = (asset.mimeType || fromData || '').toLowerCase();
+  const known: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'image/heic': 'heic',
+    'image/heif': 'heif',
+  };
+  if (known[type]) return { ext: known[type], type };
+  const fromName = /\.([a-z0-9]{3,4})$/i.exec(asset.fileName ?? '')?.[1]?.toLowerCase();
+  const fromPath = asset.uri.startsWith('file:') ? /\.([a-z0-9]{3,4})$/i.exec(asset.uri)?.[1]?.toLowerCase() : undefined;
+  const ext = fromName || fromPath || 'jpg';
+  return { ext: ext === 'jpeg' ? 'jpg' : ext, type: type || `image/${ext === 'jpg' ? 'jpeg' : ext}` };
+}
