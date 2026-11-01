@@ -155,6 +155,18 @@ stockage objet (Backblaze B2, Scaleway, Google Drive) :
 30 3 * * * rclone copy ~/B-nef/deploy/backups distant:benef-backups --max-age 48h
 ```
 
+**Le plus simple : une copie chaque jour sur ton PC** (Ubuntu). Une seule fois,
+depuis le dossier du projet sur ton PC :
+
+```bash
+sh deploy/copie-sauvegardes-pc.sh            # installer
+sh deploy/copie-sauvegardes-pc.sh --retirer  # désinstaller
+```
+
+Les fichiers arrivent dans `~/Sauvegardes-Benef` chaque jour à 9 h (ou au
+démarrage suivant), et une notification s'affiche si la copie échoue. Le
+journal est dans `~/Sauvegardes-Benef/copie.log`.
+
 Restaurer une sauvegarde :
 
 ```bash
