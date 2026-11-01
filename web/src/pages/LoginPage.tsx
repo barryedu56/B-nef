@@ -1,4 +1,4 @@
-import { CircleAlert, ShieldCheck, User } from 'lucide-react';
+import { CircleAlert, User } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
@@ -80,10 +80,6 @@ export function LoginPage() {
       <div className="auth-footer">
         <span>Pas encore de compte ?</span>
         <Link to="/register">Créer un compte gratuit</Link>
-      </div>
-      <div className="auth-trust">
-        <ShieldCheck size={14} />
-        Connexion chiffrée · <Link to="/confidentialite">Confidentialité</Link>
       </div>
     </AuthLayout>
   );
