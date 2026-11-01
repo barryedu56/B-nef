@@ -72,7 +72,19 @@ export class ApiError extends Error {
 }
 
 function extractMessage(body: unknown, status: number): string {
-  return firstMessage(body) ?? `Erreur réseau (${status})`;
+  return firstMessage(body) ?? statusMessage(status);
+}
+
+/** Message clair quand le serveur n'en donne pas (page d'erreur HTML, panne…). */
+function statusMessage(status: number): string {
+  if (status === 400) return 'Certaines informations ne sont pas valides : vérifie le formulaire.';
+  if (status === 401) return 'Ta session a expiré : reconnecte-toi.';
+  if (status === 403) return "Tu n'as pas le droit de faire cette action.";
+  if (status === 404) return "Introuvable : l'élément a peut-être été supprimé.";
+  if (status === 413) return 'Le fichier est trop lourd.';
+  if (status === 429) return 'Trop de tentatives : patiente quelques minutes avant de réessayer.';
+  if (status >= 500) return 'Le serveur rencontre un problème. Réessaie dans un instant.';
+  return `Une erreur est survenue (code ${status}). Réessaie.`;
 }
 
 /** Premier message lisible d'une erreur DRF, même imbriquée : { detail },
@@ -168,7 +180,9 @@ export async function apiRequest<T = unknown>(path: string, opts: RequestOptions
       if (__DEV__) console.warn(`[api] ${method} ${path} :`, cause);
       throw new ApiError(0, {
         detail: onlineManager.isOnline()
-          ? `Impossible de joindre le serveur (${API_URL}). Vérifie ta connexion, ou que l'API tourne et que EXPO_PUBLIC_API_URL pointe vers la bonne adresse.`
+          ? __DEV__
+            ? `Impossible de joindre le serveur (${API_URL}). Vérifie que l'API tourne et que EXPO_PUBLIC_API_URL pointe vers la bonne adresse.`
+            : 'Impossible de joindre Bénef pour le moment. Vérifie ta connexion internet et réessaie.'
           : "Pas de connexion internet : cette action nécessite d'être en ligne.",
       });
     }

@@ -2,7 +2,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.conf import settings
 from django.db import transaction as db_transaction
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from apps.common.phone import clean_guinea_phone
 from apps.currencies.models import Currency
@@ -85,10 +87,26 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "username", "email", "phone", "password", "base_currency", "language")
+        extra_kwargs = {
+            "username": {
+                "validators": [
+                    UnicodeUsernameValidator(),
+                    UniqueValidator(
+                        queryset=User.objects.all(), lookup="iexact",
+                        message="Ce nom d'utilisateur est déjà pris : choisis-en un autre.",
+                    ),
+                ],
+            },
+        }
 
     def validate_email(self, value):
+        # Message volontairement vague : on ne confirme pas à n'importe qui
+        # qu'une adresse e-mail a un compte Bénef.
         if User.objects.filter(email__iexact=value).exclude(email="").exists():
-            raise serializers.ValidationError("Un compte utilise déjà cette adresse e-mail.")
+            raise serializers.ValidationError(
+                "Cette adresse e-mail ne peut pas être utilisée. Si tu as déjà un compte, connecte-toi "
+                "ou utilise « Mot de passe oublié »."
+            )
         return value
 
     def validate_phone(self, value):

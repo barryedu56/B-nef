@@ -28,7 +28,15 @@ def tokens_for(user) -> dict:
     return {"refresh": str(refresh), "access": str(refresh.access_token)}
 
 
+# Même message que le compte n'existe pas, soit désactivé ou que le mot de
+# passe soit faux : on ne révèle jamais lequel des trois (un pirate pourrait
+# sinon tester quels noms d'utilisateur existent).
+LOGIN_FAILED = "Nom d'utilisateur ou mot de passe incorrect."
+
+
 class PasswordAwareTokenObtainPairSerializer(TokenObtainPairSerializer):
+    default_error_messages = {"no_active_account": LOGIN_FAILED}
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)

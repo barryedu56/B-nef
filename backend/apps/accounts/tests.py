@@ -1,3 +1,8 @@
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.test import TestCase
+from rest_framework.test import APIClient
+
 from apps.activities.models import Activity
 from apps.common.testutils import ApiTestCase
 from apps.finance.models import Transaction
@@ -147,3 +152,46 @@ class ChangePasswordTests(ApiTestCase):
         self.assertEqual(fresh.get("/api/auth/me/").status_code, 200)
         self.assertEqual(self.session.get("/api/auth/me/").status_code, 401)
         self.assertIn("a été modifié", mail.outbox[-1].subject)
+
+
+class AuthMessagesTests(TestCase):
+    """Les messages d'erreur ne révèlent pas quels comptes existent."""
+
+    def setUp(self):
+        cache.clear()
+        get_user_model().objects.create_user(username="fatou", password="MotDePasse123", email="fatou@example.com")
+
+    def login(self, username, password):
+        return APIClient().post("/api/auth/token/", {"username": username, "password": password}, format="json")
+
+    def test_meme_message_compte_inconnu_ou_mauvais_mot_de_passe(self):
+        unknown = self.login("personne", "MotDePasse123")
+        wrong = self.login("fatou", "mauvais-mdp")
+        self.assertEqual(unknown.status_code, 401)
+        self.assertEqual(unknown.json(), wrong.json())
+        self.assertEqual(unknown.json()["detail"], "Nom d'utilisateur ou mot de passe incorrect.")
+
+    def test_compte_desactive_meme_message(self):
+        get_user_model().objects.filter(username="fatou").update(is_active=False)
+        self.assertEqual(self.login("fatou", "MotDePasse123").json()["detail"], "Nom d'utilisateur ou mot de passe incorrect.")
+
+    def test_trop_d_essais(self):
+        for _ in range(10):
+            self.login("fatou", "faux")
+        r = self.login("fatou", "faux")
+        self.assertEqual(r.status_code, 429)
+        self.assertIn("Trop de tentatives", r.json()["detail"])
+
+    def test_inscription_email_deja_utilise_message_vague(self):
+        r = APIClient().post("/api/auth/register/", {
+            "username": "autre", "email": "FATOU@example.com", "password": "UnMotDePasse!2026",
+        }, format="json")
+        self.assertEqual(r.status_code, 400)
+        self.assertNotIn("existe", str(r.json()))
+        self.assertIn("ne peut pas être utilisée", r.json()["email"][0])
+
+    def test_nom_d_utilisateur_pris_sans_tenir_compte_des_majuscules(self):
+        r = APIClient().post("/api/auth/register/", {
+            "username": "Fatou", "email": "f2@example.com", "password": "UnMotDePasse!2026",
+        }, format="json")
+        self.assertEqual(r.json()["username"][0], "Ce nom d'utilisateur est déjà pris : choisis-en un autre.")
