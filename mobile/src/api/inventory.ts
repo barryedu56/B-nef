@@ -16,6 +16,20 @@ export async function listSaleLines(transactionId: number) {
   return data.results;
 }
 
+/** Les lignes de plusieurs ventes d'un coup (toutes les pages). */
+export async function listSaleLinesOf(transactionIds: number[]) {
+  const lines: SaleLine[] = [];
+  let page = 1;
+  for (;;) {
+    const data = await apiRequest<Paginated<SaleLine>>('/sale-lines/', {
+      params: { transaction__in: transactionIds.join(','), page },
+    });
+    lines.push(...data.results);
+    if (!data.next) return lines;
+    page += 1;
+  }
+}
+
 export interface ProductInput {
   activity: number;
   name: string;

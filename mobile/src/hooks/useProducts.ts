@@ -1,10 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import * as inventoryApi from '@/api/inventory';
 import type { Product } from '@/api/types';
 import * as offline from '@/offline/actions';
+import { findCachedItem } from '@/offline/cacheLookup';
 import { isQueued } from '@/offline/send';
 import { invalidateAfterMoneyMove } from './useTransactions';
+
+function knownProduct(queryClient: QueryClient, id: number): Product {
+  return (
+    queryClient.getQueryData<Product>(['products', 'detail', id]) ??
+    findCachedItem<Product>(queryClient, ['products'], id) ??
+    ({ id } as Product)
+  );
+}
 
 export function useProducts(activityId: number | undefined, opts?: { lowStock?: boolean; archived?: boolean }) {
   return useQuery({
@@ -16,12 +25,16 @@ export function useProducts(activityId: number | undefined, opts?: { lowStock?: 
 }
 
 export function useProduct(id: number | undefined) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ['products', 'detail', id],
     queryFn: () => inventoryApi.fetchProduct(id as number),
     enabled: id !== undefined,
     // Fiche à jour à chaque ouverture (stock, droit de corriger le stock de départ).
     refetchOnMount: 'always',
+    // Hors connexion : la fiche gardée dans la liste des produits.
+    initialData: () => findCachedItem<Product>(queryClient, ['products'], id),
+    initialDataUpdatedAt: 0,
   });
 }
 
@@ -48,8 +61,10 @@ export function useCreateProduct() {
 export function useUpdateProduct(id: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Parameters<typeof inventoryApi.updateProduct>[1]) => inventoryApi.updateProduct(id, patch),
+    // Fonctionne hors connexion : envoyé au retour du réseau.
+    mutationFn: (patch: Parameters<typeof inventoryApi.updateProduct>[1]) => offline.updateProduct(knownProduct(queryClient, id), patch),
     onSuccess: (product: Product) => {
+      if (isQueued(product)) return; // cache déjà mis à jour
       queryClient.invalidateQueries({ queryKey: ['products', product.activity] });
       queryClient.setQueryData(['products', 'detail', id], product);
     },
@@ -62,7 +77,7 @@ export function useUpdateProductInList(activityId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, patch }: { id: number; patch: Parameters<typeof inventoryApi.updateProduct>[1] }) =>
-      inventoryApi.updateProduct(id, patch),
+      offline.updateProduct(knownProduct(queryClient, id), patch),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products', activityId] }),
   });
 }

@@ -1,7 +1,7 @@
 /** Versions « utilisables hors-ligne » des opérations du quotidien. Les
  * autres (créer une activité, réglages du compte, photo…) restent en ligne
  * uniquement. */
-import type { SettleInput, TransactionInput, TransferInput } from '@/api/finance';
+import type { CountCashInput, SettleInput, TransactionInput, TransactionSafeUpdate, TransferInput } from '@/api/finance';
 import type {
   PersonalUseInput,
   ProductInput,
@@ -12,7 +12,7 @@ import type {
 } from '@/api/inventory';
 import type { PartyInput } from '@/api/parties';
 import type { ConfirmDueInput, DueOperation } from '@/api/recurring';
-import type { Party, Product, Transaction } from '@/api/types';
+import type { CashCount, Party, Product, Transaction } from '@/api/types';
 import { todayISO } from '@/lib/dates';
 import {
   addCachedParty,
@@ -20,6 +20,7 @@ import {
   addCachedTransaction,
   cachedActivity,
   cachedProduct,
+  patchCachedItem,
   patchCachedTransaction,
   pendingTransaction,
   removeCachedDue,
@@ -234,6 +235,82 @@ export async function voidTransaction(txn: Transaction, reason = ''): Promise<Tr
       patchCachedTransaction(txn.id, patch);
       return { ...txn, ...patch };
     },
+  });
+}
+
+/** Catégorie, moyen de paiement, tiers ou note d'une opération. */
+export async function updateTransaction(txn: Transaction, patch: TransactionSafeUpdate): Promise<Transaction> {
+  return sendOrQueue<Transaction>({
+    label: withActivityName('Modification d’une opération', txn.activity),
+    method: 'PATCH',
+    path: `/transactions/${txn.id}/`,
+    body: patch,
+    activityId: txn.activity,
+    optimistic: () => {
+      patchCachedTransaction(txn.id, patch);
+      return { ...txn, ...patch };
+    },
+  });
+}
+
+export async function updateParty(party: Party, patch: Partial<PartyInput> & { is_archived?: boolean }): Promise<Party> {
+  return sendOrQueue<Party>({
+    label: `Modification du tiers — ${patch.name ?? party.name}`,
+    method: 'PATCH',
+    path: `/parties/${party.id}/`,
+    body: patch,
+    optimistic: () => {
+      patchCachedItem<Party>('parties', party.id, patch);
+      return { ...party, ...patch };
+    },
+  });
+}
+
+export async function updateProduct(
+  product: Product,
+  patch: Partial<ProductInput> & { is_archived?: boolean }
+): Promise<Product> {
+  return sendOrQueue<Product>({
+    label: withActivityName(`Modification du produit ${patch.name ?? product.name}`, product.activity),
+    method: 'PATCH',
+    path: `/products/${product.id}/`,
+    body: patch,
+    activityId: product.activity,
+    optimistic: () => {
+      patchCachedItem<Product>('products', product.id, patch);
+      return { ...product, ...Object.fromEntries(Object.entries(patch).filter(([k]) => k in product)) };
+    },
+  });
+}
+
+/** Vérification de caisse. Hors connexion, l'écart affiché est estimé avec
+ * le dernier solde connu (`expected`) ; le serveur le recalcule à l'envoi,
+ * après les opérations saisies avant. */
+export async function countCash(
+  accountId: number,
+  input: CountCashInput,
+  estimate: { expected: number; currency: string }
+): Promise<CashCount> {
+  return sendOrQueue<CashCount>({
+    label: withActivityName('Vérification de caisse', input.activity),
+    method: 'POST',
+    path: `/payment-methods/${accountId}/count/`,
+    body: input,
+    activityId: input.activity,
+    optimistic: () => ({
+      id: -1,
+      payment_method: accountId,
+      activity: input.activity,
+      activity_name: cachedActivity(input.activity)?.name ?? '',
+      currency: estimate.currency,
+      expected: estimate.expected.toFixed(2),
+      counted: input.counted,
+      difference: (Number(input.counted) - estimate.expected).toFixed(2),
+      transaction: null,
+      note: input.note ?? '',
+      activity_only: input.activity_only,
+      created_at: new Date().toISOString(),
+    }),
   });
 }
 

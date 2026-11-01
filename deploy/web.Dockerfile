@@ -20,7 +20,8 @@ COPY mobile/ ./
 ENV EXPO_PUBLIC_API_URL=/api \
     BENEF_WEB_BASE_URL=/app \
     EXPO_NO_TELEMETRY=1
-RUN npx expo export --platform web --output-dir dist
+RUN npx expo export --platform web --output-dir dist \
+ && node scripts/pwa-precache.js dist /app/
 
 FROM caddy:2.10-alpine
 COPY deploy/Caddyfile /etc/caddy/Caddyfile

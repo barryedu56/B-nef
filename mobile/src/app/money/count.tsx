@@ -15,6 +15,7 @@ import { TextField } from '@/components/ui/TextField';
 import { TopBar } from '@/components/ui/TopBar';
 import { useActivities } from '@/hooks/useActivities';
 import { useAccountsOverview, useCountCash } from '@/hooks/useAccounts';
+import { isQueued } from '@/offline/send';
 import { formatAmount } from '@/lib/money';
 import { useMoneyActivity } from '@/lib/moneyFilter';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -60,6 +61,7 @@ export default function CountCashScreen() {
       const record = await countCash.mutateAsync({
         accountId: account.id,
         input: { counted: String(countedValue), activity: activity.id, note: note.trim(), activity_only: activityOnly },
+        estimate: { expected, currency },
       });
       setResult(record);
     } catch (e) {
@@ -74,9 +76,13 @@ export default function CountCashScreen() {
         <TopBar title="Vérification enregistrée" back />
         <View style={styles.content}>
           <Alert
-            tone={d === 0 ? 'success' : 'info'}
+            tone={d === 0 && !isQueued(result) ? 'success' : 'info'}
             message={
-              d === 0
+              // Hors connexion, le solde attendu n'est connu qu'à l'envoi (les
+              // opérations saisies entre-temps passent avant) : pas de faux chiffre.
+              isQueued(result)
+                ? `Vérification enregistrée sans connexion : ${formatAmount(Number(result.counted), result.currency)} comptés. L'écart sera calculé et le solde aligné dès le retour du réseau.`
+                : d === 0
                 ? 'Ta caisse est juste : le montant compté correspond au solde.'
                 : `Écart de ${formatAmount(Math.abs(d), result.currency)} (${d < 0 ? 'manque' : 'surplus'}). Le solde a été aligné sur ce que tu as compté, et l'écart compte dans tes ${d < 0 ? 'charges' : 'gains'}.`
             }

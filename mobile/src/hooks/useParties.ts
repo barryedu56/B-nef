@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as partiesApi from '@/api/parties';
 import type { Party, PartyKind } from '@/api/types';
 import * as offline from '@/offline/actions';
+import { findCachedItem } from '@/offline/cacheLookup';
 import { isQueued } from '@/offline/send';
 
 export function useParties(kind?: PartyKind) {
@@ -13,10 +14,14 @@ export function useParties(kind?: PartyKind) {
 }
 
 export function useParty(id: number | undefined) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ['parties', 'detail', id],
     queryFn: () => partiesApi.fetchParty(id as number),
     enabled: id !== undefined,
+    // Hors connexion : la fiche gardée dans la liste des tiers.
+    initialData: () => findCachedItem<Party>(queryClient, ['parties'], id),
+    initialDataUpdatedAt: 0,
   });
 }
 
@@ -37,8 +42,15 @@ export function useCreateParty() {
 export function useUpdateParty(id: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Parameters<typeof partiesApi.updateParty>[1]) => partiesApi.updateParty(id, patch),
+    // Fonctionne hors connexion : envoyé au retour du réseau.
+    mutationFn: (patch: Parameters<typeof partiesApi.updateParty>[1]) =>
+      offline.updateParty(
+        queryClient.getQueryData<Party>(['parties', 'detail', id]) ??
+          findCachedItem<Party>(queryClient, ['parties'], id) ?? ({ id } as Party),
+        patch
+      ),
     onSuccess: (party: Party) => {
+      if (isQueued(party)) return; // cache déjà mis à jour
       queryClient.invalidateQueries({ queryKey: ['parties'] });
       queryClient.setQueryData(['parties', 'detail', id], party);
     },

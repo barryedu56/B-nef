@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as financeApi from '@/api/finance';
 import type { Transaction } from '@/api/types';
 import * as offline from '@/offline/actions';
+import { findCachedItem } from '@/offline/cacheLookup';
 import { isQueued } from '@/offline/send';
 
 export function useTransactions(activityId: number | undefined, limit?: number) {
@@ -23,10 +24,16 @@ export function usePartyTransactions(partyId: number | undefined) {
 }
 
 export function useTransaction(id: number | undefined) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ['transactions', 'detail', id],
     queryFn: () => financeApi.fetchTransaction(id as number),
     enabled: id !== undefined,
+    // Jamais ouverte en ligne : on part de la ligne déjà gardée dans une
+    // liste (hors connexion, c'est elle qui s'affiche ; en ligne, la fiche
+    // est rechargée aussitôt).
+    initialData: () => findCachedItem<Transaction>(queryClient, ['transactions'], id),
+    initialDataUpdatedAt: 0,
   });
 }
 
@@ -43,8 +50,8 @@ export function useCreateTransaction() {
 export function useUpdateTransaction() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: number; patch: financeApi.TransactionSafeUpdate }) =>
-      financeApi.updateTransaction(id, patch),
+    mutationFn: ({ txn, patch }: { txn: Transaction; patch: financeApi.TransactionSafeUpdate }) =>
+      offline.updateTransaction(txn, patch),
     onSuccess: (txn) => {
       queryClient.setQueryData(['transactions', 'detail', txn.id], txn);
       invalidateAfterMoneyMove(queryClient, txn.activity);

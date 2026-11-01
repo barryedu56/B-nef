@@ -88,7 +88,9 @@ class StockMovementViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 class SaleLineViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = SaleLineSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ("transaction", "product")
+    # transaction__in=1,2,3 : les lignes de plusieurs ventes en une requête
+    # (l'app les garde pour pouvoir les afficher hors connexion).
+    filterset_fields = {"transaction": ["exact", "in"], "product": ["exact"]}
 
     def get_queryset(self):
         return SaleLine.objects.filter(

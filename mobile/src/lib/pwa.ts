@@ -52,6 +52,9 @@ export function registerServiceWorker() {
   const base = process.env.EXPO_BASE_URL ?? '';
   if (!base) return; // développement : pas de cache qui masquerait les changements
   navigator.serviceWorker.register(`${base}/sw.js`, { scope: `${base}/` }).catch(() => {});
+  // Demande au navigateur de ne pas effacer les données gardées hors
+  // connexion quand le téléphone manque de place (sans effet si refusé).
+  navigator.storage?.persist?.().catch(() => {});
 }
 
 /** Ouverte dans Safari sur iPhone / iPad, et pas encore installée. */

@@ -68,7 +68,7 @@ export default function TransactionDetailScreen() {
     setError(null);
     try {
       await updateTxn.mutateAsync({
-        id: t.id,
+        txn: t,
         patch: {
           category: categoryId ? Number(categoryId) : null,
           payment_method: paymentMethodId ? Number(paymentMethodId) : null,
@@ -116,7 +116,9 @@ export default function TransactionDetailScreen() {
             {saleLines.isLoading ? (
               <Text style={styles.dateText}>Chargement…</Text>
             ) : (saleLines.data ?? []).length === 0 ? (
-              <Text style={styles.dateText}>Aucun détail disponible.</Text>
+              <Text style={styles.dateText}>
+                {saleLines.fetchStatus === 'paused' ? 'Détail visible au retour de la connexion.' : 'Aucun détail disponible.'}
+              </Text>
             ) : (
               (saleLines.data ?? []).map((line) => (
                 <View key={line.id} style={styles.saleLineRow}>

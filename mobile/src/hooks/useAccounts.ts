@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import * as financeApi from '@/api/finance';
 import * as offline from '@/offline/actions';
+import { latestCached } from '@/offline/cacheLookup';
 import { invalidateAfterMoneyMove } from './useTransactions';
 
 /** Toutes les caisses avec leur solde, et le total. `activity` : la part de
@@ -38,8 +39,15 @@ export function useCashCounts(accountId: number | undefined, activity: number | 
 export function useCountCash() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ accountId, input }: { accountId: number; input: financeApi.CountCashInput }) =>
-      financeApi.countCash(accountId, input),
+    mutationFn: ({
+      accountId,
+      input,
+      estimate,
+    }: {
+      accountId: number;
+      input: financeApi.CountCashInput;
+      estimate: { expected: number; currency: string };
+    }) => offline.countCash(accountId, input, estimate),
     onSuccess: (count) => invalidateAfterMoneyMove(queryClient, count.activity),
   });
 }
@@ -59,8 +67,12 @@ export function useTransfer() {
 
 /** Entrées et sorties d'argent de chaque caisse sur une période. */
 export function useCashFlow(period: string, date: string, activity: number | null = null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ['accounts', 'flow', period, date, activity],
     queryFn: () => financeApi.fetchCashFlow({ period, date, activity }),
+    // Hors connexion : le même tableau (période, activité) calculé un autre jour.
+    placeholderData: () =>
+      latestCached(queryClient, ['accounts', 'flow', period], ([, a]) => (a ?? null) === activity),
   });
 }

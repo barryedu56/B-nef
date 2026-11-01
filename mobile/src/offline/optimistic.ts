@@ -131,6 +131,20 @@ export function patchCachedTransaction(id: number, patch: Partial<Transaction>) 
   );
 }
 
+/** Modifie un élément (tiers, produit) partout où il est affiché : listes et
+ * fiche. Seuls les champs que l'élément possède déjà sont changés. */
+export function patchCachedItem<T extends { id: number }>(prefix: 'parties' | 'products', id: number, patch: object) {
+  const apply = (item: T): T => {
+    if (!item || item.id !== id) return item;
+    const known = Object.fromEntries(Object.entries(patch).filter(([k]) => k in item));
+    return { ...item, ...known };
+  };
+  for (const [key, data] of queryClient.getQueriesData<T[] | T>({ queryKey: [prefix] })) {
+    if (Array.isArray(data)) queryClient.setQueryData(key, data.map(apply));
+    else if (data && typeof data === 'object' && 'id' in data) queryClient.setQueryData(key, apply(data));
+  }
+}
+
 /** Retire une échéance de dépense fixe de la liste « à confirmer ». */
 export function removeCachedDue(recurringId: number, dueDate: string) {
   queryClient.setQueriesData<{ due_date: string; recurring: { id: number } }[]>({ queryKey: ['recurring', 'due'] }, (rows) =>
