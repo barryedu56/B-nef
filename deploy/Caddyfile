@@ -39,3 +39,8 @@
 		-Server
 	}
 }
+
+# www.<domaine> -> <domaine> (même certificat automatique).
+www.{$BENEF_DOMAIN} {
+	redir https://{$BENEF_DOMAIN}{uri} permanent
+}
