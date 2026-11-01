@@ -14,6 +14,7 @@ import { WebFrame } from '@/components/WebFrame';
 import { AuthProvider } from '@/context/AuthContext';
 import { OFFLINE_CACHE_MAX_AGE, persister, queryClient } from '@/offline/queryClient';
 import { startOutboxSync } from '@/offline/sync';
+import { registerServiceWorker } from '@/lib/pwa';
 import { setupReminders } from '@/lib/reminders';
 
 // Garde le splash affiché tant que les polices d'icônes ne sont pas prêtes —
@@ -29,6 +30,8 @@ export default function RootLayout() {
   useEffect(() => startOutboxSync(), []);
   // Rappels des dépenses fixes : affichage et ouverture de l'écran au toucher.
   useEffect(() => setupReminders(), []);
+  // Version installable dans le navigateur (iPhone) : ouverture sans réseau.
+  useEffect(() => registerServiceWorker(), []);
 
   const ready = fontsLoaded || !!fontsError;
 

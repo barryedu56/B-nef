@@ -101,7 +101,9 @@ type RequestOptions = {
 
 function buildUrl(path: string, params?: Params) {
   const base = path.startsWith('http') ? path : `${API_URL}${path}`;
-  const url = new URL(base);
+  // Version installée depuis le navigateur (PWA) : l'API est sur le même
+  // domaine, son adresse peut être relative (« /api »).
+  const url = typeof window !== 'undefined' && window.location ? new URL(base, window.location.origin) : new URL(base);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== '') {

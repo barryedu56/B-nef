@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <!-- viewport-fit=cover : l'app occupe tout l'écran de l'iPhone (encoche comprise). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+    <!-- Version installable (PWA), servie sous /app/ en production : sur iPhone,
+         Safari → Partager → « Sur l'écran d'accueil ». -->
+    <link rel="manifest" href="/app/manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="/app/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/app/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Bénef" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#4f46e5" />
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        background-color: #f4f5fa;
+      }
+      body {
+        overflow: hidden;
+        /* Pas de surlignage gris au toucher ni de rebond de page, comme une vraie app. */
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior: none;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Active JavaScript pour utiliser Bénef.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

@@ -3,6 +3,7 @@ import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, Vi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, fontSize, radius, spacing } from '@/theme';
+import { InstallHint } from '@/components/InstallHint';
 
 /** Écrans d'accès : bandeau indigo avec le logo, puis une feuille blanche
  * arrondie qui contient le formulaire. */
@@ -30,6 +31,7 @@ export function AuthScreen({ title, subtitle, children }: { title: string; subti
             <Text style={styles.title}>{title}</Text>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
           </View>
+          <InstallHint />
           {children}
         </View>
       </ScrollView>
