@@ -3,8 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <!-- viewport-fit=cover : l'app occupe tout l'écran de l'iPhone (encoche comprise). -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <!-- viewport-fit=cover : l'app occupe tout l'écran de l'iPhone (encoche comprise).
+         maximum-scale=1 : pas de zoom automatique en touchant un champ (sinon le
+         formulaire déborde de l'écran). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover" />
     <title>%WEB_TITLE%</title>
     <!-- Version installable (PWA), servie sous /app/ en production : sur iPhone,
          Safari → Partager → « Sur l'écran d'accueil ». -->
@@ -17,6 +19,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#4f46e5" />
     <style id="expo-reset">
+      /* Pas de zoom au double-tap ; la taille du texte ne change pas en
+         tournant l'écran. */
+      html {
+        -webkit-text-size-adjust: 100%;
+        touch-action: pan-x pan-y;
+      }
       html,
       body {
         height: 100%;
@@ -34,6 +42,13 @@
         flex: 1;
       }
     </style>
+    <!-- Pas de zoom à deux doigts : Safari (iPhone/iPad) ignore user-scalable=no,
+         on bloque donc aussi ses gestes de zoom. -->
+    <script>
+      ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (type) {
+        document.addEventListener(type, function (e) { e.preventDefault(); }, { passive: false });
+      });
+    </script>
   </head>
 
   <body>

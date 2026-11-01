@@ -5,7 +5,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Sur téléphone et tablette : pas de zoom (automatique en touchant un
+         champ, ou à deux doigts) qui ferait déborder les formulaires. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,6 +15,13 @@
       rel="stylesheet"
     />
     <title>Bénef</title>
+    <!-- Pas de zoom à deux doigts : Safari (iPhone/iPad) ignore user-scalable=no,
+         on bloque donc aussi ses gestes de zoom. -->
+    <script>
+      ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (type) {
+        document.addEventListener(type, function (e) { e.preventDefault(); }, { passive: false });
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

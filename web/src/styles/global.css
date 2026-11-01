@@ -46,6 +46,12 @@ body,
   height: 100%;
 }
 
+/* Pas de zoom au double-tap (téléphone, tablette). */
+html {
+  -webkit-text-size-adjust: 100%;
+  touch-action: pan-x pan-y;
+}
+
 body {
   margin: 0;
   background: var(--bg);
