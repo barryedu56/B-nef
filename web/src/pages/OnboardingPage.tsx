@@ -20,9 +20,8 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useActivity } from '@/hooks/useActivities';
 import { useAccountsOverview } from '@/hooks/useAccounts';
+import { onboardingPlan, type OnboardingStep } from '@/lib/onboardingPlan';
 
-type Step = 0 | 1 | 2 | 3;
-const STEPS = ['Mon argent', 'Ma marchandise', 'Dettes et créances', 'Récapitulatif'];
 
 interface ProductRow {
   key: number;
@@ -48,9 +47,10 @@ let nextKey = 1;
 const emptyProduct = (): ProductRow => ({ key: nextKey++, name: '', unit: 'pièce', quantity: '', unitCost: '', salePrice: '', fees: '', threshold: '' });
 const emptyParty = (direction: 'in' | 'out' = 'in'): PartyRow => ({ key: nextKey++, name: '', phone: '', direction, amount: '' });
 
-/** Assistant « Je démarre avec Bénef » : pour un commerce qui existait avant
- * l'application — argent par caisse, marchandise déjà en stock (saisie ou
- * importée d'Excel), dettes et créances — enregistré en une fois à la fin. */
+/** Assistant « Je démarre avec Bénef » : pour une activité qui existait avant
+ * l'application — argent par caisse, stock déjà là (saisi ou importé d'Excel),
+ * dettes et créances — enregistré en une fois à la fin. Les étapes dépendent
+ * du type d'activité (voir onboardingPlan). */
 export function OnboardingPage() {
   const { id } = useParams<{ id: string }>();
   const activityId = Number(id);
@@ -59,7 +59,7 @@ export function OnboardingPage() {
   const activity = useActivity(activityId);
   const overview = useAccountsOverview();
 
-  const [step, setStep] = useState<Step>(0);
+  const [step, setStep] = useState(0);
   const [cash, setCash] = useState<Record<number, string>>({});
   const [products, setProducts] = useState<ProductRow[]>([emptyProduct()]);
   // Frais annexes du tableau : saisis par unité (par défaut) ou pour tout le lot.
@@ -72,26 +72,30 @@ export function OnboardingPage() {
   if (activity.isLoading || overview.isLoading) return <LoadingBlock label="préparation de l'assistant" />;
   if (activity.isError || !activity.data) return <ErrorBlock message="Activité introuvable." onRetry={() => activity.refetch()} />;
   const act = activity.data;
+  const plan = onboardingPlan(act);
+  const current = plan.steps[step];
+  const last = plan.steps.length - 1;
   const currency = act.currency;
   const accounts = overview.data?.accounts ?? [];
   const goToActivity = () => navigate(`/activities/${act.id}`);
 
-  const filledProducts = products.filter((p) => p.name.trim());
-  const filledParties = parties.filter((p) => p.name.trim());
+  // Une étape absente pour ce type d'activité n'envoie rien.
+  const filledProducts = plan.steps.includes('products') ? products.filter((p) => p.name.trim()) : [];
+  const filledParties = plan.steps.includes('parties') ? parties.filter((p) => p.name.trim()) : [];
   const cashTotal = Object.values(cash).reduce((s, v) => s + num(v), 0);
   // Valeur au coût de revient : prix d'achat + frais du lot (transport…).
   const stockTotal = filledProducts.reduce((s, p) => s + lineValue(p, feesMode), 0);
   const receivable = filledParties.filter((p) => p.direction === 'in').reduce((s, p) => s + num(p.amount), 0);
   const payable = filledParties.filter((p) => p.direction === 'out').reduce((s, p) => s + num(p.amount), 0);
 
-  const goTo = (target: Step) => {
+  const goTo = (target: number) => {
     setError(null);
     setStep(target);
     window.scrollTo({ top: 0 });
   };
 
   const validateStep = (): string | null => {
-    if (step === 1) {
+    if (current === 'products') {
       const names = new Set<string>();
       for (const p of filledProducts) {
         const key = p.name.trim().toLowerCase();
@@ -100,7 +104,7 @@ export function OnboardingPage() {
         if (num(p.quantity) > 0 && num(p.unitCost) <= 0) return `« ${p.name} » : indique combien t'a coûté chaque unité.`;
       }
     }
-    if (step === 2) {
+    if (current === 'parties') {
       const bad = filledParties.find((p) => num(p.amount) <= 0);
       if (bad) return `« ${bad.name} » : indique le montant.`;
       const badPhone = filledParties.find((p) => p.phone.trim() && !isValidGuineaPhone(p.phone));
@@ -112,7 +116,7 @@ export function OnboardingPage() {
   const next = () => {
     const problem = validateStep();
     if (problem) setError(problem);
-    else goTo((step + 1) as Step);
+    else goTo(step + 1);
   };
 
   const onSubmit = async () => {
@@ -149,11 +153,11 @@ export function OnboardingPage() {
           <div className="alert success">
             <CircleCheck size={18} />
             <span>
-              {act.name} démarre avec tout ce que tu avais déjà : {result.products} produit{result.products > 1 ? 's' : ''},{' '}
-              {result.parties} personne{result.parties > 1 ? 's' : ''}. Tu peux maintenant enregistrer tes ventes et dépenses au jour le jour.
+              {act.name} démarre avec tout ce que tu avais déjà
+              {counts(plan.steps, result.products, result.parties)}. Tu peux maintenant enregistrer tes entrées et dépenses au jour le jour.
             </span>
           </div>
-          <Summary currency={currency} cash={result.cash_total} stock={result.stock_value} receivable={result.receivable} payable={result.payable} />
+          <Summary steps={plan.steps} currency={currency} cash={result.cash_total} stock={result.stock_value} receivable={result.receivable} payable={result.payable} />
           <div>
             <Button onClick={goToActivity}>Aller à mon activité</Button>
           </div>
@@ -165,24 +169,23 @@ export function OnboardingPage() {
   return (
     <>
       <PageHeader title="Je démarre avec Bénef" subtitle={`${act.name} · ce que tu avais avant l'application`} />
-      <div className="content" style={{ maxWidth: step === 1 ? 1100 : 720 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-          {STEPS.map((label, i) => (
-            <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="content" style={{ maxWidth: current === 'products' ? 1100 : 720 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${plan.steps.length}, 1fr)`, gap: 10 }}>
+          {plan.steps.map((id, i) => (
+            <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ height: 4, borderRadius: 999, background: i <= step ? 'var(--accent)' : 'var(--border)' }} />
               <span style={{ fontSize: 12, fontWeight: 600, color: i === step ? 'var(--accent)' : 'var(--text-tertiary)' }}>
-                {i + 1}. {label}
+                {i + 1}. {plan.labels[id]}
               </span>
             </div>
           ))}
         </div>
 
-        {step === 0 ? (
+        {current === 'cash' ? (
           <Card>
             <span className="card-title">Combien as-tu aujourd'hui dans chaque caisse ?</span>
             <p className="field-hint" style={{ marginTop: -6, marginBottom: 14 }}>
-              Compte l'argent du tiroir, regarde le solde de ton compte et de ton mobile money. Cet argent compte dans tes caisses, pas
-              dans ton bénéfice.
+              {plan.cashHint} Cet argent compte dans tes caisses, pas dans ton bénéfice.
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
               {accounts.map((a) => (
@@ -194,8 +197,9 @@ export function OnboardingPage() {
           </Card>
         ) : null}
 
-        {step === 1 ? (
+        {current === 'products' ? (
           <ProductsStep
+            title={plan.productsTitle}
             products={products}
             setProducts={setProducts}
             feesMode={feesMode}
@@ -206,11 +210,11 @@ export function OnboardingPage() {
           />
         ) : null}
 
-        {step === 2 ? (
+        {current === 'parties' ? (
           <Card>
-            <span className="card-title">Qui te doit de l'argent, à qui en dois-tu ?</span>
+            <span className="card-title">{plan.partiesTitle}</span>
             <p className="field-hint" style={{ marginTop: -6, marginBottom: 14 }}>
-              Les clients qui ont pris à crédit et les fournisseurs pas encore payés, aujourd'hui.
+              {plan.partiesHint}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {parties.map((p) => (
@@ -223,7 +227,7 @@ export function OnboardingPage() {
                     value={p.direction}
                     onChange={(v) => updateRow(setParties, p.key, { direction: v })}
                   />
-                  <TextInput value={p.name} onChange={(e) => updateRow(setParties, p.key, { name: e.target.value })} placeholder={p.direction === 'in' ? 'Nom du client' : 'Nom du fournisseur'} aria-label="Nom" />
+                  <TextInput value={p.name} onChange={(e) => updateRow(setParties, p.key, { name: e.target.value })} placeholder={p.direction === 'in' ? plan.owesMe : plan.iOwe} aria-label="Nom" />
                   <AmountInput value={p.amount} onChange={(v) => updateRow(setParties, p.key, { amount: v })} placeholder={`Montant (${currency})`} aria-label="Montant" />
                   <PhoneInput value={p.phone} onChange={(v) => updateRow(setParties, p.key, { phone: v })} placeholder="Téléphone (facultatif)" aria-label="Téléphone" />
                   <button className="icon-btn" onClick={() => setParties((rows) => (rows.length > 1 ? rows.filter((r) => r.key !== p.key) : [emptyParty()]))} aria-label="Retirer">
@@ -240,13 +244,13 @@ export function OnboardingPage() {
           </Card>
         ) : null}
 
-        {step === 3 ? (
+        {current === 'recap' ? (
           <>
             <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Voici ce avec quoi tu démarres. Vérifie, puis valide : tout est enregistré d'un coup.</p>
-            <Summary currency={currency} cash={String(cashTotal)} stock={String(stockTotal)} receivable={String(receivable)} payable={String(payable)} />
+            <Summary steps={plan.steps} currency={currency} cash={String(cashTotal)} stock={String(stockTotal)} receivable={String(receivable)} payable={String(payable)} />
             <span className="field-hint">
-              {filledProducts.length} produit{filledProducts.length > 1 ? 's' : ''} · {filledParties.length} personne
-              {filledParties.length > 1 ? 's' : ''}. Rien de tout ça ne compte dans ton bénéfice : ce sont tes affaires d'avant Bénef.
+              {counts(plan.steps, filledProducts.length, filledParties.length).replace(/^ : /, '')}
+              {plan.steps.length > 2 ? '. ' : ''}Rien de tout ça ne compte dans ton bénéfice : ce sont tes affaires d'avant Bénef.
             </span>
           </>
         ) : null}
@@ -255,11 +259,11 @@ export function OnboardingPage() {
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           {step > 0 ? (
-            <Button variant="secondary" onClick={() => goTo((step - 1) as Step)}>
+            <Button variant="secondary" onClick={() => goTo(step - 1)}>
               Retour
             </Button>
           ) : null}
-          {step < 3 ? (
+          {step < last ? (
             <Button onClick={next}>Suivant</Button>
           ) : (
             <Button onClick={onSubmit} loading={saving}>
@@ -267,8 +271,8 @@ export function OnboardingPage() {
             </Button>
           )}
           <span style={{ flex: 1 }} />
-          {step < 3 ? (
-            <button onClick={() => goTo((step + 1) as Step)} style={linkStyle}>
+          {step < last ? (
+            <button onClick={() => goTo(step + 1)} style={linkStyle}>
               Passer cette étape
             </button>
           ) : (
@@ -285,6 +289,7 @@ export function OnboardingPage() {
 const linkStyle = { background: 'none', border: 0, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' } as const;
 
 function ProductsStep({
+  title,
   products,
   setProducts,
   feesMode,
@@ -293,6 +298,7 @@ function ProductsStep({
   stockTotal,
   onError,
 }: {
+  title: string;
   products: ProductRow[];
   setProducts: (fn: (rows: ProductRow[]) => ProductRow[]) => void;
   feesMode: FeesMode;
@@ -345,7 +351,7 @@ function ProductsStep({
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <span className="card-title">Ta marchandise déjà en stock</span>
+          <span className="card-title">{title}</span>
           <p className="field-hint" style={{ marginTop: -6 }}>
             Pour chaque produit : la quantité, ce qu'il t'a coûté (le dernier prix d'achat), les frais annexes (transport,
             douane… — par unité ou pour tout le lot, au choix) et ton prix de vente.
@@ -479,7 +485,30 @@ function describeError(e: unknown): string {
   return e.message;
 }
 
-function Summary({ currency, cash, stock, receivable, payable }: { currency: string; cash: string; stock: string; receivable: string; payable: string }) {
+/** « : 3 produits, 2 personnes » — seulement pour les étapes de cette activité. */
+function counts(steps: OnboardingStep[], products: number, parties: number): string {
+  const parts = [
+    steps.includes('products') ? `${products} produit${products > 1 ? 's' : ''}` : null,
+    steps.includes('parties') ? `${parties} personne${parties > 1 ? 's' : ''}` : null,
+  ].filter(Boolean);
+  return parts.length ? ` : ${parts.join(', ')}` : '';
+}
+
+function Summary({
+  steps,
+  currency,
+  cash,
+  stock,
+  receivable,
+  payable,
+}: {
+  steps: OnboardingStep[];
+  currency: string;
+  cash: string;
+  stock: string;
+  receivable: string;
+  payable: string;
+}) {
   const total = Number(cash) + Number(stock) + Number(receivable) - Number(payable);
   const line = (label: string, value: string) => (
     <div className="switch-row">
@@ -490,9 +519,9 @@ function Summary({ currency, cash, stock, receivable, payable }: { currency: str
   return (
     <Card>
       {line('Argent dans tes caisses', cash)}
-      {line('Marchandise (à son coût)', stock)}
-      {line('On te doit', receivable)}
-      {line('Tu dois', payable)}
+      {steps.includes('products') ? line('Stock (à son coût)', stock) : null}
+      {steps.includes('parties') ? line('On te doit', receivable) : null}
+      {steps.includes('parties') ? line('Tu dois', payable) : null}
       <div className="switch-row" style={{ borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 14 }}>
         <span style={{ fontWeight: 800 }}>Ce que vaut ton affaire</span>
         <AmountText amount={total} currency={currency} size={20} sign="neutral" />

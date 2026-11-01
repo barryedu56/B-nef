@@ -85,7 +85,7 @@ export default function ActivitySettingsScreen() {
           onPress={() => router.push({ pathname: '/activity/[id]/onboarding', params: { id: String(act.id) } })}
         />
         <Text style={styles.assistantHint}>
-          Pour ajouter d'un coup l'argent, la marchandise et les dettes que tu avais avant Bénef.
+          Pour ajouter d'un coup ce que tu avais avant Bénef : ton argent et, selon l'activité, ton stock et tes dettes.
         </Text>
 
         <Text onPress={onArchive} style={[styles.archiveLink, archiving && styles.archiveLinkDisabled]}>

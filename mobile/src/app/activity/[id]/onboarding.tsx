@@ -23,10 +23,9 @@ import { TopBar } from '@/components/ui/TopBar';
 import { useActivity } from '@/hooks/useActivities';
 import { useAccountsOverview } from '@/hooks/useAccounts';
 import { formatAmount } from '@/lib/money';
+import { onboardingPlan, type OnboardingStep } from '@/lib/onboardingPlan';
 import { colors, fontSize, spacing } from '@/theme';
 
-type Step = 0 | 1 | 2 | 3;
-const STEPS = ['Mon argent', 'Ma marchandise', 'Dettes', 'Récapitulatif'];
 
 interface ProductRow {
   key: number;
@@ -52,9 +51,10 @@ let nextKey = 1;
 const emptyProduct = (): ProductRow => ({ key: nextKey++, name: '', unit: 'pièce', quantity: '', unitCost: '', salePrice: '', fees: '', feesMode: 'unit' });
 const emptyParty = (direction: 'in' | 'out' = 'in'): PartyRow => ({ key: nextKey++, name: '', phone: '', direction, amount: '' });
 
-/** Assistant « Je démarre avec Bénef » : pour un commerce qui existait avant
- * l'application — argent par caisse, marchandise déjà en stock, dettes et
- * créances — enregistré en une fois à la fin. Chaque étape peut être passée. */
+/** Assistant « Je démarre avec Bénef » : pour une activité qui existait avant
+ * l'application — argent par caisse, stock déjà là, dettes et créances —
+ * enregistré en une fois à la fin. Chaque étape peut être passée ; les étapes
+ * dépendent du type d'activité (voir onboardingPlan). */
 export default function OnboardingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const activityId = Number(id);
@@ -62,7 +62,7 @@ export default function OnboardingScreen() {
   const overview = useAccountsOverview();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<Step>(0);
+  const [step, setStep] = useState(0);
   const [cash, setCash] = useState<Record<number, string>>({});
   const [products, setProducts] = useState<ProductRow[]>([emptyProduct()]);
   const [parties, setParties] = useState<PartyRow[]>([emptyParty()]);
@@ -72,11 +72,15 @@ export default function OnboardingScreen() {
 
   if (activity.isLoading || overview.isLoading || !activity.data) return <LoadingView />;
   const act = activity.data;
+  const plan = onboardingPlan(act);
+  const current = plan.steps[step];
+  const last = plan.steps.length - 1;
   const currency = act.currency;
   const accounts = overview.data?.accounts ?? [];
 
-  const filledProducts = products.filter((p) => p.name.trim());
-  const filledParties = parties.filter((p) => p.name.trim());
+  // Une étape absente pour ce type d'activité n'envoie rien.
+  const filledProducts = plan.steps.includes('products') ? products.filter((p) => p.name.trim()) : [];
+  const filledParties = plan.steps.includes('parties') ? parties.filter((p) => p.name.trim()) : [];
   const cashTotal = Object.values(cash).reduce((s, v) => s + num(v), 0);
   // Valeur au coût de revient : prix d'achat + frais du lot (transport…).
   const stockTotal = filledProducts.reduce(
@@ -86,17 +90,17 @@ export default function OnboardingScreen() {
   const receivable = filledParties.filter((p) => p.direction === 'in').reduce((s, p) => s + num(p.amount), 0);
   const payable = filledParties.filter((p) => p.direction === 'out').reduce((s, p) => s + num(p.amount), 0);
 
-  const goTo = (target: Step) => {
+  const goTo = (target: number) => {
     setError(null);
     setStep(target);
   };
 
   const validateStep = (): string | null => {
-    if (step === 1) {
+    if (current === 'products') {
       const bad = filledProducts.find((p) => num(p.quantity) > 0 && num(p.unitCost) <= 0);
       if (bad) return `« ${bad.name} » : indique combien t'a coûté chaque unité.`;
     }
-    if (step === 2) {
+    if (current === 'parties') {
       const bad = filledParties.find((p) => num(p.amount) <= 0);
       if (bad) return `« ${bad.name} » : indique le montant.`;
       const badPhone = filledParties.find((p) => p.phone.trim() && !isValidGuineaPhone(p.phone));
@@ -111,7 +115,7 @@ export default function OnboardingScreen() {
       setError(problem);
       return;
     }
-    goTo((step + 1) as Step);
+    goTo(step + 1);
   };
 
   const onSubmit = async () => {
@@ -144,8 +148,8 @@ export default function OnboardingScreen() {
       <Screen edges={['top']}>
         <TopBar title="C'est prêt !" />
         <View style={styles.content}>
-          <Alert tone="success" message={`${act.name} démarre avec tout ce que tu avais déjà. Tu peux maintenant enregistrer tes ventes et dépenses au jour le jour.`} />
-          <Summary currency={currency} cash={result.cash_total} stock={result.stock_value} receivable={result.receivable} payable={result.payable} />
+          <Alert tone="success" message={`${act.name} démarre avec tout ce que tu avais déjà. Tu peux maintenant enregistrer tes entrées et dépenses au jour le jour.`} />
+          <Summary steps={plan.steps} currency={currency} cash={result.cash_total} stock={result.stock_value} receivable={result.receivable} payable={result.payable} />
           <Button label="Aller à mon activité" onPress={() => router.replace({ pathname: '/activity/[id]', params: { id } })} />
         </View>
       </Screen>
@@ -157,17 +161,17 @@ export default function OnboardingScreen() {
       <TopBar title="Je démarre avec Bénef" subtitle={act.name} back />
       <View style={styles.content}>
         <View style={styles.steps}>
-          {STEPS.map((label, i) => (
-            <View key={label} style={styles.stepItem}>
+          {plan.steps.map((stepId, i) => (
+            <View key={stepId} style={styles.stepItem}>
               <View style={[styles.stepBar, i <= step && styles.stepBarDone]} />
-              <Text style={[styles.stepLabel, i === step && styles.stepLabelActive]}>{label}</Text>
+              <Text style={[styles.stepLabel, i === step && styles.stepLabelActive]}>{plan.labels[stepId]}</Text>
             </View>
           ))}
         </View>
 
-        {step === 0 ? (
+        {current === 'cash' ? (
           <>
-            <Text style={styles.lead}>Combien as-tu aujourd'hui dans chaque caisse pour cette activité ? Compte l'argent du tiroir, regarde tes soldes.</Text>
+            <Text style={styles.lead}>Combien as-tu aujourd'hui dans chaque caisse pour cette activité ? {plan.cashHint}</Text>
             <Card style={styles.card}>
               {accounts.map((a) => (
                 <AmountField
@@ -184,10 +188,10 @@ export default function OnboardingScreen() {
           </>
         ) : null}
 
-        {step === 1 ? (
+        {current === 'products' ? (
           <>
             <Text style={styles.lead}>
-              Fais le tour de ta marchandise et note chaque produit : la quantité, ce qu'il t'a coûté (le dernier prix d'achat), et ton
+              {plan.productsTitle} Note chaque produit : la quantité, ce qu'il t'a coûté (le dernier prix d'achat), et ton
               prix de vente.
             </Text>
             {products.map((p, i) => (
@@ -230,9 +234,9 @@ export default function OnboardingScreen() {
           </>
         ) : null}
 
-        {step === 2 ? (
+        {current === 'parties' ? (
           <>
-            <Text style={styles.lead}>Les clients qui te doivent de l'argent et les fournisseurs à qui tu dois de l'argent, aujourd'hui.</Text>
+            <Text style={styles.lead}>{plan.partiesHint}</Text>
             {parties.map((p, i) => (
               <Card key={p.key} style={styles.card}>
                 <View style={styles.rowHead}>
@@ -251,7 +255,7 @@ export default function OnboardingScreen() {
                   value={p.direction}
                   onChange={(v) => updateRow(setParties, p.key, { direction: v })}
                 />
-                <TextField label="Nom" value={p.name} onChangeText={(v) => updateRow(setParties, p.key, { name: v })} placeholder={p.direction === 'in' ? 'ex. Mariama' : 'ex. Grossiste Kaloum'} />
+                <TextField label="Nom" value={p.name} onChangeText={(v) => updateRow(setParties, p.key, { name: v })} placeholder={p.direction === 'in' ? plan.owesMe : plan.iOwe} />
                 <AmountField label="Montant" value={p.amount} onChangeText={(v) => updateRow(setParties, p.key, { amount: v })} placeholder="0" suffix={currency} />
                 <PhoneField value={p.phone} onChangeText={(v) => updateRow(setParties, p.key, { phone: v })} />
               </Card>
@@ -260,13 +264,12 @@ export default function OnboardingScreen() {
           </>
         ) : null}
 
-        {step === 3 ? (
+        {current === 'recap' ? (
           <>
             <Text style={styles.lead}>Voici ce avec quoi tu démarres. Vérifie, puis valide : tout est enregistré d'un coup.</Text>
-            <Summary currency={currency} cash={String(cashTotal)} stock={String(stockTotal)} receivable={String(receivable)} payable={String(payable)} />
+            <Summary steps={plan.steps} currency={currency} cash={String(cashTotal)} stock={String(stockTotal)} receivable={String(receivable)} payable={String(payable)} />
             <Text style={styles.hint}>
-              {filledProducts.length} produit{filledProducts.length > 1 ? 's' : ''} · {filledParties.length} personne
-              {filledParties.length > 1 ? 's' : ''}. Rien de tout ça ne compte dans ton bénéfice : ce sont tes affaires d'avant Bénef.
+              {counts(plan.steps, filledProducts.length, filledParties.length)}Rien de tout ça ne compte dans ton bénéfice : ce sont tes affaires d'avant Bénef.
             </Text>
           </>
         ) : null}
@@ -274,15 +277,15 @@ export default function OnboardingScreen() {
         {error ? <Alert message={error} /> : null}
 
         <View style={styles.nav}>
-          {step > 0 ? <Button label="Retour" variant="secondary" onPress={() => goTo((step - 1) as Step)} style={styles.navButton} /> : null}
-          {step < 3 ? (
+          {step > 0 ? <Button label="Retour" variant="secondary" onPress={() => goTo(step - 1)} style={styles.navButton} /> : null}
+          {step < last ? (
             <Button label="Suivant" onPress={next} style={styles.navButton} />
           ) : (
             <Button label="Valider le démarrage" icon="checkmark-circle-outline" onPress={onSubmit} loading={saving} style={styles.navButton} />
           )}
         </View>
-        {step < 3 ? (
-          <Pressable onPress={() => goTo((step + 1) as Step)} style={styles.skip} accessibilityRole="button">
+        {step < last ? (
+          <Pressable onPress={() => goTo(step + 1)} style={styles.skip} accessibilityRole="button">
             <Text style={styles.skipText}>Passer cette étape</Text>
           </Pressable>
         ) : (
@@ -323,7 +326,30 @@ function describeError(e: unknown): string {
   return e.message;
 }
 
-function Summary({ currency, cash, stock, receivable, payable }: { currency: string; cash: string; stock: string; receivable: string; payable: string }) {
+/** « 3 produits · 2 personnes. » — seulement pour les étapes de cette activité. */
+function counts(steps: OnboardingStep[], products: number, parties: number): string {
+  const parts = [
+    steps.includes('products') ? `${products} produit${products > 1 ? 's' : ''}` : null,
+    steps.includes('parties') ? `${parties} personne${parties > 1 ? 's' : ''}` : null,
+  ].filter(Boolean);
+  return parts.length ? `${parts.join(' · ')}. ` : '';
+}
+
+function Summary({
+  steps,
+  currency,
+  cash,
+  stock,
+  receivable,
+  payable,
+}: {
+  steps: OnboardingStep[];
+  currency: string;
+  cash: string;
+  stock: string;
+  receivable: string;
+  payable: string;
+}) {
   const total = Number(cash) + Number(stock) + Number(receivable) - Number(payable);
   const line = (label: string, value: string, color?: string) => (
     <View style={styles.sumRow}>
@@ -334,9 +360,9 @@ function Summary({ currency, cash, stock, receivable, payable }: { currency: str
   return (
     <Card style={styles.card}>
       {line('Argent dans tes caisses', cash)}
-      {line('Marchandise (à son coût)', stock)}
-      {line('On te doit', receivable, colors.positive)}
-      {line('Tu dois', payable, colors.negative)}
+      {steps.includes('products') ? line('Stock (à son coût)', stock) : null}
+      {steps.includes('parties') ? line('On te doit', receivable, colors.positive) : null}
+      {steps.includes('parties') ? line('Tu dois', payable, colors.negative) : null}
       <View style={[styles.sumRow, styles.sumTotal]}>
         <Text style={[styles.sumLabel, { fontWeight: '800', color: colors.textPrimary }]}>Ce que vaut ton affaire</Text>
         <Text style={[styles.sumValue, { fontSize: fontSize.lg }]}>{formatAmount(total, currency)}</Text>

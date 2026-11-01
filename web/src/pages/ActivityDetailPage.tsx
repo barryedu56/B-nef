@@ -200,7 +200,7 @@ export function ActivityDetailPage() {
           <Card>
             <span className="card-title">Assistant de démarrage</span>
             <span className="field-hint" style={{ display: 'block', marginBottom: 10 }}>
-              Ajoute d'un coup l'argent, la marchandise (ou un fichier Excel) et les dettes que tu avais avant Bénef.
+              Ajoute d'un coup ce que tu avais avant Bénef : ton argent et, selon l'activité, ton stock (ou un fichier Excel) et tes dettes.
             </span>
             <Link to={`/activities/${act.id}/onboarding`} className="btn btn-secondary">
               Ouvrir l'assistant
