@@ -74,8 +74,11 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DJANGO_DEBUG: "False"
+    # Attend que le backend ait appliqué les migrations (sinon, au tout premier
+    # démarrage, les tables n'existent pas encore et le premier passage échoue).
     command: >
-      sh -c 'while true; do
+      sh -c 'until python manage.py migrate --check >/dev/null 2>&1; do sleep 10; done;
+      while true; do
         python manage.py fetch_rates;
         python manage.py purge_idempotency;
         sleep 86400;
