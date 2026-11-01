@@ -6,6 +6,7 @@ import {
   Receipt,
   Repeat,
   Settings,
+  ShieldCheck,
   Store,
   Users,
   Wallet,
@@ -62,6 +63,12 @@ export function AppLayout() {
               {label}
             </NavLink>
           ))}
+          {user?.is_staff ? (
+            <NavLink to="/console" className="sidebar-link">
+              <ShieldCheck size={18} />
+              Console admin
+            </NavLink>
+          ) : null}
         </nav>
         <div className="sidebar-footer">
           <Avatar url={user?.avatar} name={user?.username} size={32} />

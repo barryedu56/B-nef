@@ -58,7 +58,9 @@ export function PrivacyPage() {
 
       <h2>Qui y a accès</h2>
       <p>
-        Toi seul, avec ton compte. Les données sont hébergées chez {LEGAL.host}. Les e-mails (code de mot de
+        Toi, avec ton compte. L'éditeur de Bénef peut aussi les consulter, uniquement pour t'aider (à ta
+        demande) et pour faire fonctionner le service ; chacune de ses actions sur un compte est enregistrée.
+        Les données sont hébergées chez {LEGAL.host}. Les e-mails (code de mot de
         passe) passent par un prestataire d'envoi d'e-mails. En cas d'erreur technique, un rapport sans données
         personnelles peut être envoyé à un service de suivi d'erreurs.
       </p>

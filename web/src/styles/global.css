@@ -1452,3 +1452,187 @@ input[type='password']::-ms-clear {
   color: var(--accent);
   flex-shrink: 0;
 }
+
+/* ---------- Console d'administration ---------- */
+
+.console-shell .sidebar-brand .badge {
+  margin-left: 6px;
+}
+.muted {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+.positive {
+  color: var(--positive);
+}
+.negative {
+  color: var(--negative);
+}
+.live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--positive);
+}
+.live-dot > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--positive);
+}
+.live-dot > span.pulse {
+  animation: live-pulse 1s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.console-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.console-feed li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.console-feed li:last-child {
+  border-bottom: none;
+}
+.console-feed .feed-text {
+  flex: 1;
+  min-width: 0;
+}
+.console-feed small {
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.feed-signup {
+  background: var(--positive-soft);
+  color: var(--positive);
+}
+.feed-login {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.feed-operation {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.console-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.console-legend .sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+.console-legend .sw.ops {
+  background: var(--accent);
+}
+.console-legend .sw.signups {
+  background: var(--positive);
+  border-radius: 50%;
+}
+.console-day {
+  position: relative;
+}
+.signup-dot {
+  position: absolute;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--positive);
+  border: 2px solid var(--card);
+}
+.console-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+.console-filters > .input-group {
+  flex: 1 1 240px;
+}
+.console-filters > .select,
+.console-filters > .field {
+  flex: 0 1 220px;
+}
+.console-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+}
+.console-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.console-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--accent);
+  text-decoration: none;
+  margin-top: 6px;
+}
+.console-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 20px;
+  font-size: 14px;
+}
+.console-kv span {
+  color: var(--text-secondary);
+}
+.console-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+.console-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.console-secret {
+  font-size: 22px;
+  text-align: center;
+  padding: 14px;
+  margin: 10px 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  user-select: all;
+}
+.console-check-row {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.console-check-row .bar-track {
+  margin-top: 8px;
+}

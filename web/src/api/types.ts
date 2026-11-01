@@ -214,6 +214,8 @@ export interface Me {
   base_currency: string
   display_currency: string | null
   effective_display_currency: string
+  /** Compte administrateur : accès à la console (/console). */
+  is_staff?: boolean
 }
 
 export interface Paginated<T> {

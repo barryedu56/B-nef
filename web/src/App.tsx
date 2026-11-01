@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { ConsoleLayout } from '@/components/layout/ConsoleLayout';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AuthProvider } from '@/context/AuthContext';
 import { ActivitiesPage } from '@/pages/ActivitiesPage';
@@ -23,6 +24,13 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { TransactionsPage } from '@/pages/TransactionsPage';
+import { ConsoleDashboardPage } from '@/pages/console/ConsoleDashboardPage';
+import { ConsoleHealthPage } from '@/pages/console/ConsoleHealthPage';
+import { ConsoleJournalPage } from '@/pages/console/ConsoleJournalPage';
+import { ConsoleOperationsPage } from '@/pages/console/ConsoleOperationsPage';
+import { ConsoleRatesPage } from '@/pages/console/ConsoleRatesPage';
+import { ConsoleUserPage } from '@/pages/console/ConsoleUserPage';
+import { ConsoleUsersPage } from '@/pages/console/ConsoleUsersPage';
 
 function App() {
   const queryClient = useMemo(
@@ -68,6 +76,15 @@ function App() {
                 <Route path="/recurring" element={<RecurringPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+              </Route>
+              <Route path="/console" element={<ConsoleLayout />}>
+                <Route index element={<ConsoleDashboardPage />} />
+                <Route path="users" element={<ConsoleUsersPage />} />
+                <Route path="users/:id" element={<ConsoleUserPage />} />
+                <Route path="operations" element={<ConsoleOperationsPage />} />
+                <Route path="rates" element={<ConsoleRatesPage />} />
+                <Route path="health" element={<ConsoleHealthPage />} />
+                <Route path="journal" element={<ConsoleJournalPage />} />
               </Route>
             </Route>
 
