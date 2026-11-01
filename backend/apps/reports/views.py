@@ -16,7 +16,7 @@ from apps.currencies.models import Currency
 
 from . import services
 from .export import build_csv, build_xlsx
-from .pdf import build_report_pdf
+from .pdf import build_export_pdf, build_report_pdf
 
 _MONTHS_LONG = [
     "janvier", "février", "mars", "avril", "mai", "juin",
@@ -136,7 +136,7 @@ def _attachment(response: HttpResponse, raw_name: str) -> HttpResponse:
 
 class ExportView(APIView):
     """Opérations + compte de résultat sur des dates libres, pour le
-    comptable : `?file=xlsx|csv&start=AAAA-MM-JJ&end=AAAA-MM-JJ[&activity=]`
+    comptable : `?file=pdf|xlsx|csv&start=AAAA-MM-JJ&end=AAAA-MM-JJ[&activity=]`
     (par défaut : le mois en cours, toutes les activités)."""
 
     permission_classes = [IsAuthenticated]
@@ -155,6 +155,9 @@ class ExportView(APIView):
         fmt = request.query_params.get("file", "xlsx")
         label = (activity.name if activity else "toutes-activites").replace(" ", "_").replace("/", "-")
         name = f"benef-{label}-{start.isoformat()}_{end.isoformat()}"
+        if fmt == "pdf":
+            response = HttpResponse(build_export_pdf(request.user, start, end, activity), content_type="application/pdf")
+            return _attachment(response, f"{name}.pdf")
         if fmt == "csv":
             response = HttpResponse(build_csv(request.user, start, end, activity), content_type="text/csv; charset=utf-8")
             return _attachment(response, f"{name}.csv")

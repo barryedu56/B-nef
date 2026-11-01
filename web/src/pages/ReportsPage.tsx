@@ -198,15 +198,15 @@ function firstDayOfMonth(iso: string) {
   return `${iso.slice(0, 8)}01`;
 }
 
-/** Export Excel / CSV pour le comptable, sur des dates libres. */
+/** Export PDF / Excel / CSV pour le comptable, sur des dates libres. */
 function ExportCard({ activityId }: { activityId?: number }) {
   const today = todayISO();
   const [start, setStart] = useState(firstDayOfMonth(today));
   const [end, setEnd] = useState(today);
-  const [busy, setBusy] = useState<'xlsx' | 'csv' | null>(null);
+  const [busy, setBusy] = useState<'pdf' | 'xlsx' | 'csv' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const onExport = async (file: 'xlsx' | 'csv') => {
+  const onExport = async (file: 'pdf' | 'xlsx' | 'csv') => {
     setError(null);
     setBusy(file);
     try {
@@ -228,8 +228,11 @@ function ExportCard({ activityId }: { activityId?: number }) {
         <Field label="Au">
           <TextInput type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} />
         </Field>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button onClick={() => onExport('xlsx')} loading={busy === 'xlsx'} disabled={busy !== null}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Button onClick={() => onExport('pdf')} loading={busy === 'pdf'} disabled={busy !== null}>
+            PDF
+          </Button>
+          <Button variant="secondary" onClick={() => onExport('xlsx')} loading={busy === 'xlsx'} disabled={busy !== null}>
             Excel
           </Button>
           <Button variant="secondary" onClick={() => onExport('csv')} loading={busy === 'csv'} disabled={busy !== null}>

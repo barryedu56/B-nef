@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
-import { shareExport, type ExportFile } from '@/api/exports';
+import { canShareNatively, prepareWebExport, shareExport, shareWebFile, type ExportFile } from '@/api/exports';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -38,21 +38,27 @@ function resolveRange(range: Range): { start: string; end: string } {
   }
 }
 
-/** Export Excel / CSV pour le comptable, partagé depuis le téléphone. */
+/** Export pour le comptable (PDF, Excel ou CSV), partagé depuis le téléphone.
+ * Marche aussi dans la version installée depuis le navigateur (iPhone). */
 export default function ExportScreen() {
   const activities = useActivities();
   const [range, setRange] = useState<Range>('this-month');
   const [activityId, setActivityId] = useState('');
   const [busy, setBusy] = useState<ExportFile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Navigateur : fichier prêt, à partager d'un 2e appui (voir prepareWebExport).
+  const [ready, setReady] = useState<globalThis.File | null>(null);
 
   const { start, end } = resolveRange(range);
 
   const onExport = async (file: ExportFile) => {
     setError(null);
+    setReady(null);
     setBusy(file);
     try {
-      await shareExport({ file, start, end, activity: activityId ? Number(activityId) : undefined });
+      const params = { file, start, end, activity: activityId ? Number(activityId) : undefined };
+      if (canShareNatively) await shareExport(params);
+      else setReady(await prepareWebExport(params));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Impossible de générer l'export.");
     } finally {
@@ -65,14 +71,23 @@ export default function ExportScreen() {
       <TopBar title="Export pour le comptable" back />
       <View style={styles.content}>
         <Text style={styles.help}>
-          Toutes les opérations de la période (annulées comprises, signalées) et le compte de résultat. Le fichier
-          s'ouvre ensuite dans le menu de partage : WhatsApp, e-mail, Drive…
+          Le compte de résultat et toutes les opérations de la période (annulées comprises, signalées). Le PDF se lit
+          sur n'importe quel téléphone ; Excel et CSV servent au comptable pour refaire ses calculs. Le fichier s'ouvre
+          ensuite dans le menu de partage : WhatsApp, e-mail, Fichiers…
         </Text>
         <Card style={styles.card}>
           <Text style={styles.label}>Période</Text>
           <View style={styles.chips}>
             {RANGES.map((r) => (
-              <Chip key={r.value} label={r.label} selected={range === r.value} onPress={() => setRange(r.value)} />
+              <Chip
+                key={r.value}
+                label={r.label}
+                selected={range === r.value}
+                onPress={() => {
+                  setRange(r.value);
+                  setReady(null);
+                }}
+              />
             ))}
           </View>
           <Text style={styles.dates}>
@@ -82,11 +97,23 @@ export default function ExportScreen() {
             label="Activité"
             value={activityId}
             options={[{ value: '', label: 'Toutes les activités' }, ...(activities.data ?? []).map((a) => ({ value: String(a.id), label: a.name }))]}
-            onChange={setActivityId}
+            onChange={(v) => {
+              setActivityId(v);
+              setReady(null);
+            }}
           />
         </Card>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button label="Excel (.xlsx)" onPress={() => onExport('xlsx')} loading={busy === 'xlsx'} disabled={busy !== null} />
+        {ready ? (
+          <Card style={styles.readyCard}>
+            <Text style={styles.readyText}>
+              {ready.name} est prêt ({Math.max(1, Math.round(ready.size / 1024))} Ko).
+            </Text>
+            <Button label="Partager ou enregistrer" icon="share-outline" onPress={() => void shareWebFile(ready)} />
+          </Card>
+        ) : null}
+        <Button label="PDF" icon="document-text-outline" onPress={() => onExport('pdf')} loading={busy === 'pdf'} disabled={busy !== null} />
+        <Button label="Excel (.xlsx)" variant="secondary" onPress={() => onExport('xlsx')} loading={busy === 'xlsx'} disabled={busy !== null} />
         <Button label="CSV" variant="secondary" onPress={() => onExport('csv')} loading={busy === 'csv'} disabled={busy !== null} />
       </View>
     </Screen>
@@ -101,4 +128,6 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   dates: { fontSize: fontSize.xs, color: colors.textTertiary },
   error: { fontSize: fontSize.sm, color: colors.negative },
+  readyCard: { gap: spacing.sm, backgroundColor: colors.accentSoft },
+  readyText: { fontSize: fontSize.sm, color: colors.textPrimary },
 });

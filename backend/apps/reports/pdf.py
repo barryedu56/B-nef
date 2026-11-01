@@ -116,3 +116,130 @@ def build_report_pdf(*, title: str, subtitle: str, data: dict) -> bytes:
 
     doc.build(elements)
     return buf.getvalue()
+
+
+def build_export_pdf(user, start, end, activity) -> bytes:
+    """Export pour le comptable en PDF (s'ouvre partout, iPhone compris) :
+    compte de résultat de la période puis la liste des opérations."""
+    from xml.sax.saxutils import escape
+
+    from reportlab.lib.pagesizes import landscape
+
+    from apps.finance.models import Transaction
+
+    from . import services
+    from .export import SUMMARY_ROWS, transactions_for
+
+    buf = io.BytesIO()
+    page = landscape(A4)
+    title = activity.name if activity else "Toutes les activités"
+
+    def footer(canvas, doc):
+        canvas.saveState()
+        canvas.setFont("Helvetica", 8)
+        canvas.setFillColor(MUTED)
+        canvas.drawString(15 * mm, 9 * mm, f"Bénef · {title} · du {start:%d/%m/%Y} au {end:%d/%m/%Y}")
+        canvas.drawRightString(page[0] - 15 * mm, 9 * mm, f"Page {doc.page}")
+        canvas.restoreState()
+
+    doc = SimpleDocTemplate(
+        buf, pagesize=page, title=f"Bénef — {title}",
+        topMargin=15 * mm, bottomMargin=16 * mm, leftMargin=15 * mm, rightMargin=15 * mm,
+    )
+    brand = ParagraphStyle("brand", fontSize=10.5, leading=14, textColor=INDIGO, fontName="Helvetica-Bold")
+    h1 = ParagraphStyle("h1", fontSize=17, leading=22, textColor=TEXT, fontName="Helvetica-Bold", spaceBefore=2)
+    sub = ParagraphStyle("sub", fontSize=10, leading=14, textColor=MUTED, fontName="Helvetica")
+    section = ParagraphStyle("section", fontSize=11.5, textColor=TEXT, fontName="Helvetica-Bold", spaceBefore=12, spaceAfter=6)
+    cell = ParagraphStyle("cell", fontSize=8.5, leading=10.5, textColor=TEXT, fontName="Helvetica")
+    cell_muted = ParagraphStyle("cellm", parent=cell, textColor=MUTED)
+
+    summary = services.range_summary(user, start, end, activity).as_dict()
+    currency = summary["currency"]
+    elements = [
+        Paragraph("Bénef", brand),
+        Paragraph(f"Export pour le comptable — {escape(title)}", h1),
+        Paragraph(f"Du {start:%d/%m/%Y} au {end:%d/%m/%Y} · montants en {currency}", sub),
+        Paragraph("Compte de résultat", section),
+    ]
+    rows = [[label, _fmt(summary[key], currency)] for label, key in SUMMARY_ROWS]
+    net_index = [key for _, key in SUMMARY_ROWS].index("net_profit")
+    table = Table(
+        [[Paragraph(escape(label), cell), amount] for label, amount in rows],
+        colWidths=[150 * mm, 50 * mm], hAlign="LEFT",
+    )
+    table.setStyle(TableStyle([
+        ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+        ("FONTSIZE", (1, 0), (1, -1), 9),
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.3, colors.HexColor("#e6e6e3")),
+        ("FONTNAME", (1, net_index), (1, net_index), "Helvetica-Bold"),
+        ("BACKGROUND", (0, net_index), (-1, net_index), colors.HexColor("#eef0ff")),
+    ]))
+    elements.append(table)
+
+    # Montants dans une seule devise : celle de l'activité, ou la devise
+    # principale pour « toutes les activités ».
+    use_activity_currency = activity is not None
+    ops_currency = activity.currency_id if activity else user.base_currency_id
+    head = ["Date", "Activité", "Opération", "Catégorie / tiers", "Paiement", "Note", f"Montant ({ops_currency})"]
+    data = [head]
+    voided_rows = []
+    total_in = total_out = Decimal("0")
+    for txn in transactions_for(user, start, end, activity).iterator(chunk_size=2000):
+        value = txn.amount_activity if use_activity_currency else txn.amount_base
+        incoming = txn.direction == Transaction.Direction.IN
+        if txn.is_voided:
+            voided_rows.append(len(data))
+        elif incoming:
+            total_in += value
+        else:
+            total_out += value
+        kind = escape(txn.get_kind_display()) + (" · à crédit" if txn.is_credit else "")
+        if txn.is_voided:
+            kind += " · <b>annulée</b>"
+        who = " · ".join(escape(x) for x in (txn.category.name if txn.category else "", txn.party.name if txn.party else "") if x)
+        note = escape(txn.note or "")
+        if txn.currency_id != ops_currency:
+            note = (note + " " if note else "") + f"(saisi : {_fmt(txn.amount, txn.currency_id)})"
+        data.append([
+            txn.occurred_on.strftime("%d/%m/%Y"),
+            Paragraph(escape(txn.activity.name), cell),
+            Paragraph(kind, cell),
+            Paragraph(who, cell),
+            Paragraph(escape(txn.payment_method.name) if txn.payment_method else "", cell),
+            Paragraph(note, cell_muted),
+            _fmt(value if incoming else -value, ops_currency),
+        ])
+
+    elements.append(Paragraph(f"Opérations ({len(data) - 1})", section))
+    elements.append(Paragraph(
+        f"Entrées : <b>{_fmt(total_in, ops_currency)}</b> · Sorties : <b>{_fmt(-total_out, ops_currency)}</b>"
+        " · les opérations annulées sont listées mais ne comptent pas.", sub,
+    ))
+    elements.append(Spacer(1, 6))
+    if len(data) == 1:
+        elements.append(Paragraph("Aucune opération sur cette période.", sub))
+    else:
+        ops = Table(data, colWidths=[20 * mm, 36 * mm, 38 * mm, 48 * mm, 30 * mm, 64 * mm, 31 * mm], repeatRows=1)
+        style = [
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("BACKGROUND", (0, 0), (-1, 0), INDIGO),
+            ("ALIGN", (-1, 0), (-1, -1), "RIGHT"),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f6f6fb")]),
+            ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#e6e6e3")),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]
+        for r in voided_rows:
+            style.append(("TEXTCOLOR", (0, r), (-1, r), MUTED))
+        ops.setStyle(TableStyle(style))
+        elements.append(ops)
+
+    doc.build(elements, onFirstPage=footer, onLaterPages=footer)
+    return buf.getvalue()

@@ -161,6 +161,13 @@ class ExportTests(ApiTestCase):
         self.assertIn("12/03/2026", text)
         self.assertIn("-700,50", text)
 
+    def test_pdf(self):
+        r = self.client.get("/api/reports/export/", {"file": "pdf", "start": "2026-03-01", "end": "2026-03-31"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "application/pdf")
+        self.assertIn(".pdf", r["Content-Disposition"])
+        self.assertTrue(r.content.startswith(b"%PDF"))
+
     def test_activite_d_un_autre_compte_refusee(self):
         other = self.make_user("autre")
         r = self.client_for(other).get("/api/reports/export/", {"activity": self.shop.pk})

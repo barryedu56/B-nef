@@ -62,7 +62,7 @@ export function downloadReportPdf(params: { activity?: number; period: Period; d
 }
 
 /** Export pour le comptable : opérations + compte de résultat. */
-export function downloadExport(params: { file: 'xlsx' | 'csv'; start: string; end: string; activity?: number }) {
+export function downloadExport(params: { file: 'pdf' | 'xlsx' | 'csv'; start: string; end: string; activity?: number }) {
   return downloadFile(
     '/reports/export/',
     { file: params.file, start: params.start, end: params.end, activity: params.activity?.toString() },
