@@ -28,8 +28,9 @@ class UserSerializer(serializers.ModelSerializer):
             "base_currency",
             "display_currency",
             "effective_display_currency",
+            "is_staff",
         )
-        read_only_fields = ("id", "username")
+        read_only_fields = ("id", "username", "is_staff")
 
     def get_avatar(self, obj):
         if not obj.avatar:

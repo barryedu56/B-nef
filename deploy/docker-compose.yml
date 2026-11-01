@@ -41,6 +41,8 @@ services:
       DJANGO_ADMIN_URL: ${BENEF_ADMIN_PATH:-admin}
     volumes:
       - media:/app/media
+      # Lecture seule : la console admin affiche la date de la dernière sauvegarde.
+      - ./backups:/backups:ro
     depends_on:
       db:
         condition: service_healthy

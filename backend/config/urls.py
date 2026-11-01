@@ -51,6 +51,7 @@ api_patterns = [
     path("personal-use/", PersonalUseView.as_view(), name="personal-use"),
     path("transfers/", TransferView.as_view(), name="transfer-create"),
     path("reports/", include("apps.reports.urls")),
+    path("console/", include("apps.console.urls")),
     path("", include(router.urls)),
 ]
 

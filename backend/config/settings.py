@@ -60,6 +60,7 @@ LOCAL_APPS = [
     "apps.contacts",
     "apps.budget",
     "apps.reports",
+    "apps.console",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -226,6 +227,8 @@ SIMPLE_JWT = {
     # vrai (table token_blacklist) — sans ça, un token volé restait valable
     # jusqu'à 30 jours même après qu'un nouveau ait été émis.
     "BLACKLIST_AFTER_ROTATION": True,
+    # « Dernière connexion » visible dans la console d'administration.
+    "UPDATE_LAST_LOGIN": True,
 }
 
 # --- CORS (apps mobile Expo + web Vite) -------------------------------
