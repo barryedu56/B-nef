@@ -22,12 +22,24 @@
 		# jour de l'app mettrait des jours à arriver.
 		@sw path /app/sw.js
 		header @sw Cache-Control "no-cache"
+		# Fichiers dont le nom change à chaque version : gardés un an par le
+		# navigateur, sans revérifier (chaque vérification coûte un aller-retour,
+		# près d'une demi-seconde depuis la Guinée).
+		@appfiles path /app/_expo/* /app/assets/*
+		header @appfiles Cache-Control "public, max-age=31536000, immutable"
+		@apppage not path /app/_expo/* /app/assets/* /app/sw.js
+		header @apppage Cache-Control "no-cache"
 		try_files {path} /app/index.html
 		file_server
 	}
 
 	handle {
 		root * /srv/web
+		@webfiles path /assets/*
+		header @webfiles Cache-Control "public, max-age=31536000, immutable"
+		# La page elle-même est toujours revérifiée : une mise à jour arrive tout de suite.
+		@webpage not path /assets/*
+		header @webpage Cache-Control "no-cache"
 		try_files {path} /index.html
 		file_server
 	}

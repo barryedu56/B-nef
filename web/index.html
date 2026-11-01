@@ -10,9 +10,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Polices chargées sans bloquer l'affichage : avec une connexion lente
+         (Guinée → serveur en Europe), la page s'affiche tout de suite avec la
+         police du téléphone, puis IBM Plex la remplace dès qu'elle arrive. -->
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
+    />
+    <link
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
     />
     <title>Bénef</title>
     <!-- Pas de zoom à deux doigts : Safari (iPhone/iPad) ignore user-scalable=no,
