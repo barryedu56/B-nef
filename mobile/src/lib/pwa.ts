@@ -1,6 +1,49 @@
-/** Version installable (PWA) : sur iPhone (pas d'App Store pour l'instant),
- * l'app s'installe depuis Safari et s'ouvre ensuite comme une vraie app. */
+/** Version installable (PWA) : sur iPhone et Android (en attendant les
+ * stores), l'app s'installe depuis le navigateur et s'ouvre ensuite comme
+ * une vraie app. */
 import { Platform } from 'react-native';
+
+/** Demande d'installation proposée par Chrome sur Android (événement
+ * « beforeinstallprompt »), gardée pour l'afficher au bon moment. */
+interface InstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+let installPrompt: InstallPromptEvent | null = null;
+const listeners = new Set<() => void>();
+
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault(); // on affiche notre propre bouton « Installer »
+    installPrompt = event as InstallPromptEvent;
+    listeners.forEach((l) => l());
+  });
+  window.addEventListener('appinstalled', () => {
+    installPrompt = null;
+    listeners.forEach((l) => l());
+  });
+}
+
+export function canPromptInstall(): boolean {
+  return installPrompt !== null;
+}
+
+export function onInstallAvailabilityChange(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Ouvre la fenêtre d'installation de Chrome. Vrai si l'utilisateur accepte. */
+export async function promptInstall(): Promise<boolean> {
+  if (!installPrompt) return false;
+  const event = installPrompt;
+  installPrompt = null;
+  await event.prompt();
+  const { outcome } = await event.userChoice;
+  listeners.forEach((l) => l());
+  return outcome === 'accepted';
+}
 
 /** Enregistre le service worker (ouverture sans réseau). Seulement dans le
  * navigateur, en production (servie sous EXPO_BASE_URL, ex. /app). */
