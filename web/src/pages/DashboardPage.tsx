@@ -15,6 +15,7 @@ import { EmptyState, ErrorBlock, LoadingBlock } from '@/components/ui/QueryState
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuth } from '@/context/AuthContext';
+import { homeWords } from '@/lib/activityWords';
 import { useActivities } from '@/hooks/useActivities';
 import { useBudgetsStatus } from '@/hooks/useBudgets';
 import { useGlobalSummary } from '@/hooks/useReports';
@@ -38,6 +39,7 @@ export function DashboardPage() {
 
   const { user } = useAuth();
   const activities = useActivities();
+  const home = homeWords(activities.data);
   const summary = useGlobalSummary(period, currency);
   const lowStock = useLowStockAcrossActivities(activities.data);
   // Pas de filtre par kind ici : un tiers "both" (client et fournisseur) peut
@@ -84,8 +86,8 @@ export function DashboardPage() {
       <div className="content">
         <DueBanner />
         <div className="kpi-grid">
-          <KpiTile label="Bénéfice net" amount={data.net_profit} currency={data.currency} highlight icon={<TrendingUp size={18} />} />
-          <KpiTile label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} sign="neutral" icon={<Banknote size={18} />} tone="positive" />
+          <KpiTile label={home.resultShort} amount={data.net_profit} currency={data.currency} highlight icon={<TrendingUp size={18} />} />
+          <KpiTile label={home.income} amount={data.revenue} currency={data.currency} sign="neutral" icon={<Banknote size={18} />} tone="positive" />
           <KpiTile label="Dépenses" amount={data.expenses} currency={data.currency} sign="neutral" icon={<Receipt size={18} />} tone="negative" />
           <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} sign="neutral" icon={<ChartColumn size={18} />} tone="info" />
           {Number(data.personal_use) > 0 ? (
@@ -101,7 +103,7 @@ export function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <Card>
-              <span className="card-title">Évolution du bénéfice net</span>
+              <span className="card-title">{home.personal ? 'Ce qui reste, mois par mois' : 'Évolution du bénéfice net'}</span>
               <ProfitChart series={data.timeseries} />
             </Card>
 

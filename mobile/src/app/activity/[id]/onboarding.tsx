@@ -23,6 +23,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { useActivity } from '@/hooks/useActivities';
 import { useAccountsOverview } from '@/hooks/useAccounts';
 import { formatAmount } from '@/lib/money';
+import { activityWords } from '@/lib/activityWords';
 import { onboardingPlan, type OnboardingStep } from '@/lib/onboardingPlan';
 import { colors, fontSize, spacing } from '@/theme';
 
@@ -149,7 +150,7 @@ export default function OnboardingScreen() {
         <TopBar title="C'est prêt !" />
         <View style={styles.content}>
           <Alert tone="success" message={`${act.name} démarre avec tout ce que tu avais déjà. Tu peux maintenant enregistrer tes entrées et dépenses au jour le jour.`} />
-          <Summary steps={plan.steps} currency={currency} cash={result.cash_total} stock={result.stock_value} receivable={result.receivable} payable={result.payable} />
+          <Summary steps={plan.steps} totalLabel={activityWords(act.type).startTotal} currency={currency} cash={result.cash_total} stock={result.stock_value} receivable={result.receivable} payable={result.payable} />
           <Button label="Aller à mon activité" onPress={() => router.replace({ pathname: '/activity/[id]', params: { id } })} />
         </View>
       </Screen>
@@ -267,9 +268,9 @@ export default function OnboardingScreen() {
         {current === 'recap' ? (
           <>
             <Text style={styles.lead}>Voici ce avec quoi tu démarres. Vérifie, puis valide : tout est enregistré d'un coup.</Text>
-            <Summary steps={plan.steps} currency={currency} cash={String(cashTotal)} stock={String(stockTotal)} receivable={String(receivable)} payable={String(payable)} />
+            <Summary steps={plan.steps} totalLabel={activityWords(act.type).startTotal} currency={currency} cash={String(cashTotal)} stock={String(stockTotal)} receivable={String(receivable)} payable={String(payable)} />
             <Text style={styles.hint}>
-              {counts(plan.steps, filledProducts.length, filledParties.length)}Rien de tout ça ne compte dans ton bénéfice : ce sont tes affaires d'avant Bénef.
+              {counts(plan.steps, filledProducts.length, filledParties.length)}{activityWords(act.type).startNote}
             </Text>
           </>
         ) : null}
@@ -337,6 +338,7 @@ function counts(steps: OnboardingStep[], products: number, parties: number): str
 
 function Summary({
   steps,
+  totalLabel,
   currency,
   cash,
   stock,
@@ -344,6 +346,7 @@ function Summary({
   payable,
 }: {
   steps: OnboardingStep[];
+  totalLabel: string;
   currency: string;
   cash: string;
   stock: string;
@@ -364,7 +367,7 @@ function Summary({
       {steps.includes('parties') ? line('On te doit', receivable, colors.positive) : null}
       {steps.includes('parties') ? line('Tu dois', payable, colors.negative) : null}
       <View style={[styles.sumRow, styles.sumTotal]}>
-        <Text style={[styles.sumLabel, { fontWeight: '800', color: colors.textPrimary }]}>Ce que vaut ton affaire</Text>
+        <Text style={[styles.sumLabel, { fontWeight: '800', color: colors.textPrimary }]}>{totalLabel}</Text>
         <Text style={[styles.sumValue, { fontSize: fontSize.lg }]}>{formatAmount(total, currency)}</Text>
       </View>
     </Card>

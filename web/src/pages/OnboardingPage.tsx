@@ -20,6 +20,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useActivity } from '@/hooks/useActivities';
 import { useAccountsOverview } from '@/hooks/useAccounts';
+import { activityWords } from '@/lib/activityWords';
 import { onboardingPlan, type OnboardingStep } from '@/lib/onboardingPlan';
 
 
@@ -157,7 +158,7 @@ export function OnboardingPage() {
               {counts(plan.steps, result.products, result.parties)}. Tu peux maintenant enregistrer tes entrées et dépenses au jour le jour.
             </span>
           </div>
-          <Summary steps={plan.steps} currency={currency} cash={result.cash_total} stock={result.stock_value} receivable={result.receivable} payable={result.payable} />
+          <Summary steps={plan.steps} totalLabel={activityWords(act.type).startTotal} currency={currency} cash={result.cash_total} stock={result.stock_value} receivable={result.receivable} payable={result.payable} />
           <div>
             <Button onClick={goToActivity}>Aller à mon activité</Button>
           </div>
@@ -247,10 +248,10 @@ export function OnboardingPage() {
         {current === 'recap' ? (
           <>
             <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Voici ce avec quoi tu démarres. Vérifie, puis valide : tout est enregistré d'un coup.</p>
-            <Summary steps={plan.steps} currency={currency} cash={String(cashTotal)} stock={String(stockTotal)} receivable={String(receivable)} payable={String(payable)} />
+            <Summary steps={plan.steps} totalLabel={activityWords(act.type).startTotal} currency={currency} cash={String(cashTotal)} stock={String(stockTotal)} receivable={String(receivable)} payable={String(payable)} />
             <span className="field-hint">
               {counts(plan.steps, filledProducts.length, filledParties.length).replace(/^ : /, '')}
-              {plan.steps.length > 2 ? '. ' : ''}Rien de tout ça ne compte dans ton bénéfice : ce sont tes affaires d'avant Bénef.
+              {plan.steps.length > 2 ? '. ' : ''}{activityWords(act.type).startNote}
             </span>
           </>
         ) : null}
@@ -496,6 +497,7 @@ function counts(steps: OnboardingStep[], products: number, parties: number): str
 
 function Summary({
   steps,
+  totalLabel,
   currency,
   cash,
   stock,
@@ -503,6 +505,7 @@ function Summary({
   payable,
 }: {
   steps: OnboardingStep[];
+  totalLabel: string;
   currency: string;
   cash: string;
   stock: string;
@@ -523,7 +526,7 @@ function Summary({
       {steps.includes('parties') ? line('On te doit', receivable) : null}
       {steps.includes('parties') ? line('Tu dois', payable) : null}
       <div className="switch-row" style={{ borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 14 }}>
-        <span style={{ fontWeight: 800 }}>Ce que vaut ton affaire</span>
+        <span style={{ fontWeight: 800 }}>{totalLabel}</span>
         <AmountText amount={total} currency={currency} size={20} sign="neutral" />
       </div>
     </Card>

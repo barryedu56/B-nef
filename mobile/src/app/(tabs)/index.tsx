@@ -18,11 +18,13 @@ import { DueBanner } from '@/components/DueBanner';
 import { InstallHint } from '@/components/InstallHint';
 import { SyncBanner } from '@/components/SyncBanner';
 import { useAuth } from '@/context/AuthContext';
+import { homeWords } from '@/lib/activityWords';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
 export default function ActivitiesScreen() {
   const { user } = useAuth();
   const activities = useActivities();
+  const home = homeWords(activities.data);
   const summary = useGlobalSummary('month');
 
   const netByActivity = new Map((summary.data?.by_activity ?? []).map((row) => [row.activity_id, row]));
@@ -47,8 +49,11 @@ export default function ActivitiesScreen() {
         <InstallHint />
         <DueBanner />
         {summary.data ? (
-          <HeroCard label="Bénéfice net ce mois · toutes activités" amount={summary.data.net_profit} currency={summary.data.currency}>
-            <HeroStat label="Chiffre d'affaires" amount={summary.data.revenue} currency={summary.data.currency} />
+          <HeroCard
+            label={`${home.personal ? 'Ce qui te reste' : 'Bénéfice net'} ce mois · toutes activités`}
+            amount={summary.data.net_profit}
+            currency={summary.data.currency}>
+            <HeroStat label={home.income} amount={summary.data.revenue} currency={summary.data.currency} />
             <HeroStat label="Dépenses" amount={summary.data.expenses} currency={summary.data.currency} />
           </HeroCard>
         ) : null}

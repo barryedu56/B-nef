@@ -20,6 +20,7 @@ import { useActivity } from '@/hooks/useActivities';
 import { useBudgetsStatus } from '@/hooks/useBudgets';
 import { useActivitySummary } from '@/hooks/useReports';
 import { useCategories, usePaymentMethods, useTransactions } from '@/hooks/useTransactions';
+import { activityWords } from '@/lib/activityWords';
 import { formatPeriodLabel, formatRelativeDate, shiftAnchor, todayISO } from '@/lib/dates';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import { setMoneyActivity } from '@/lib/moneyFilter';
@@ -53,6 +54,7 @@ export default function ActivityDashboardScreen() {
   }
 
   const act = activity.data;
+  const words = activityWords(act.type);
   const data = summary.data;
   const categoryById = new Map((categories.data ?? []).map((c) => [c.id, c.name]));
   const paymentById = new Map((paymentMethods.data ?? []).map((p) => [p.id, p.name]));
@@ -86,8 +88,8 @@ export default function ActivityDashboardScreen() {
           </View>
         </View>
 
-        <HeroCard label="Bénéfice net de la période" amount={data.net_profit} currency={data.currency}>
-          <HeroStat label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} />
+        <HeroCard label={words.result} amount={data.net_profit} currency={data.currency}>
+          <HeroStat label={words.income} amount={data.revenue} currency={data.currency} />
           <HeroStat
             label="Caisse"
             amount={data.cash_balance}
@@ -103,7 +105,7 @@ export default function ActivityDashboardScreen() {
         <View style={styles.kpiGrid}>
           {act.has_inventory ? <KpiTile label="Coût des ventes" amount={data.cogs} currency={data.currency} icon="cube-outline" tone="negative" /> : null}
           {act.has_inventory ? <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} icon="bar-chart-outline" tone="info" /> : null}
-          <KpiTile label="Charges" amount={data.expenses} currency={data.currency} icon="receipt-outline" tone="negative" />
+          <KpiTile label={words.expenses} amount={data.expenses} currency={data.currency} icon="receipt-outline" tone="negative" />
           {act.has_inventory ? <KpiTile label="Valeur du stock" amount={data.stock_value} currency={data.currency} icon="layers-outline" tone="warning" /> : null}
           {act.has_inventory ? (
             <KpiTile label="Achats de marchandise" amount={data.purchases} currency={data.currency} icon="cart-outline" tone="accent" />
@@ -115,7 +117,7 @@ export default function ActivityDashboardScreen() {
 
         {data.timeseries.length > 0 ? (
           <Card>
-            <Text style={styles.cardTitle}>Évolution du bénéfice</Text>
+            <Text style={styles.cardTitle}>{words.chart}</Text>
             <ProfitChart series={data.timeseries} />
           </Card>
         ) : null}

@@ -21,6 +21,7 @@ import { useActivity, useUpdateActivity } from '@/hooks/useActivities';
 import { useBudgetsStatus } from '@/hooks/useBudgets';
 import { useActivitySummary } from '@/hooks/useReports';
 import { useTransactions } from '@/hooks/useTransactions';
+import { activityWords } from '@/lib/activityWords';
 import { formatPeriodLabel, formatRelativeDate, shiftAnchor, todayISO } from '@/lib/dates';
 
 const PERIOD_OPTIONS: { value: Period; label: string }[] = [
@@ -50,6 +51,7 @@ export function ActivityDetailPage() {
   if (summary.isError || !summary.data) return <ErrorBlock message="Impossible de calculer le résumé." onRetry={() => summary.refetch()} />;
 
   const act = activity.data;
+  const words = activityWords(act.type);
   const data = summary.data;
   const recent = (transactions.data?.results ?? []).slice(0, 8);
 
@@ -91,11 +93,11 @@ export function ActivityDetailPage() {
           </div>
 
           <div className="kpi-grid">
-            <KpiTile label="Bénéfice net" amount={data.net_profit} currency={data.currency} highlight icon={<TrendingUp size={18} />} />
-            <KpiTile label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} sign="neutral" icon={<Banknote size={18} />} tone="positive" />
+            <KpiTile label={words.resultShort} amount={data.net_profit} currency={data.currency} highlight icon={<TrendingUp size={18} />} />
+            <KpiTile label={words.income} amount={data.revenue} currency={data.currency} sign="neutral" icon={<Banknote size={18} />} tone="positive" />
             {act.has_inventory ? <KpiTile label="Coût des ventes" amount={data.cogs} currency={data.currency} sign="neutral" icon={<PackageMinus size={18} />} tone="negative" /> : null}
             {act.has_inventory ? <KpiTile label="Marge brute" amount={data.gross_margin} currency={data.currency} sign="neutral" icon={<ChartColumn size={18} />} tone="info" /> : null}
-            <KpiTile label="Charges" amount={data.expenses} currency={data.currency} sign="neutral" icon={<Receipt size={18} />} tone="negative" />
+            <KpiTile label={words.expenses} amount={data.expenses} currency={data.currency} sign="neutral" icon={<Receipt size={18} />} tone="negative" />
             {act.has_inventory ? (
               <KpiTile label="Consommé personnellement" amount={data.personal_use} currency={data.currency} sign="neutral" icon={<HandCoins size={18} />} tone="warning" />
             ) : null}
@@ -111,7 +113,7 @@ export function ActivityDetailPage() {
 
           {data.timeseries.length > 0 ? (
             <Card>
-              <span className="card-title">Évolution du bénéfice</span>
+              <span className="card-title">{words.chart}</span>
               <ProfitChart series={data.timeseries} />
             </Card>
           ) : null}
