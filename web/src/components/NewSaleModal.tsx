@@ -24,6 +24,8 @@ export function NewSaleModal({ activity, onClose }: NewSaleModalProps) {
 
   const [search, setSearch] = useState('');
   const [quantities, setQuantities] = useState<Record<number, string>>({});
+  // Prix négocié par produit (saisie brute) ; absent = prix de vente habituel.
+  const [prices, setPrices] = useState<Record<number, string>>({});
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
   const [isCredit, setIsCredit] = useState(false);
   const [partyId, setPartyId] = useState<string | null>(null);
@@ -40,11 +42,14 @@ export function NewSaleModal({ activity, onClose }: NewSaleModalProps) {
   const cartLines = useMemo(() => {
     const list = products.data ?? [];
     return list
-      .map((p) => ({ product: p, quantity: Number(quantities[p.id] || 0) }))
+      .map((p) => {
+        const priceRaw = prices[p.id] ?? String(Number(p.sale_price));
+        return { product: p, quantity: Number(quantities[p.id] || 0), priceRaw, price: Number(priceRaw.replace(',', '.')) || 0 };
+      })
       .filter((line) => line.quantity > 0);
-  }, [products.data, quantities]);
+  }, [products.data, quantities, prices]);
 
-  const total = cartLines.reduce((sum, line) => sum + line.quantity * Number(line.product.sale_price), 0);
+  const total = cartLines.reduce((sum, line) => sum + line.quantity * line.price, 0);
 
   const setQty = (productId: number, raw: string) => {
     setQuantities((prev) => ({ ...prev, [productId]: raw }));
@@ -58,6 +63,11 @@ export function NewSaleModal({ activity, onClose }: NewSaleModalProps) {
       setError('Ajoute au moins un produit.');
       return;
     }
+    const noPrice = cartLines.find((line) => !line.priceRaw.trim());
+    if (noPrice) {
+      setError(`Écris le prix de « ${noPrice.product.name} ».`);
+      return;
+    }
     if (isCredit && amountPaidNow && paidNowValue > total) {
       setError('Le montant payé maintenant dépasse le total de la vente.');
       return;
@@ -66,7 +76,12 @@ export function NewSaleModal({ activity, onClose }: NewSaleModalProps) {
     try {
       await createSale.mutateAsync({
         activity: activity.id,
-        lines: cartLines.map((line) => ({ product: line.product.id, quantity: String(line.quantity) })),
+        lines: cartLines.map((line) => ({
+          product: line.product.id,
+          quantity: String(line.quantity),
+          // On n'envoie le prix que s'il a été négocié.
+          ...(line.price !== Number(line.product.sale_price) ? { unit_price: String(line.price) } : {}),
+        })),
         payment_method: paymentMethodId ? Number(paymentMethodId) : null,
         party: isCredit && partyId ? Number(partyId) : null,
         is_credit: isCredit,
@@ -101,8 +116,20 @@ export function NewSaleModal({ activity, onClose }: NewSaleModalProps) {
         )}
 
         {cartLines.length > 0 ? (
-          <div className="card card-muted" style={{ padding: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
+          <div className="card card-muted" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <span className="field-hint">Prix négocié avec le client ? Change le prix de l'unité ci-dessous.</span>
+            {cartLines.map((line) => (
+              <CartLine
+                key={line.product.id}
+                product={line.product}
+                quantity={line.quantity}
+                priceRaw={line.priceRaw}
+                price={line.price}
+                currency={activity.currency}
+                onChangePrice={(raw) => setPrices((prev) => ({ ...prev, [line.product.id]: raw }))}
+              />
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
               <span>Total · {cartLines.length} ligne{cartLines.length > 1 ? 's' : ''}</span>
               <span className="mono">{formatAmount(total, activity.currency)}</span>
             </div>
@@ -141,6 +168,56 @@ export function NewSaleModal({ activity, onClose }: NewSaleModalProps) {
         </div>
       </form>
     </Modal>
+  );
+}
+
+/** Une ligne du panier : quantité × prix de l'unité, modifiable pour un prix
+ * négocié (pour cette vente seulement). */
+function CartLine({
+  product,
+  quantity,
+  priceRaw,
+  price,
+  currency,
+  onChangePrice,
+}: {
+  product: Product;
+  quantity: number;
+  priceRaw: string;
+  price: number;
+  currency: string;
+  onChangePrice: (raw: string) => void;
+}) {
+  const normal = Number(product.sale_price);
+  const changed = priceRaw.trim() !== '' && price !== normal;
+  const atLoss = priceRaw.trim() !== '' && price < Number(product.purchase_price);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+        <span style={{ flex: 1, minWidth: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {product.name}
+        </span>
+        <span style={{ color: 'var(--text-secondary)' }}>{quantity} ×</span>
+        <AmountInput
+          value={priceRaw}
+          onChange={onChangePrice}
+          placeholder="Prix"
+          aria-label={`Prix de l'unité — ${product.name}`}
+          style={{ width: 120, textAlign: 'right' }}
+        />
+        <span className="mono" style={{ minWidth: 96, textAlign: 'right' }}>{formatAmount(quantity * price, currency)}</span>
+      </div>
+      {changed ? (
+        <span className="field-hint">
+          Prix habituel : <s>{formatAmount(normal, currency)}</s> · ce prix vaut pour cette vente seulement
+        </span>
+      ) : null}
+      {atLoss ? (
+        <span className="error-text">
+          Attention : tu vends à perte (tu l'as payé {formatAmount(product.purchase_price, currency)} l'unité).
+        </span>
+      ) : null}
+    </div>
   );
 }
 

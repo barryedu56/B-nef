@@ -230,11 +230,12 @@ class SettleTransactionSerializer(serializers.Serializer):
 class SaleLineInputSerializer(serializers.Serializer):
     product = serializers.IntegerField()
     quantity = serializers.DecimalField(max_digits=16, decimal_places=3)
+    # Prix négocié pour cette vente ; absent = prix de vente du produit.
     unit_price = serializers.DecimalField(
-        max_digits=20, decimal_places=2, required=False, allow_null=True
+        max_digits=20, decimal_places=2, required=False, allow_null=True, min_value=Decimal("0")
     )
     discount = serializers.DecimalField(
-        max_digits=20, decimal_places=2, required=False, default=Decimal("0")
+        max_digits=20, decimal_places=2, required=False, default=Decimal("0"), min_value=Decimal("0")
     )
 
 

@@ -33,6 +33,8 @@ export default function NewSaleScreen() {
 
   const [search, setSearch] = useState('');
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+  // Prix négocié par produit (saisie brute) ; absent = prix de vente habituel.
+  const [prices, setPrices] = useState<Record<number, string>>({});
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
   const [isCredit, setIsCredit] = useState(false);
   const [partyId, setPartyId] = useState<string | null>(null);
@@ -50,10 +52,13 @@ export default function NewSaleScreen() {
     const list = products.data ?? [];
     return list
       .filter((p) => (quantities[p.id] ?? 0) > 0)
-      .map((p) => ({ product: p, quantity: quantities[p.id] }));
-  }, [products.data, quantities]);
+      .map((p) => {
+        const raw = prices[p.id] ?? String(Number(p.sale_price));
+        return { product: p, quantity: quantities[p.id], priceRaw: raw, price: Number(raw.replace(',', '.')) || 0 };
+      });
+  }, [products.data, quantities, prices]);
 
-  const total = cartLines.reduce((sum, line) => sum + line.quantity * Number(line.product.sale_price), 0);
+  const total = cartLines.reduce((sum, line) => sum + line.quantity * line.price, 0);
 
   if (activity.isLoading || !activity.data) return <LoadingView />;
   const act = activity.data;
@@ -69,6 +74,11 @@ export default function NewSaleScreen() {
       setError('Ajoute au moins un produit.');
       return;
     }
+    const noPrice = cartLines.find((line) => !line.priceRaw.trim());
+    if (noPrice) {
+      setError(`Écris le prix de « ${noPrice.product.name} ».`);
+      return;
+    }
     if (isCredit && amountPaidNow && paidNowValue > total) {
       setError('Le montant payé maintenant dépasse le total de la vente.');
       return;
@@ -77,7 +87,12 @@ export default function NewSaleScreen() {
     try {
       await createSale.mutateAsync({
         activity: activityId,
-        lines: cartLines.map((line) => ({ product: line.product.id, quantity: String(line.quantity) })),
+        lines: cartLines.map((line) => ({
+          product: line.product.id,
+          quantity: String(line.quantity),
+          // On n'envoie le prix que s'il a été négocié.
+          ...(line.price !== Number(line.product.sale_price) ? { unit_price: String(line.price) } : {}),
+        })),
         payment_method: paymentMethodId ? Number(paymentMethodId) : null,
         party: isCredit && partyId ? Number(partyId) : null,
         is_credit: isCredit,
@@ -132,6 +147,18 @@ export default function NewSaleScreen() {
             <View style={styles.cartRow}>
               <Text style={styles.cartLabel}>Sous-total · {cartLines.length} ligne{cartLines.length > 1 ? 's' : ''}</Text>
             </View>
+            <Text style={styles.hint}>Prix négocié avec le client ? Change le prix de l'unité ci-dessous.</Text>
+            {cartLines.map((line) => (
+              <CartLine
+                key={line.product.id}
+                product={line.product}
+                quantity={line.quantity}
+                priceRaw={line.priceRaw}
+                price={line.price}
+                currency={act.currency}
+                onChangePrice={(raw) => setPrices((prev) => ({ ...prev, [line.product.id]: raw }))}
+              />
+            ))}
             <View style={styles.cartTotalRow}>
               <Text style={styles.cartTotalLabel}>Total</Text>
               <Text style={styles.cartTotalValue}>{formatAmount(total, act.currency)}</Text>
@@ -216,6 +243,54 @@ function ProductLine({
   );
 }
 
+/** Une ligne du panier : quantité × prix de l'unité, modifiable pour un prix
+ * négocié (pour cette vente seulement). */
+function CartLine({
+  product,
+  quantity,
+  priceRaw,
+  price,
+  currency,
+  onChangePrice,
+}: {
+  product: Product;
+  quantity: number;
+  priceRaw: string;
+  price: number;
+  currency: string;
+  onChangePrice: (raw: string) => void;
+}) {
+  const normal = Number(product.sale_price);
+  const changed = priceRaw.trim() !== '' && price !== normal;
+  const atLoss = priceRaw.trim() !== '' && price < Number(product.purchase_price);
+  return (
+    <View style={styles.cartLine}>
+      <View style={styles.cartRow}>
+        <Text style={styles.productName} numberOfLines={1}>
+          {product.name}
+        </Text>
+        <Text style={styles.cartLineTotal}>{formatAmount(quantity * price, currency)}</Text>
+      </View>
+      <View style={styles.cartPriceRow}>
+        <Text style={styles.cartLabel}>{formatQty(String(quantity))} ×</Text>
+        <View style={{ flex: 1 }}>
+          <AmountField value={priceRaw} onChangeText={onChangePrice} placeholder="Prix de l'unité" suffix={currency} />
+        </View>
+      </View>
+      {changed ? (
+        <Text style={styles.hint}>
+          Prix habituel : <Text style={styles.strike}>{formatAmount(normal, currency)}</Text> · ce prix vaut pour cette vente seulement
+        </Text>
+      ) : null}
+      {atLoss ? (
+        <Text style={styles.lossText}>
+          Attention : tu vends à perte (tu l'as payé {formatAmount(product.purchase_price, currency)} l'unité).
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md },
   searchBox: {
@@ -242,7 +317,12 @@ const styles = StyleSheet.create({
   productMeta: { fontSize: 11.5, color: colors.textTertiary },
   productMetaWarning: { color: colors.warning },
   cartCard: { gap: spacing.sm },
-  cartRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  cartRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+  cartLine: { gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  cartLineTotal: { fontSize: 13.5, fontWeight: '600', color: colors.textPrimary },
+  cartPriceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  strike: { textDecorationLine: 'line-through' },
+  lossText: { fontSize: 11.5, color: colors.negative, fontWeight: '600' },
   cartLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
   cartTotalRow: {
     flexDirection: 'row',

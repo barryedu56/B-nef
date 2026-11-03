@@ -31,6 +31,29 @@ class SaleTests(ApiTestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_quantity, 10)
 
+    def test_prix_negocie_utilise_pour_total_et_marge(self):
+        r = self.client.post(
+            "/api/sales/",
+            {"activity": self.shop.pk, "lines": [{"product": self.product.pk, "quantity": "4", "unit_price": "1200"}]},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 201, r.content)
+        txn = Transaction.objects.get()
+        self.assertEqual(txn.amount, Decimal("4800"))
+        line = txn.sale_lines.get()
+        self.assertEqual(line.unit_price, Decimal("1200"))
+        self.assertEqual(line.unit_cost, Decimal("1000"))
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.sale_price, Decimal("1500"))
+
+    def test_prix_negatif_refuse(self):
+        r = self.client.post(
+            "/api/sales/",
+            {"activity": self.shop.pk, "lines": [{"product": self.product.pk, "quantity": "1", "unit_price": "-5"}]},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 400, r.content)
+
     def test_vente_de_tout_le_stock_acceptee(self):
         r = self.sell("10")
         self.assertEqual(r.status_code, 201, r.content)
