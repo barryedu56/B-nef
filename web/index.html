@@ -25,6 +25,25 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
     />
     <title>Bénef</title>
+    <!-- Téléphone ou tablette : direction la version téléphone (/app/), avant
+         même de charger la version ordinateur. Restent ici : la console admin,
+         les pages légales, et qui ouvre une fois monbenef.com/?ordinateur. -->
+    <script>
+      (function () {
+        try {
+          var KEY = 'benef:version-ordinateur';
+          if (/[?&]ordinateur\b/.test(location.search)) localStorage.setItem(KEY, '1');
+          if (localStorage.getItem(KEY) === '1') return;
+        } catch (e) {}
+        var ua = navigator.userAgent;
+        var onPhone = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+          (ua.indexOf('Macintosh') !== -1 && navigator.maxTouchPoints > 1);
+        var path = location.pathname;
+        if (!onPhone || /^\/(console|confidentialite|suppression-compte)(\/|$)/.test(path)) return;
+        var same = /^\/(login|register|forgot-password)\/?$/.test(path);
+        location.replace('/app' + (same ? path + location.search : '/'));
+      })();
+    </script>
     <!-- Pas de zoom à deux doigts : Safari (iPhone/iPad) ignore user-scalable=no,
          on bloque donc aussi ses gestes de zoom. -->
     <script>
