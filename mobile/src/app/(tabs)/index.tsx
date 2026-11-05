@@ -40,7 +40,7 @@ export default function ActivitiesScreen() {
       <View style={styles.header}>
         <Avatar url={user?.avatar} name={user?.username} size={44} />
         <View style={styles.greeting}>
-          <Text style={styles.hello}>Bonjour {user?.username} 👋</Text>
+          <Text style={styles.hello}>Bonjour {user?.username}</Text>
           <Text style={styles.date}>{todayLabel()}</Text>
         </View>
       </View>
