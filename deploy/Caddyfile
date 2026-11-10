@@ -56,3 +56,17 @@
 www.{$BENEF_DOMAIN} {
 	redir https://{$BENEF_DOMAIN}{uri} permanent
 }
+
+# SolFerme (projet séparé : /root/SolFerme/deploy sur le serveur). Son API
+# rejoint ce Caddy par le réseau Docker « deploy_default » (alias solferme-backend).
+# Si SolFerme est arrêté, seul ce domaine répond 502 : Bénef n'est pas touché.
+solferme.monbenef.com {
+	encode gzip zstd
+	reverse_proxy solferme-backend:8000
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
