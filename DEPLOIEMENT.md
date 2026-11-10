@@ -145,17 +145,29 @@ cd deploy && docker compose up -d --build
 
 ## 8. Sauvegardes — à lire
 
-Les dumps quotidiens sont dans `deploy/backups/`. **Ils sont sur le même
-serveur que la base** : si le serveur disparaît, ils disparaissent avec. Copie-les
-ailleurs chaque jour, par exemple avec [rclone](https://rclone.org) vers un
-stockage objet (Backblaze B2, Scaleway, Google Drive) :
+Les dumps quotidiens sont dans `deploy/backups/` (vers 2 h). **En place depuis le
+2026-11-10** : chaque nuit à 2 h 45, `deploy/sauvegarde-drive.sh` (cron de root) les
+copie sur **Google Drive** (`barryedu56@gmail.com`), avec ceux de SolFerme :
+
+| Projet | Dossier Drive | Fichiers |
+|---|---|---|
+| Bénef | `Benef-Backups` | `benef-*.dump` |
+| SolFerme | `SolFerme-Backups` | `solferme_*.sql.gz` |
+
+90 jours sont gardés sur Drive (`DRIVE_KEEP_DAYS`). Le remote rclone `gdrive` n'a
+que l'accès `drive.file` : il ne voit que les fichiers qu'il a créés lui-même.
 
 ```bash
-# crontab -e
-30 3 * * * rclone copy ~/B-nef/deploy/backups distant:benef-backups --max-age 48h
+/root/B-nef/deploy/sauvegarde-drive.sh   # envoi immédiat (le même que la nuit)
+tail /var/log/sauvegarde-drive.log       # journal des envois
 ```
 
-**Le plus simple : une copie chaque jour sur ton PC** (Ubuntu). Une seule fois,
+Si Google retire l'accès (mot de passe changé, accès révoqué), refais
+l'autorisation : `rclone config reconnect gdrive:` depuis une session
+`ssh -L 53682:127.0.0.1:53682 root@49.13.173.243`, puis ouvre le lien affiché
+sur le PC.
+
+**En plus, une copie chaque jour sur ton PC** (Ubuntu). Une seule fois,
 depuis le dossier du projet sur ton PC :
 
 ```bash
