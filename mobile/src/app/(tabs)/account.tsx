@@ -214,7 +214,7 @@ export default function AccountScreen() {
           <Text style={styles.sectionTitle}>Devises</Text>
           <Text style={styles.hint}>
             La devise principale sert de référence pour la vue globale. La devise d’affichage — modifiable aussi
-            depuis l’onglet Vue globale — reconvertit automatiquement les montants à afficher, sans rien saisir.
+            depuis l’onglet Bilan — reconvertit automatiquement les montants à afficher, sans rien saisir.
           </Text>
           <PickerField
             label="Devise principale"

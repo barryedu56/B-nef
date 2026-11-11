@@ -72,7 +72,7 @@ export default function GlobalViewScreen() {
     <Screen onRefresh={() => summary.refetch()} refreshing={summary.isRefetching}>
       <SyncBanner />
       <View style={styles.header}>
-        <Text style={styles.title}>Vue globale</Text>
+        <Text style={styles.title}>Bilan</Text>
       </View>
 
       <View style={styles.content}>

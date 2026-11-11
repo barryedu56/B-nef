@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { Redirect, Tabs } from 'expo-router';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingView } from '@/components/ui/QueryState';
@@ -64,7 +64,14 @@ export default function TabsLayout() {
         },
         tabBarItemStyle: { paddingTop: 2 },
         tabBarIconStyle: { marginBottom: -2 },
-        tabBarLabelStyle: { fontSize: 11.5, fontWeight: '800', marginTop: 2 },
+        // React Navigation impose sa propre police aux libellés (Roboto sur
+        // Android, plus large : « Vue glob… ») : on remet celle de l'app.
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '800',
+          marginTop: 4,
+          ...(Platform.OS === 'web' ? { fontFamily: 'Nunito, system-ui, sans-serif' } : null),
+        },
       }}>
       <Tabs.Screen
         name="index"
@@ -83,7 +90,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="global"
         options={{
-          title: 'Vue globale',
+          title: 'Bilan',
           tabBarIcon: tabIcon('globe-outline'),
         }}
       />
