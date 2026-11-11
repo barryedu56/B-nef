@@ -20,11 +20,11 @@ import { colors, fontSize, spacing } from '@/theme';
 import type { Direction } from '@/api/types';
 
 export default function NewTransactionScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, direction: initialDirection } = useLocalSearchParams<{ id: string; direction?: string }>();
   const activityId = Number(id);
 
   const activity = useActivity(activityId);
-  const [direction, setDirection] = useState<Direction>('out');
+  const [direction, setDirection] = useState<Direction>(initialDirection === 'in' ? 'in' : 'out');
   const categories = useCategories(activityId, direction);
   const paymentMethods = usePaymentMethods();
   const createTransaction = useCreateTransaction();

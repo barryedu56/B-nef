@@ -19,7 +19,7 @@ import { useActivity } from '@/hooks/useActivities';
 import { useCreateSale, useProducts } from '@/hooks/useProducts';
 import { usePaymentMethods } from '@/hooks/useTransactions';
 import { formatAmount } from '@/lib/money';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, shadow, spacing } from '@/theme';
 import { formatQty } from '@/components/ProductCard';
 
 export default function NewSaleScreen() {
@@ -129,9 +129,11 @@ export default function NewSaleScreen() {
             onAction={() => router.push({ pathname: '/activity/[id]/products/new', params: { id } })}
           />
         ) : (
-          <View>
+          <>
+          <Text style={styles.sectionTitle}>Touche le produit vendu</Text>
+          <View style={styles.productGrid}>
             {filtered.map((product) => (
-              <ProductLine
+              <ProductTile
                 key={product.id}
                 product={product}
                 currency={act.currency}
@@ -140,6 +142,7 @@ export default function NewSaleScreen() {
               />
             ))}
           </View>
+          </>
         )}
 
         {cartLines.length > 0 ? (
@@ -147,7 +150,7 @@ export default function NewSaleScreen() {
             <View style={styles.cartRow}>
               <Text style={styles.cartLabel}>Sous-total · {cartLines.length} ligne{cartLines.length > 1 ? 's' : ''}</Text>
             </View>
-            <Text style={styles.hint}>Prix négocié avec le client ? Change le prix de l'unité ci-dessous.</Text>
+            <Text style={styles.hint}>Le client discute le prix ? Change le prix de l'unité ci-dessous.</Text>
             {cartLines.map((line) => (
               <CartLine
                 key={line.product.id}
@@ -167,7 +170,7 @@ export default function NewSaleScreen() {
         ) : null}
 
         <Card style={styles.paymentCard}>
-          <Text style={styles.sectionLabel}>Paiement</Text>
+          <Text style={styles.sectionTitle}>Le client paie comment ?</Text>
           <View style={styles.chipRow}>
             {(paymentMethods.data ?? []).map((method) => (
               <Chip
@@ -205,7 +208,7 @@ export default function NewSaleScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Button
-          label={cartLines.length > 0 ? `Valider la vente · ${formatAmount(total, act.currency)}` : 'Valider la vente'}
+          label={cartLines.length > 0 ? `C'est vendu · ${formatAmount(total, act.currency)}` : "C'est vendu"}
           onPress={onSubmit}
           loading={createSale.isPending}
           disabled={cartLines.length === 0}
@@ -216,7 +219,9 @@ export default function NewSaleScreen() {
   );
 }
 
-function ProductLine({
+/** Un produit en grande carte : nom, prix, stock, puis « + Ajouter » ou
+ * les boutons − / + une fois dans le panier (carte entourée d'orange). */
+function ProductTile({
   product,
   currency,
   quantity,
@@ -228,17 +233,26 @@ function ProductLine({
   onChange: (qty: number) => void;
 }) {
   const stock = Number(product.stock_quantity);
+  const selected = quantity > 0;
   return (
-    <View style={styles.productRow}>
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={1}>
-          {product.name}
-        </Text>
-        <Text style={[styles.productMeta, stock <= 0 && styles.productMetaWarning]}>
-          Stock {formatQty(product.stock_quantity)} · {formatAmount(product.sale_price, currency)} l’unité
-        </Text>
-      </View>
-      <Stepper value={quantity} onChange={onChange} min={0} max={Math.max(stock, quantity)} />
+    <View style={[styles.tile, selected && styles.tileSelected]}>
+      <Text style={styles.productName} numberOfLines={2}>
+        {product.name}
+      </Text>
+      <Text style={styles.productPrice}>{formatAmount(product.sale_price, currency)}</Text>
+      <Text style={[styles.productMeta, stock <= 0 && styles.productMetaWarning]}>Reste {formatQty(product.stock_quantity)}</Text>
+      {selected ? (
+        <Stepper value={quantity} onChange={onChange} min={0} max={Math.max(stock, quantity)} />
+      ) : (
+        <Pressable
+          onPress={() => onChange(1)}
+          disabled={stock <= 0}
+          accessibilityRole="button"
+          accessibilityLabel={`Ajouter ${product.name}`}
+          style={({ pressed }) => [styles.addButton, stock <= 0 && styles.addButtonDisabled, pressed && { opacity: 0.8 }]}>
+          <Text style={styles.addButtonLabel}>{stock <= 0 ? 'Plus en stock' : '+ Ajouter'}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -304,17 +318,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   searchInput: { flex: 1, minHeight: 44, fontSize: fontSize.md, color: colors.textPrimary },
-  productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  sectionTitle: { fontSize: fontSize.md, fontWeight: '800', color: colors.textSecondary },
+  // Deux cartes par ligne, même largeur, y compris la dernière seule.
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.md },
+  tile: {
+    width: '48.3%',
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 3,
+    borderColor: 'transparent',
+    padding: spacing.md,
+    gap: 6,
+    ...shadow.sm,
   },
-  productInfo: { flex: 1, gap: 2 },
-  productName: { fontSize: 13.5, fontWeight: '600', color: colors.textPrimary },
-  productMeta: { fontSize: 11.5, color: colors.textTertiary },
+  tileSelected: { borderColor: colors.accent },
+  productName: { fontSize: 16, fontWeight: '900', color: colors.textPrimary, minHeight: 40 },
+  productPrice: { fontSize: fontSize.md, fontWeight: '800', color: colors.textSecondary },
+  productMeta: { fontSize: 12.5, fontWeight: '600', color: colors.textTertiary },
+  addButton: { height: 42, borderRadius: radius.md, backgroundColor: colors.placeholder, alignItems: 'center', justifyContent: 'center' },
+  addButtonDisabled: { opacity: 0.5 },
+  addButtonLabel: { fontSize: 15, fontWeight: '800', color: colors.accentDark },
   productMetaWarning: { color: colors.warning },
   cartCard: { gap: spacing.sm },
   cartRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },

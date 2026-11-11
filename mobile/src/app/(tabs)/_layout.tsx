@@ -6,15 +6,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingView } from '@/components/ui/QueryState';
 import { useAuth } from '@/context/AuthContext';
-import { colors } from '@/theme';
+import { colors, shadow } from '@/theme';
 
-const TAB_BAR_CONTENT_HEIGHT = 62;
+const TAB_BAR_CONTENT_HEIGHT = 68;
 
 /** Icône d'onglet : couleur du thème selon l'onglet actif (mêmes valeurs
  * que tabBarActiveTintColor / tabBarInactiveTintColor). */
 function tabIcon(name: ComponentProps<typeof Ionicons>['name']) {
-  return ({ focused, size }: { focused: boolean; size: number }) => (
-    <Ionicons name={name} size={size} color={focused ? colors.accent : colors.textTertiary} />
+  return ({ focused }: { focused: boolean; size: number }) => (
+    <View
+      style={{
+        width: 52,
+        height: 30,
+        borderRadius: 999,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: focused ? colors.accentSoft : 'transparent',
+      }}>
+      <Ionicons name={name} size={22} color={focused ? colors.accent : colors.textSecondary} />
+    </View>
   );
 }
 
@@ -43,17 +53,18 @@ export default function TabsLayout() {
         // au-dessus du clavier et de manger la place des champs.
         tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          borderTopColor: colors.border,
+          borderTopWidth: 0,
           backgroundColor: colors.card,
           height: TAB_BAR_CONTENT_HEIGHT + bottomInset,
           paddingTop: 8,
           paddingBottom: bottomInset,
+          ...shadow.md,
         },
         tabBarItemStyle: { paddingTop: 2 },
         tabBarIconStyle: { marginBottom: -2 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 11.5, fontWeight: '800', marginTop: 2 },
       }}>
       <Tabs.Screen
         name="index"

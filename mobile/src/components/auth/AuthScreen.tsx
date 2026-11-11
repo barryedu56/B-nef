@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   },
   bubble: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.09)' },
   bubbleTop: { width: 260, height: 260, right: -90, top: -70 },
-  bubbleBottom: { width: 160, height: 160, left: -60, bottom: -70, backgroundColor: 'rgba(109,40,217,0.45)' },
+  bubbleBottom: { width: 160, height: 160, left: -60, bottom: -70, backgroundColor: 'rgba(138,48,8,0.35)' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   logo: { width: 48, height: 48, borderRadius: 14, borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)' },
   brandName: { fontSize: 26, fontWeight: '800', color: colors.white, letterSpacing: -0.5 },

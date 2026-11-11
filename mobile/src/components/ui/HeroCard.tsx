@@ -1,11 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AmountText } from '@/components/ui/AmountText';
 import { colors, fontSize, radius, shadow, spacing } from '@/theme';
 
-/** Grande carte indigo du chiffre clé (bénéfice net), avec des mini-stats
- * optionnelles en dessous. */
+/** Grande carte blanche du chiffre clé (bénéfice net) : le montant en très
+ * gros, une pastille « Tu gagnes / Tu perds », et des mini-stats colorées
+ * en dessous (vert = argent qui entre, rouge = argent qui sort). */
 export function HeroCard({
   label,
   amount,
@@ -17,33 +19,61 @@ export function HeroCard({
   currency: string;
   children?: ReactNode;
 }) {
-  const negative = Number(amount) < 0;
+  const value = Number(amount);
+  const badge = value > 0 ? { text: 'Tu gagnes', bg: colors.positiveSoft, fg: colors.positive } : value < 0 ? { text: 'Tu perds', bg: colors.negativeSoft, fg: colors.negative } : null;
   return (
     <View style={styles.card}>
-      <View style={[styles.bubble, styles.bubbleA]} />
-      <View style={[styles.bubble, styles.bubbleB]} />
-      <Text style={styles.label}>{label}</Text>
-      <AmountText amount={amount} currency={currency} size={30} weight="800" sign="neutral" style={styles.amount} />
-      {negative ? <Text style={styles.note}>Perte sur la période</Text> : null}
+      <View style={styles.top}>
+        <Text style={styles.label}>{label}</Text>
+        {badge ? (
+          <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+            <Text style={[styles.badgeText, { color: badge.fg }]}>{badge.text}</Text>
+          </View>
+        ) : null}
+      </View>
+      <AmountText amount={amount} currency={currency} size={34} weight="900" sign="neutral" style={styles.amount} />
       {children ? <View style={styles.stats}>{children}</View> : null}
     </View>
   );
 }
 
-/** Mini-stat blanche à placer dans une HeroCard. */
-export function HeroStat({ label, amount, currency, onPress }: { label: string; amount: string; currency: string; onPress?: () => void }) {
+const TONES = {
+  in: { bg: colors.positiveSoft, fg: colors.positive, icon: 'arrow-down' as const },
+  out: { bg: colors.negativeSoft, fg: colors.negative, icon: 'arrow-up' as const },
+  neutral: { bg: colors.placeholder, fg: colors.textSecondary, icon: null },
+};
+
+/** Mini-stat à placer dans une HeroCard. `tone` : in (vert), out (rouge). */
+export function HeroStat({
+  label,
+  amount,
+  currency,
+  onPress,
+  tone = 'neutral',
+}: {
+  label: string;
+  amount: string;
+  currency: string;
+  onPress?: () => void;
+  tone?: keyof typeof TONES;
+}) {
+  const t = TONES[tone];
   const content = (
     <>
-      <Text style={styles.statLabel}>
-        {label}
-        {onPress ? ' ›' : ''}
-      </Text>
-      <AmountText amount={amount} currency={currency} size={14} weight="700" sign="neutral" style={styles.statAmount} />
+      {t.icon ? <Ionicons name={t.icon} size={20} color={t.fg} /> : null}
+      <View style={styles.statText}>
+        <Text style={[styles.statLabel, { color: t.fg }]} numberOfLines={1}>
+          {label}
+          {onPress ? ' ›' : ''}
+        </Text>
+        <AmountText amount={amount} currency={currency} size={14.5} weight="800" sign="neutral" style={styles.amount} />
+      </View>
     </>
   );
-  if (!onPress) return <View style={styles.stat}>{content}</View>;
+  const style = [styles.stat, { backgroundColor: t.bg }];
+  if (!onPress) return <View style={style}>{content}</View>;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.stat, pressed && { opacity: 0.8 }]} accessibilityRole="button">
+    <Pressable onPress={onPress} style={({ pressed }) => [style, pressed && { opacity: 0.8 }]} accessibilityRole="button">
       {content}
     </Pressable>
   );
@@ -51,21 +81,19 @@ export function HeroStat({ label, amount, currency, onPress }: { label: string; 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.card,
     borderRadius: radius.xl,
     padding: spacing.xl,
-    gap: 4,
-    overflow: 'hidden',
-    ...shadow.accent,
+    gap: spacing.sm,
+    ...shadow.md,
   },
-  bubble: { position: 'absolute', borderRadius: 999 },
-  bubbleA: { width: 180, height: 180, right: -50, top: -70, backgroundColor: 'rgba(255,255,255,0.1)' },
-  bubbleB: { width: 120, height: 120, right: 60, bottom: -80, backgroundColor: 'rgba(109,40,217,0.55)' },
-  label: { fontSize: fontSize.sm, color: 'rgba(255,255,255,0.82)', fontWeight: '600' },
-  amount: { color: colors.white },
-  note: { fontSize: fontSize.xs, color: '#fecaca', fontWeight: '600' },
-  stats: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  stat: { flex: 1, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: radius.md, padding: spacing.md, gap: 2 },
-  statLabel: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.8)' },
-  statAmount: { color: colors.white },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  label: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontWeight: '800' },
+  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  badgeText: { fontSize: fontSize.sm, fontWeight: '800' },
+  amount: { color: colors.textPrimary },
+  stats: { flexDirection: 'row', gap: spacing.sm + 2, marginTop: spacing.xs },
+  stat: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.lg - 4, paddingVertical: 10, paddingHorizontal: spacing.md },
+  statText: { flex: 1, gap: 1 },
+  statLabel: { fontSize: 12, fontWeight: '800' },
 });

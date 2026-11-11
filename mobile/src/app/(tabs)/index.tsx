@@ -19,7 +19,7 @@ import { InstallHint } from '@/components/InstallHint';
 import { SyncBanner } from '@/components/SyncBanner';
 import { useAuth } from '@/context/AuthContext';
 import { homeWords } from '@/lib/activityWords';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, shadow, spacing } from '@/theme';
 
 export default function ActivitiesScreen() {
   const { user } = useAuth();
@@ -40,7 +40,7 @@ export default function ActivitiesScreen() {
       <View style={styles.header}>
         <Avatar url={user?.avatar} name={user?.username} size={44} />
         <View style={styles.greeting}>
-          <Text style={styles.hello}>Bonjour {user?.username}</Text>
+          <Text style={styles.hello}>Bonjour {capitalize(user?.username)}</Text>
           <Text style={styles.date}>{todayLabel()}</Text>
         </View>
       </View>
@@ -53,10 +53,12 @@ export default function ActivitiesScreen() {
             label={`${home.personal ? 'Ce qui te reste' : 'Bénéfice net'} ce mois · toutes activités`}
             amount={summary.data.net_profit}
             currency={summary.data.currency}>
-            <HeroStat label={home.income} amount={summary.data.revenue} currency={summary.data.currency} />
-            <HeroStat label="Dépenses" amount={summary.data.expenses} currency={summary.data.currency} />
+            <HeroStat label={home.income} amount={summary.data.revenue} currency={summary.data.currency} tone="in" />
+            <HeroStat label="Dépenses" amount={summary.data.expenses} currency={summary.data.currency} tone="out" />
           </HeroCard>
         ) : null}
+
+        {activities.data && activities.data.length === 1 ? <QuickActions activity={activities.data[0]} /> : null}
 
         <Text style={styles.sectionTitle}>Mes activités</Text>
 
@@ -95,6 +97,51 @@ const TYPE_ICONS: Partial<Record<Activity['type'], ComponentProps<typeof Ionicon
   farming: 'leaf-outline',
   household: 'home-outline',
 };
+
+function capitalize(name?: string) {
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : '';
+}
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
+
+/** « Que veux-tu faire ? » : quatre gros boutons avec icône, pour l'activité
+ * unique de l'utilisateur (le cas le plus courant). */
+function QuickActions({ activity }: { activity: Activity }) {
+  const id = String(activity.id);
+  const tiles: { label: string; icon: IconName; color: string; primary?: boolean; onPress: () => void }[] = [];
+  if (activity.has_inventory) {
+    tiles.push({ label: 'Vendre', icon: 'cart-outline', color: colors.white, primary: true, onPress: () => router.push({ pathname: '/activity/[id]/new-sale', params: { id } }) });
+  } else {
+    tiles.push({ label: 'Entrée', icon: 'arrow-down-circle-outline', color: colors.white, primary: true, onPress: () => router.push({ pathname: '/activity/[id]/new-transaction', params: { id, direction: 'in' } }) });
+  }
+  tiles.push({ label: 'Dépense', icon: 'arrow-up-circle-outline', color: colors.negative, onPress: () => router.push({ pathname: '/activity/[id]/new-transaction', params: { id, direction: 'out' } }) });
+  if (activity.has_inventory) {
+    tiles.push({ label: 'Mon stock', icon: 'cube-outline', color: colors.warning, onPress: () => router.push({ pathname: '/activity/[id]/products', params: { id } }) });
+  }
+  if (activity.has_debts) {
+    tiles.push({ label: 'Crédits', icon: 'people-outline', color: colors.info, onPress: () => router.push('/(tabs)/parties') });
+  }
+  if (tiles.length < 4) {
+    tiles.push({ label: 'Mon activité', icon: 'stats-chart-outline', color: colors.accent, onPress: () => router.push({ pathname: '/activity/[id]', params: { id } }) });
+  }
+  return (
+    <View style={styles.quick}>
+      <Text style={styles.sectionTitle}>Que veux-tu faire ?</Text>
+      <View style={styles.quickGrid}>
+        {tiles.slice(0, 4).map((tile) => (
+          <Pressable
+            key={tile.label}
+            onPress={tile.onPress}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.tile, tile.primary && styles.tilePrimary, pressed && styles.cardPressed]}>
+            <Ionicons name={tile.icon} size={32} color={tile.color} />
+            <Text style={[styles.tileLabel, tile.primary && styles.tileLabelPrimary]}>{tile.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 function todayLabel() {
   return new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -137,10 +184,25 @@ function ActivityCard({ activity, netProfit }: { activity: Activity; netProfit?:
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.md },
   greeting: { flex: 1, gap: 2 },
-  hello: { fontSize: fontSize.xl, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.3 },
+  hello: { fontSize: 22, fontWeight: '900', color: colors.textPrimary, letterSpacing: -0.3 },
   date: { fontSize: fontSize.sm, color: colors.textSecondary, textTransform: 'capitalize' },
   content: { paddingHorizontal: spacing.lg, gap: spacing.md },
-  sectionTitle: { fontSize: fontSize.lg, fontWeight: '700', color: colors.textPrimary, marginTop: spacing.sm },
+  sectionTitle: { fontSize: fontSize.lg, fontWeight: '800', color: colors.textPrimary, marginTop: spacing.sm },
+  quick: { gap: spacing.md },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  tile: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    height: 104,
+    borderRadius: radius.lg,
+    backgroundColor: colors.card,
+    padding: spacing.lg,
+    justifyContent: 'space-between',
+    ...shadow.md,
+  },
+  tilePrimary: { backgroundColor: colors.accent, ...shadow.accent },
+  tileLabel: { fontSize: 17, fontWeight: '900', color: colors.textPrimary },
+  tileLabelPrimary: { color: colors.white },
   list: { gap: spacing.sm + 2 },
   cardPressed: { opacity: 0.9 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -159,7 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#c7cbf3',
+    borderColor: colors.borderStrong,
   },
   addLabel: { fontSize: fontSize.md, fontWeight: '700', color: colors.accent },
 });

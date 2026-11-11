@@ -189,7 +189,7 @@ function AccountCard({
       tabIndex={0}
       onClick={onSelect}
       onKeyDown={(e) => (e.key === 'Enter' ? onSelect() : undefined)}
-      style={selected ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px rgba(79,70,229,0.12)' } : undefined}>
+      style={selected ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px rgba(194,65,12,0.12)' } : undefined}>
       <div className="activity-card-head">
         <span className="row-icon" style={{ width: 42, height: 42, borderRadius: 12 }}>
           <Icon size={20} />

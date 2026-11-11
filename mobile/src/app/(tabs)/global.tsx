@@ -89,8 +89,8 @@ export default function GlobalViewScreen() {
         ) : null}
 
         <HeroCard label={`Bénéfice net total · ${formatPeriodLabel(period, anchor)}`} amount={data.net_profit} currency={data.currency}>
-          <HeroStat label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} />
-          <HeroStat label="Dépenses" amount={data.expenses} currency={data.currency} />
+          <HeroStat label="Chiffre d'affaires" amount={data.revenue} currency={data.currency} tone="in" />
+          <HeroStat label="Dépenses" amount={data.expenses} currency={data.currency} tone="out" />
         </HeroCard>
 
         <Card style={styles.patrimoineCard}>

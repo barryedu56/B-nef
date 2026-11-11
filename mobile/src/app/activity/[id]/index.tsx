@@ -89,7 +89,7 @@ export default function ActivityDashboardScreen() {
         </View>
 
         <HeroCard label={words.result} amount={data.net_profit} currency={data.currency}>
-          <HeroStat label={words.income} amount={data.revenue} currency={data.currency} />
+          <HeroStat label={words.income} amount={data.revenue} currency={data.currency} tone="in" />
           <HeroStat
             label="Caisse"
             amount={data.cash_balance}

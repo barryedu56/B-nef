@@ -17,7 +17,25 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Bénef" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="theme-color" content="#4f46e5" />
+    <meta name="theme-color" content="#fbf6ee" />
+    <!-- Police Nunito (ronde, lisible), servie par l'app elle-même : elle
+         marche aussi hors connexion. -->
+    <link rel="preload" href="/app/fonts/nunito.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+      @font-face {
+        font-family: 'Nunito';
+        src: url('/app/fonts/nunito.woff2') format('woff2');
+        font-weight: 200 1000;
+        font-display: swap;
+      }
+      /* Toute l'app en Nunito. Le sélecteur #root passe devant les classes de
+         react-native-web ; les icônes (police donnée dans style="…") gardent
+         la leur. */
+      #root,
+      #root * {
+        font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+    </style>
     <style id="expo-reset">
       /* Pas de zoom au double-tap ; la taille du texte ne change pas en
          tournant l'écran. */
@@ -28,7 +46,7 @@
       html,
       body {
         height: 100%;
-        background-color: #f4f5fa;
+        background-color: #fbf6ee;
       }
       body {
         overflow: hidden;

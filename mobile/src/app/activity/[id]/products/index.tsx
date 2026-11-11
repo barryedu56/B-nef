@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#c7cbf3',
+    borderColor: colors.borderStrong,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
