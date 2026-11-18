@@ -79,6 +79,12 @@ export async function shareWebFile(file: globalThis.File): Promise<void> {
       if ((error as Error).name === 'AbortError') return; // menu fermé par l'utilisateur
     }
   }
+  downloadWebFile(file);
+}
+
+/** Enregistre le fichier sur l'appareil (dossier Téléchargements sur
+ * Android, app Fichiers sur iPhone). */
+export function downloadWebFile(file: globalThis.File): void {
   const href = URL.createObjectURL(file);
   const link = document.createElement('a');
   link.href = href;

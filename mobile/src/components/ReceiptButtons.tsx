@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
-import { shareWebFile } from '@/api/exports';
+import { downloadWebFile, shareWebFile } from '@/api/exports';
 import { prepareWebReceipt, shareReceipt, type ReceiptFile } from '@/api/receipts';
 import { Button } from '@/components/ui/Button';
 import { colors, fontSize, spacing } from '@/theme';
@@ -33,16 +33,39 @@ export function ReceiptButtons({ txnId }: { txnId: number }) {
   };
 
   if (ready) {
+    const isImage = ready.type === 'image/png';
     return (
       <View style={styles.wrap}>
-        <Button
-          label={ready.type === 'image/png' ? 'Partager l’image du reçu' : 'Partager le reçu PDF'}
-          icon="share-outline"
-          onPress={() => {
-            void shareWebFile(ready);
-            setReady(null);
-          }}
-        />
+        <Text style={styles.readyTitle}>{isImage ? 'Image du reçu prête' : 'Reçu PDF prêt'}</Text>
+        <View style={styles.row}>
+          <Button
+            label="Enregistrer"
+            icon="download-outline"
+            fullWidth={false}
+            style={styles.half}
+            onPress={() => {
+              downloadWebFile(ready);
+              setReady(null);
+            }}
+          />
+          <Button
+            label="Partager"
+            icon="share-outline"
+            variant="secondary"
+            fullWidth={false}
+            style={styles.half}
+            onPress={() => {
+              void shareWebFile(ready);
+              setReady(null);
+            }}
+          />
+        </View>
+        {isImage && IS_IOS ? (
+          <Text style={styles.note}>Pour la mettre dans Photos : Partager, puis « Enregistrer l’image ».</Text>
+        ) : null}
+        <Text onPress={() => setReady(null)} style={styles.back}>
+          Retour
+        </Text>
       </View>
     );
   }
@@ -76,7 +99,14 @@ export function ReceiptButtons({ txnId }: { txnId: number }) {
   );
 }
 
+const IS_IOS =
+  Platform.OS === 'web' &&
+  typeof navigator !== 'undefined' &&
+  (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1));
+
 const styles = StyleSheet.create({
+  readyTitle: { fontSize: fontSize.md, fontWeight: '800', color: colors.textPrimary, textAlign: 'center' },
+  back: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', paddingVertical: spacing.sm },
   wrap: { gap: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm },
   half: { flex: 1 },
