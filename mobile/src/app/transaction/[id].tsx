@@ -136,6 +136,15 @@ export default function TransactionDetailScreen() {
           </Card>
         ) : null}
 
+        {!locked && t.kind === 'sale' && Number(t.settled_amount ?? 0) === 0 ? (
+          <Button
+            label="Modifier la vente"
+            icon="create-outline"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/activity/[id]/new-sale', params: { id: String(t.activity), replaces: String(t.id) } })}
+          />
+        ) : null}
+
         {!locked && t.is_credit && !t.is_settled ? (
           showSettleForm ? (
             <Card style={styles.card}>

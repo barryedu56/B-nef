@@ -90,6 +90,10 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
       setError('Indique une quantité et un coût valides.');
       return;
     }
+    if (isCredit && !partyId) {
+      setError('Choisis le fournisseur à payer.');
+      return;
+    }
     if (isCredit && amountPaidNow && paidNowValue > total) {
       setError('Le montant payé maintenant dépasse le total de l’achat.');
       return;
@@ -104,7 +108,7 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
         extra_fees: fees > 0 ? String(fees) : undefined,
         cost_currency: currency,
         payment_method: paymentMethodId ? Number(paymentMethodId) : null,
-        party: isCredit && partyId ? Number(partyId) : null,
+        party: partyId ? Number(partyId) : null,
         is_credit: isCredit,
         amount_paid_now: isCredit && paidNowValue > 0 ? String(paidNowValue) : undefined,
         fee: feeValue > 0 ? String(feeValue) : undefined,
@@ -171,9 +175,6 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
               </View>
             </View>
             <AmountField label="Prix de vente" value={salePrice} onChangeText={onPriceChange} suffix={currency} />
-            <Text style={styles.hint}>
-              Calculé à partir du coût de revient et de la marge — modifie l'un ou l'autre si ça ne te convient pas.
-            </Text>
           </View>
         ) : null}
 
@@ -191,6 +192,8 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
           </View>
         </View>
 
+        <PartyPicker label="Fournisseur (facultatif)" kind="supplier" value={partyId} onChange={setPartyId} />
+
         {hasDebts ? (
           <View style={styles.creditRow}>
             <Text style={styles.label}>Achat à crédit</Text>
@@ -198,19 +201,13 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
           </View>
         ) : null}
         {hasDebts && isCredit ? (
-          <>
-            <PartyPicker label="Fournisseur" kind="supplier" value={partyId} onChange={setPartyId} />
-            <AmountField
-              label="Montant payé maintenant (facultatif)"
-              value={amountPaidNow}
-              onChangeText={setAmountPaidNow}
-              placeholder="0"
-              suffix={currency}
-            />
-            <Text style={styles.hint}>
-              Laisse à 0 si rien n'est payé tout de suite. Sinon, le reste devient ta dette envers ce fournisseur.
-            </Text>
-          </>
+          <AmountField
+            label="Déjà payé (facultatif)"
+            value={amountPaidNow}
+            onChangeText={setAmountPaidNow}
+            placeholder="0"
+            suffix={currency}
+          />
         ) : null}
 
         {showFee ? (
@@ -220,7 +217,6 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
             onChangeText={setFee}
             placeholder="0"
             suffix={currency}
-            hint="Ce que l'opérateur prend pour payer le fournisseur. Compté comme une dépense, pas dans le coût du produit."
           />
         ) : null}
 

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
@@ -16,15 +16,21 @@ import { Screen } from '@/components/ui/Screen';
 import { Stepper } from '@/components/ui/Stepper';
 import { TopBar } from '@/components/ui/TopBar';
 import { useActivity } from '@/hooks/useActivities';
-import { useCreateSale, useProducts } from '@/hooks/useProducts';
-import { usePaymentMethods } from '@/hooks/useTransactions';
+import { useIsOnline } from '@/hooks/useOffline';
+import { useCreateSale, useProducts, useSaleLines } from '@/hooks/useProducts';
+import { usePaymentMethods, useTransaction } from '@/hooks/useTransactions';
 import { formatAmount } from '@/lib/money';
 import { colors, fontSize, radius, shadow, spacing } from '@/theme';
 import { formatQty } from '@/components/ProductCard';
 
 export default function NewSaleScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `replaces` : correction d'une vente existante (le panier part de celle-ci).
+  const { id, replaces } = useLocalSearchParams<{ id: string; replaces?: string }>();
   const activityId = Number(id);
+  const replacedId = replaces ? Number(replaces) : undefined;
+  const replaced = useTransaction(replacedId);
+  const replacedLines = useSaleLines(replacedId, replacedId !== undefined);
+  const online = useIsOnline();
 
   const activity = useActivity(activityId);
   const products = useProducts(activityId);
@@ -40,6 +46,26 @@ export default function NewSaleScreen() {
   const [partyId, setPartyId] = useState<string | null>(null);
   const [amountPaidNow, setAmountPaidNow] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Quantités de la vente corrigée : elles reviennent en stock à l'enregistrement.
+  const [originalQty, setOriginalQty] = useState<Record<number, number>>({});
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !replaced.data || !replacedLines.data) return;
+    prefilled.current = true;
+    const qty: Record<number, number> = {};
+    const price: Record<number, string> = {};
+    for (const line of replacedLines.data) {
+      qty[line.product] = (qty[line.product] ?? 0) + Number(line.quantity);
+      price[line.product] = String(Number(line.unit_price));
+    }
+    setQuantities(qty);
+    setOriginalQty(qty);
+    setPrices(price);
+    setPaymentMethodId(replaced.data.payment_method ? String(replaced.data.payment_method) : null);
+    setPartyId(replaced.data.party ? String(replaced.data.party) : null);
+    setIsCredit(replaced.data.is_credit);
+  }, [replaced.data, replacedLines.data]);
 
   const filtered = useMemo(() => {
     const list = products.data ?? [];
@@ -79,6 +105,14 @@ export default function NewSaleScreen() {
       setError(`Écris le prix de « ${noPrice.product.name} ».`);
       return;
     }
+    if (isCredit && !partyId) {
+      setError('Choisis le client qui doit payer.');
+      return;
+    }
+    if (replacedId !== undefined && !online) {
+      setError('Il faut internet pour modifier une vente.');
+      return;
+    }
     if (isCredit && amountPaidNow && paidNowValue > total) {
       setError('Le montant payé maintenant dépasse le total de la vente.');
       return;
@@ -94,10 +128,11 @@ export default function NewSaleScreen() {
           ...(line.price !== Number(line.product.sale_price) ? { unit_price: String(line.price) } : {}),
         })),
         payment_method: paymentMethodId ? Number(paymentMethodId) : null,
-        party: isCredit && partyId ? Number(partyId) : null,
+        party: partyId ? Number(partyId) : null,
         is_credit: isCredit,
         amount_paid_now: isCredit && paidNowValue > 0 ? String(paidNowValue) : undefined,
         sale_currency: act.currency,
+        ...(replaced.data ? { replaces: replaced.data.id, occurred_on: replaced.data.occurred_on } : {}),
       });
       router.back();
     } catch (e) {
@@ -107,7 +142,7 @@ export default function NewSaleScreen() {
 
   return (
     <Screen scroll edges={['top']}>
-      <TopBar title="Nouvelle vente" subtitle={act.name} back />
+      <TopBar title={replacedId !== undefined ? 'Modifier la vente' : 'Nouvelle vente'} subtitle={act.name} back />
       <View style={styles.content}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={16} color={colors.textTertiary} />
@@ -138,6 +173,7 @@ export default function NewSaleScreen() {
                 product={product}
                 currency={act.currency}
                 quantity={quantities[product.id] ?? 0}
+                extraStock={originalQty[product.id] ?? 0}
                 onChange={(qty) => setQuantity(product.id, qty)}
               />
             ))}
@@ -147,10 +183,7 @@ export default function NewSaleScreen() {
 
         {cartLines.length > 0 ? (
           <Card tone="muted" style={styles.cartCard}>
-            <View style={styles.cartRow}>
-              <Text style={styles.cartLabel}>Sous-total · {cartLines.length} ligne{cartLines.length > 1 ? 's' : ''}</Text>
-            </View>
-            <Text style={styles.hint}>Le client discute le prix ? Change le prix de l'unité ci-dessous.</Text>
+            <Text style={styles.cartLabel}>Prix négocié ? Touche le prix pour le changer.</Text>
             {cartLines.map((line) => (
               <CartLine
                 key={line.product.id}
@@ -182,6 +215,8 @@ export default function NewSaleScreen() {
             ))}
           </View>
 
+          <PartyPicker label="Client (facultatif)" kind="client" value={partyId} onChange={setPartyId} />
+
           {act.has_debts ? (
             <View style={styles.creditRow}>
               <Text style={styles.sectionLabel}>Vente à crédit</Text>
@@ -189,19 +224,13 @@ export default function NewSaleScreen() {
             </View>
           ) : null}
           {act.has_debts && isCredit ? (
-            <>
-              <PartyPicker label="Client" kind="client" value={partyId} onChange={setPartyId} />
-              <AmountField
-                label="Montant payé maintenant (facultatif)"
-                value={amountPaidNow}
-                onChangeText={setAmountPaidNow}
-                placeholder="0"
-                suffix={act.currency}
-              />
-              <Text style={styles.hint}>
-                Laisse à 0 si rien n'est payé tout de suite. Sinon, le reste devient la créance du client.
-              </Text>
-            </>
+            <AmountField
+              label="Déjà payé (facultatif)"
+              value={amountPaidNow}
+              onChangeText={setAmountPaidNow}
+              placeholder="0"
+              suffix={act.currency}
+            />
           ) : null}
         </Card>
 
@@ -213,7 +242,6 @@ export default function NewSaleScreen() {
           loading={createSale.isPending}
           disabled={cartLines.length === 0}
         />
-        <Text style={styles.note}>Le stock des produits vendus sera mis à jour automatiquement.</Text>
       </View>
     </Screen>
   );
@@ -225,14 +253,17 @@ function ProductTile({
   product,
   currency,
   quantity,
+  extraStock = 0,
   onChange,
 }: {
   product: Product;
   currency: string;
   quantity: number;
+  /** Quantité de la vente corrigée, qui reviendra en stock. */
+  extraStock?: number;
   onChange: (qty: number) => void;
 }) {
-  const stock = Number(product.stock_quantity);
+  const stock = Number(product.stock_quantity) + extraStock;
   const selected = quantity > 0;
   return (
     <View style={[styles.tile, selected && styles.tileSelected]}>

@@ -30,7 +30,7 @@ export function PartyPicker({ label, kind, value, onChange }: PartyPickerProps) 
   const onCreate = async () => {
     if (!newName.trim()) return;
     if (newPhone && !isValidGuineaPhone(newPhone)) {
-      setAddError('Numéro invalide : 9 chiffres, en commençant par 61, 62, 65 ou 66.');
+      setAddError('Numéro invalide (ex. 622123456).');
       return;
     }
     setAddError(null);
@@ -66,7 +66,7 @@ export function PartyPicker({ label, kind, value, onChange }: PartyPickerProps) 
         </View>
 
         <View style={styles.addBlock}>
-          <Text style={styles.addLabel}>Ajouter un nouveau tiers (facultatif : nom et numéro)</Text>
+          <Text style={styles.addLabel}>Nouveau : nom et numéro</Text>
           <View style={styles.addRow}>
             <TextInput
               value={newName}
@@ -78,7 +78,7 @@ export function PartyPicker({ label, kind, value, onChange }: PartyPickerProps) 
             <TextInput
               value={newPhone}
               onChangeText={(text) => setNewPhone(normalizeGuineaPhone(text).slice(0, 9))}
-              placeholder="Numéro (ex. 622123456)"
+              placeholder="Numéro"
               placeholderTextColor={colors.textTertiary}
               keyboardType="phone-pad"
               style={[styles.addInput, { flex: 1 }]}
@@ -86,7 +86,7 @@ export function PartyPicker({ label, kind, value, onChange }: PartyPickerProps) 
           </View>
           {addError ? <Text style={styles.addError}>{addError}</Text> : null}
           <Button
-            label="Ajouter ce tiers"
+            label="Ajouter"
             variant="secondary"
             onPress={onCreate}
             disabled={!newName.trim()}
@@ -99,7 +99,7 @@ export function PartyPicker({ label, kind, value, onChange }: PartyPickerProps) 
           keyExtractor={(item) => String(item.id)}
           style={styles.list}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListEmptyComponent={<Text style={styles.empty}>Aucun tiers pour l’instant — ajoute-en un ci-dessus.</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>Personne pour l’instant.</Text>}
           renderItem={({ item }) => (
             <Pressable
               style={styles.option}

@@ -73,6 +73,8 @@ export interface SaleInput {
   global_discount?: string;
   sale_currency?: string;
   note?: string;
+  /** Correction : id de la vente remplacée (annulée côté serveur). */
+  replaces?: number;
 }
 
 export function createSale(input: SaleInput) {
