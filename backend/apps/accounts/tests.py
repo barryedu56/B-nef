@@ -200,3 +200,29 @@ class AuthMessagesTests(TestCase):
             "username": "Fatou", "email": "f2@example.com", "password": "UnMotDePasse!2026",
         }, format="json")
         self.assertEqual(r.json()["username"][0], "Ce nom d'utilisateur est déjà pris : choisis-en un autre.")
+
+
+class ProfileEditTests(ApiTestCase):
+    def test_telephone_modifiable_sans_mot_de_passe(self):
+        r = self.client.patch("/api/auth/me/", {"phone": "622123456"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.phone, "622123456")
+
+    def test_email_exige_le_mot_de_passe(self):
+        r = self.client.patch("/api/auth/me/", {"email": "nouveau@ex.com"}, format="json")
+        self.assertEqual(r.status_code, 400, r.content)
+        r = self.client.patch("/api/auth/me/", {"email": "nouveau@ex.com", "current_password": "faux"}, format="json")
+        self.assertEqual(r.status_code, 400, r.content)
+        self.user.refresh_from_db()
+        self.assertNotEqual(self.user.email, "nouveau@ex.com")
+        r = self.client.patch("/api/auth/me/", {"email": "nouveau@ex.com", "current_password": "MotDePasse123"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "nouveau@ex.com")
+        self.assertNotIn("current_password", r.json())
+
+    def test_email_deja_pris_refuse(self):
+        self.make_user("autre").__class__.objects.filter(username="autre").update(email="pris@ex.com")
+        r = self.client.patch("/api/auth/me/", {"email": "PRIS@ex.com", "current_password": "MotDePasse123"}, format="json")
+        self.assertEqual(r.status_code, 400, r.content)

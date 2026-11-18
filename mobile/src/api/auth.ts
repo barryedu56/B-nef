@@ -35,7 +35,9 @@ export function fetchMe() {
   return apiRequest<Me>('/auth/me/');
 }
 
-export function updateMe(patch: Partial<Pick<Me, 'phone' | 'language' | 'base_currency' | 'display_currency' | 'email'>>) {
+export function updateMe(
+  patch: Partial<Pick<Me, 'phone' | 'language' | 'base_currency' | 'display_currency' | 'email'>> & { current_password?: string },
+) {
   return apiRequest<Me>('/auth/me/', { method: 'PATCH', body: patch });
 }
 

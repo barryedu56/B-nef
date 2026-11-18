@@ -17,6 +17,9 @@ class UserSerializer(serializers.ModelSerializer):
         source="effective_display_currency_id", read_only=True
     )
     avatar = serializers.SerializerMethodField()
+    # Exigé pour changer d'e-mail : l'e-mail permet de réinitialiser le mot de
+    # passe, donc de prendre le compte (téléphone prêté, laissé ouvert…).
+    current_password = serializers.CharField(write_only=True, required=False, trim_whitespace=False)
 
     class Meta:
         model = User
@@ -31,6 +34,7 @@ class UserSerializer(serializers.ModelSerializer):
             "display_currency",
             "effective_display_currency",
             "is_staff",
+            "current_password",
         )
         read_only_fields = ("id", "username", "is_staff")
 
@@ -44,8 +48,23 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_phone(self, value):
         return clean_guinea_phone(value)
 
+    def validate(self, attrs):
+        email = attrs.get("email")
+        if self.instance is not None and email is not None and email.lower() != (self.instance.email or "").lower():
+            if not email:
+                raise serializers.ValidationError(
+                    {"email": "Garde une adresse e-mail : elle sert si tu oublies ton mot de passe."}
+                )
+            if not self.instance.check_password(attrs.get("current_password") or ""):
+                raise serializers.ValidationError({"current_password": "Mot de passe incorrect."})
+            if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+                # Vague exprès : on ne confirme pas qu'une adresse a un compte.
+                raise serializers.ValidationError({"email": "Cette adresse e-mail ne peut pas être utilisée."})
+        return attrs
+
     @db_transaction.atomic
     def update(self, instance, validated_data):
+        validated_data.pop("current_password", None)
         old_base = instance.base_currency_id
         user = super().update(instance, validated_data)
         if user.base_currency_id != old_base:

@@ -169,6 +169,7 @@ export default function AccountScreen() {
         </Card>
 
         <Group>
+          <Row icon="person-outline" color={colors.info} label="Mes informations" onPress={() => router.push('/profile')} />
           <Row icon="key-outline" color={colors.accent} label="Mot de passe" onPress={() => router.push('/change-password')} last />
         </Group>
 
