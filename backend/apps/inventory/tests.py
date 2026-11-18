@@ -208,3 +208,25 @@ class InitialStockCorrectionTests(ApiTestCase):
         self.assertEqual(r.status_code, 201, r.content)
         s = self.summary(f"/api/reports/activity/{self.shop.pk}/")
         self.assertEqual(s["stock_losses"], 400000)
+
+
+class ReceiptTests(ApiTestCase):
+    def test_recu_pdf_et_image(self):
+        sale = self.client.post(
+            "/api/sales/", {"activity": self.shop.pk, "lines": [{"product": self.product.pk, "quantity": "2"}]}, format="json"
+        ).json()
+        r = self.client.get(f"/api/transactions/{sale['id']}/receipt/?file=pdf")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "application/pdf")
+        self.assertTrue(r.content.startswith(b"%PDF"))
+        r = self.client.get(f"/api/transactions/{sale['id']}/receipt/?file=png")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.content.startswith(b"\x89PNG"))
+
+    def test_recu_d_un_autre_utilisateur_introuvable(self):
+        sale = self.client.post(
+            "/api/sales/", {"activity": self.shop.pk, "lines": [{"product": self.product.pk, "quantity": "1"}]}, format="json"
+        ).json()
+        other = self.make_user("intrus")
+        self.client.force_authenticate(other)
+        self.assertEqual(self.client.get(f"/api/transactions/{sale['id']}/receipt/").status_code, 404)

@@ -61,6 +61,11 @@ export function downloadReportPdf(params: { activity?: number; period: Period; d
   );
 }
 
+/** Reçu d'une vente, à donner au client : PDF ou image. */
+export function downloadReceipt(transactionId: number, file: 'pdf' | 'png') {
+  return downloadFile(`/transactions/${transactionId}/receipt/`, { file }, `recu-benef-${transactionId}.${file}`);
+}
+
 /** Export pour le comptable : opérations + compte de résultat. */
 export function downloadExport(params: { file: 'pdf' | 'xlsx' | 'csv'; start: string; end: string; activity?: number }) {
   return downloadFile(

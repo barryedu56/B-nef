@@ -1,4 +1,5 @@
 from django.db import transaction as db_transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -12,6 +13,7 @@ from rest_framework.views import APIView
 from apps.activities.models import Activity
 from apps.contacts.models import Party
 from apps.inventory.models import Product
+from apps.reports.receipt import build_receipt_pdf, build_receipt_png, receipt_for
 from apps.inventory.services import adjust_stock, consume_for_personal_use, register_sale, restock
 
 from . import accounts
@@ -194,6 +196,22 @@ class TransactionViewSet(viewsets.ModelViewSet):
         except VoidError as exc:
             raise ValidationError({"detail": str(exc)}) from exc
         return Response(TransactionSerializer(txn).data)
+
+    @action(detail=True, methods=["get"])
+    def receipt(self, request, pk=None):
+        """Reçu d'une vente : `?file=pdf` (défaut) ou `?file=png`."""
+        txn = self.get_object()
+        if txn.kind != Transaction.Kind.SALE:
+            raise ValidationError({"detail": "Le reçu existe seulement pour une vente."})
+        data = receipt_for(txn)
+        if request.query_params.get("file") == "png":
+            response = HttpResponse(build_receipt_png(data), content_type="image/png")
+            ext = "png"
+        else:
+            response = HttpResponse(build_receipt_pdf(data), content_type="application/pdf")
+            ext = "pdf"
+        response["Content-Disposition"] = f'attachment; filename="recu-benef-{txn.pk}.{ext}"'
+        return response
 
     @action(detail=True, methods=["post"])
     def settle(self, request, pk=None):

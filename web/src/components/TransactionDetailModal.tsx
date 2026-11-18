@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { ApiError } from '@/api/client';
+import { downloadReceipt } from '@/api/reports';
 import { PartyPicker } from './PartyPicker';
 import { SettleForm } from './SettleForm';
 import { AmountText } from './ui/AmountText';
@@ -25,6 +26,7 @@ export function TransactionDetailModal({ transactionId, onClose }: TransactionDe
   const categories = useCategories(txn.data?.direction);
   const paymentMethods = usePaymentMethods();
   const saleLines = useSaleLines(transactionId, txn.data?.kind === 'sale');
+  const [receiptBusy, setReceiptBusy] = useState<'pdf' | 'png' | null>(null);
   const updateTxn = useUpdateTransaction();
   const voidTxn = useVoidTransaction();
 
@@ -66,6 +68,18 @@ export function TransactionDetailModal({ transactionId, onClose }: TransactionDe
   const act = activity.data;
   const currency = act?.currency ?? t.currency;
   const locked = t.is_voided;
+
+  const receipt = async (file: 'pdf' | 'png') => {
+    setError(null);
+    setReceiptBusy(file);
+    try {
+      await downloadReceipt(t.id, file);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Le reçu n'a pas pu être créé.");
+    } finally {
+      setReceiptBusy(null);
+    }
+  };
 
   const onSave = async () => {
     setError(null);
@@ -142,6 +156,14 @@ export function TransactionDetailModal({ transactionId, onClose }: TransactionDe
                 </div>
               ))
             )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+              <Button type="button" variant="secondary" onClick={() => void receipt('pdf')} loading={receiptBusy === 'pdf'}>
+                Reçu PDF
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => void receipt('png')} loading={receiptBusy === 'png'}>
+                Reçu en image
+              </Button>
+            </div>
           </div>
         ) : null}
 

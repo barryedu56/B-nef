@@ -4,6 +4,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
 import { PartyPicker } from '@/components/PartyPicker';
+import { ReceiptButtons } from '@/components/ReceiptButtons';
 import { SettleForm } from '@/components/SettleForm';
 import { AmountText } from '@/components/ui/AmountText';
 import { Button } from '@/components/ui/Button';
@@ -136,6 +137,8 @@ export default function TransactionDetailScreen() {
             )}
           </Card>
         ) : null}
+
+        {t.kind === 'sale' ? <ReceiptButtons txnId={t.id} /> : null}
 
         {!locked && t.kind === 'sale' && Number(t.settled_amount ?? 0) === 0 ? (
           <Button

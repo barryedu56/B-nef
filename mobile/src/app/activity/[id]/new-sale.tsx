@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
-import type { Product } from '@/api/types';
+import type { Product, Transaction } from '@/api/types';
 import { AmountField } from '@/components/ui/AmountField';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -12,6 +12,7 @@ import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingView } from '@/components/ui/QueryState';
 import { PartyPicker } from '@/components/PartyPicker';
+import { ReceiptButtons } from '@/components/ReceiptButtons';
 import { Screen } from '@/components/ui/Screen';
 import { Stepper } from '@/components/ui/Stepper';
 import { TopBar } from '@/components/ui/TopBar';
@@ -46,6 +47,8 @@ export default function NewSaleScreen() {
   const [partyId, setPartyId] = useState<string | null>(null);
   const [amountPaidNow, setAmountPaidNow] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Vente enregistrée : écran « C'est vendu » avec le reçu.
+  const [done, setDone] = useState<Transaction | null>(null);
 
   // Quantités de la vente corrigée : elles reviennent en stock à l'enregistrement.
   const [originalQty, setOriginalQty] = useState<Record<number, number>>({});
@@ -119,7 +122,7 @@ export default function NewSaleScreen() {
     }
     setError(null);
     try {
-      await createSale.mutateAsync({
+      const txn = await createSale.mutateAsync({
         activity: activityId,
         lines: cartLines.map((line) => ({
           product: line.product.id,
@@ -134,11 +137,41 @@ export default function NewSaleScreen() {
         sale_currency: act.currency,
         ...(replaced.data ? { replaces: replaced.data.id, occurred_on: replaced.data.occurred_on } : {}),
       });
-      router.back();
+      setDone(txn);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Impossible d'enregistrer la vente.");
     }
   };
+
+  const startOver = () => {
+    setDone(null);
+    setQuantities({});
+    setPrices({});
+    setPartyId(null);
+    setIsCredit(false);
+    setAmountPaidNow('');
+    setSearch('');
+  };
+
+  if (done) {
+    return (
+      <Screen scroll edges={['top']}>
+        <TopBar title="C'est vendu" subtitle={act.name} back />
+        <View style={styles.content}>
+          <Card style={styles.doneCard}>
+            <View style={styles.doneIcon}>
+              <Ionicons name="checkmark" size={40} color={colors.white} />
+            </View>
+            <Text style={styles.doneTitle}>Vente enregistrée</Text>
+            <Text style={styles.doneAmount}>{formatAmount(done.amount, done.currency || act.currency)}</Text>
+          </Card>
+          <ReceiptButtons txnId={done.id} />
+          {replacedId === undefined ? <Button label="Nouvelle vente" icon="add" onPress={startOver} /> : null}
+          <Button label="Terminé" variant="secondary" onPress={() => router.back()} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen scroll edges={['top']}>
@@ -337,6 +370,10 @@ function CartLine({
 }
 
 const styles = StyleSheet.create({
+  doneCard: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxl },
+  doneIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.positive, alignItems: 'center', justifyContent: 'center' },
+  doneTitle: { fontSize: fontSize.xl, fontWeight: '900', color: colors.textPrimary },
+  doneAmount: { fontSize: 28, fontWeight: '900', color: colors.positive },
   content: { padding: spacing.lg, gap: spacing.md },
   searchBox: {
     flexDirection: 'row',
