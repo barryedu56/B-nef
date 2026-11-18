@@ -25,6 +25,9 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { activityWords } from '@/lib/activityWords';
 import { formatPeriodLabel, formatRelativeDate, shiftAnchor, todayISO } from '@/lib/dates';
 
+/** Opérations visibles avant « Voir plus ». */
+const HISTORY_PREVIEW = 4;
+
 const PERIOD_OPTIONS: { value: Period; label: string }[] = [
   { value: 'day', label: 'Jour' },
   { value: 'week', label: 'Semaine' },
@@ -41,6 +44,7 @@ export function ActivityDetailPage() {
   const [anchor, setAnchor] = useState(todayISO());
   const [modal, setModal] = useState<'transaction' | 'sale' | 'edit' | null>(null);
   const [openTransactionId, setOpenTransactionId] = useState<number | null>(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const activity = useActivity(activityId);
   const summary = useActivitySummary(activityId, period, undefined, anchor);
@@ -54,7 +58,8 @@ export function ActivityDetailPage() {
   const act = activity.data;
   const words = activityWords(act.type);
   const data = summary.data;
-  const recent = (transactions.data?.results ?? []).slice(0, 8);
+  const allRecent = transactions.data?.results ?? [];
+  const recent = showAllHistory ? allRecent : allRecent.slice(0, HISTORY_PREVIEW);
 
   const toggleModule = (field: 'has_inventory' | 'has_debts' | 'has_budget') => (value: boolean) => {
     updateActivity.mutate({ [field]: value });
@@ -162,6 +167,13 @@ export function ActivityDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                {allRecent.length > HISTORY_PREVIEW ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10 }}>
+                    <Button variant="secondary" onClick={() => setShowAllHistory((v) => !v)}>
+                      {showAllHistory ? 'Voir moins' : `Voir plus (${allRecent.length - HISTORY_PREVIEW})`}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             )}
           </Card>

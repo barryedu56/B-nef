@@ -16,6 +16,10 @@ import { OFFLINE_CACHE_MAX_AGE, persister, queryClient } from '@/offline/queryCl
 import { startOutboxSync } from '@/offline/sync';
 import { registerServiceWorker } from '@/lib/pwa';
 import { setupReminders } from '@/lib/reminders';
+import { installWebAlert } from '@/lib/webAlert';
+
+// Confirmations (archiver, supprimer…) : muettes dans le navigateur sans ça.
+installWebAlert();
 
 // Garde le splash affiché tant que les polices d'icônes ne sont pas prêtes —
 // sur Android via Expo Go, elles se chargent après le premier rendu, ce qui

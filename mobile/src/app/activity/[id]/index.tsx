@@ -41,7 +41,8 @@ export default function ActivityDashboardScreen() {
 
   const activity = useActivity(activityId);
   const summary = useActivitySummary(activityId, period, undefined, anchor);
-  const transactions = useTransactions(activityId, 6);
+  const transactions = useTransactions(activityId);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const categories = useCategories(activityId);
   const paymentMethods = usePaymentMethods();
 
@@ -151,7 +152,7 @@ export default function ActivityDashboardScreen() {
           </View>
           {transactions.data && transactions.data.results.length > 0 ? (
             <View>
-              {transactions.data.results.map((txn) => (
+              {(showAllHistory ? transactions.data.results : transactions.data.results.slice(0, HISTORY_PREVIEW)).map((txn) => (
                 <TransactionRow
                   key={txn.id}
                   txn={txn}
@@ -160,6 +161,14 @@ export default function ActivityDashboardScreen() {
                   paymentName={txn.payment_method ? paymentById.get(txn.payment_method) : undefined}
                 />
               ))}
+              {transactions.data.results.length > HISTORY_PREVIEW ? (
+                <Pressable onPress={() => setShowAllHistory((v) => !v)} style={styles.moreButton} accessibilityRole="button">
+                  <Text style={styles.moreLabel}>
+                    {showAllHistory ? 'Voir moins' : `Voir plus (${transactions.data.results.length - HISTORY_PREVIEW})`}
+                  </Text>
+                  <Ionicons name={showAllHistory ? 'chevron-up' : 'chevron-down'} size={18} color={colors.accent} />
+                </Pressable>
+              ) : null}
             </View>
           ) : (
             <EmptyState icon="receipt-outline" title="Aucune opération enregistrée" />
@@ -169,6 +178,9 @@ export default function ActivityDashboardScreen() {
     </Screen>
   );
 }
+
+/** Opérations visibles avant « Voir plus ». */
+const HISTORY_PREVIEW = 4;
 
 function ActivityBudgetsCard({ activityId }: { activityId: number }) {
   const budgets = useBudgetsStatus(activityId);
@@ -244,6 +256,8 @@ function TransactionRow({
 }
 
 const styles = StyleSheet.create({
+  moreButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 48, marginTop: spacing.sm },
+  moreLabel: { fontSize: fontSize.md, fontWeight: '800', color: colors.accent },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   budgetLink: { fontSize: fontSize.sm, fontWeight: '600', color: colors.accent },
   budgetEmpty: { fontSize: fontSize.xs, color: colors.textTertiary },
