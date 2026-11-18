@@ -46,6 +46,33 @@ class SaleTests(ApiTestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.sale_price, Decimal("1500"))
 
+    def test_correction_de_vente_remplace_l_ancienne(self):
+        first = self.sell("4").json()
+        r = self.client.post(
+            "/api/sales/",
+            {"activity": self.shop.pk, "lines": [{"product": self.product.pk, "quantity": "2"}], "replaces": first["id"]},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 201, r.content)
+        old = Transaction.objects.get(pk=first["id"])
+        self.assertTrue(old.is_voided)
+        self.assertEqual(old.voided_reason, "Vente corrigée")
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 8)
+        self.assertEqual(Transaction.objects.filter(voided_at__isnull=True, kind="sale").count(), 1)
+
+    def test_correction_refusee_garde_l_ancienne_vente(self):
+        first = self.sell("4").json()
+        r = self.client.post(
+            "/api/sales/",
+            {"activity": self.shop.pk, "lines": [{"product": self.product.pk, "quantity": "50"}], "replaces": first["id"]},
+            format="json",
+        )
+        self.assertEqual(r.status_code, 400, r.content)
+        self.assertFalse(Transaction.objects.get(pk=first["id"]).is_voided)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 6)
+
     def test_prix_negatif_refuse(self):
         r = self.client.post(
             "/api/sales/",

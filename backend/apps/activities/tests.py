@@ -132,3 +132,17 @@ class AnonymousAccessTests(ApiTestCase):
         anon = APIClient()
         for path in ("/api/activities/", "/api/transactions/", "/api/payment-methods/overview/", "/api/recurring/due/"):
             self.assertEqual(anon.get(path).status_code, 401, path)
+
+
+class ActivityEditTests(ApiTestCase):
+    def test_nom_et_type_modifiables(self):
+        r = self.client.patch(f"/api/activities/{self.shop.pk}/", {"name": "Boutique Madina", "type": "service"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.shop.refresh_from_db()
+        self.assertEqual((self.shop.name, self.shop.type), ("Boutique Madina", "service"))
+
+    def test_devise_non_modifiable(self):
+        r = self.client.patch(f"/api/activities/{self.shop.pk}/", {"currency": "USD"}, format="json")
+        self.assertEqual(r.status_code, 400, r.content)
+        self.shop.refresh_from_db()
+        self.assertEqual(self.shop.currency_id, "GNF")

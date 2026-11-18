@@ -259,6 +259,9 @@ class SaleInputSerializer(serializers.Serializer):
     # réellement eu lieu, on l'accepte même si le stock enregistré ne suffit
     # plus (il deviendra négatif et apparaîtra en alerte de stock).
     recorded_offline = serializers.BooleanField(default=False)
+    # Correction d'une vente : celle-ci remplace la vente indiquée, qui est
+    # annulée (stock remis) dans la même opération. Rien n'est effacé.
+    replaces = serializers.IntegerField(required=False, allow_null=True)
 
     def validate(self, attrs):
         if attrs.get("amount_paid_now") and not attrs.get("is_credit"):

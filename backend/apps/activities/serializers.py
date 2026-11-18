@@ -39,6 +39,13 @@ class ActivitySerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id", "created_at")
 
+    def validate_currency(self, value):
+        # Les montants déjà saisis sont dans la devise de l'activité : la
+        # changer après coup les fausserait tous.
+        if self.instance is not None and value != self.instance.currency:
+            raise serializers.ValidationError("La devise d'une activité ne peut plus être changée.")
+        return value
+
     def validate_opening_balance(self, value):
         if value < 0:
             raise serializers.ValidationError("La somme de départ ne peut pas être négative.")

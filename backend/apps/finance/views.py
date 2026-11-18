@@ -1,3 +1,4 @@
+from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -247,24 +248,37 @@ class SaleView(_OwnedLookupMixin, APIView):
             }
             for line in v["lines"]
         ]
-        try:
-            txn = register_sale(
-                activity=activity,
-                lines=lines,
-                occurred_on=v.get("occurred_on"),
-                payment_method=self._optional(PaymentMethod, v.get("payment_method"), request),
-                party=self._optional(Party, v.get("party"), request),
-                is_credit=v.get("is_credit", False),
-                amount_paid_now=v.get("amount_paid_now"),
-                global_discount=v.get("global_discount") or 0,
-                sale_currency=v.get("sale_currency"),
-                note=v.get("note", ""),
-                user=request.user,
-                allow_negative_stock=v["recorded_offline"],
+        replaced = None
+        if v.get("replaces"):
+            replaced = get_object_or_404(
+                Transaction, pk=v["replaces"], activity=activity, kind=Transaction.Kind.SALE
             )
+        try:
+            with db_transaction.atomic():
+                if replaced is not None:
+                    # Annule d'abord l'ancienne vente (stock remis), puis
+                    # enregistre la vente corrigée : tout ou rien.
+                    void_transaction(replaced, request.user, reason="Vente corrigée")
+                txn = self._register(request, activity, lines, v, replaced)
         except (ValueError, VoidError) as exc:
             raise ValidationError({"detail": str(exc)}) from exc
         return Response(TransactionSerializer(txn).data, status=status.HTTP_201_CREATED)
+
+    def _register(self, request, activity, lines, v, replaced):
+        return register_sale(
+            activity=activity,
+            lines=lines,
+            occurred_on=v.get("occurred_on") or (replaced.occurred_on if replaced else None),
+            payment_method=self._optional(PaymentMethod, v.get("payment_method"), request),
+            party=self._optional(Party, v.get("party"), request),
+            is_credit=v.get("is_credit", False),
+            amount_paid_now=v.get("amount_paid_now"),
+            global_discount=v.get("global_discount") or 0,
+            sale_currency=v.get("sale_currency"),
+            note=v.get("note", ""),
+            user=request.user,
+            allow_negative_stock=v["recorded_offline"],
+        )
 
 
 class PurchaseView(_OwnedLookupMixin, APIView):
