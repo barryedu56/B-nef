@@ -42,7 +42,7 @@ export function LoginPage() {
   };
 
   return (
-    <AuthLayout title="Bon retour 👋" subtitle="Connecte-toi pour retrouver tes activités et tes chiffres.">
+    <AuthLayout title="Bon retour" subtitle="Connecte-toi pour retrouver tes activités et tes chiffres.">
       <form className="auth-form" onSubmit={onSubmit} noValidate>
         {errors.general ? (
           <div className="alert error" role="alert">

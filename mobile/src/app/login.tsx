@@ -38,7 +38,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <AuthScreen title="Bon retour 👋" subtitle="Connecte-toi pour retrouver tes activités et tes chiffres.">
+    <AuthScreen title="Bon retour" subtitle="Connecte-toi pour retrouver tes activités et tes chiffres.">
       <View style={styles.form}>
         <TextField
           label="Nom d'utilisateur"
