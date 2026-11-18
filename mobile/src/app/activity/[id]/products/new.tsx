@@ -84,7 +84,7 @@ export default function NewProductScreen() {
               <Text style={styles.switchLabel}>J'ai déjà ce produit en stock</Text>
               <Text style={styles.switchHint}>Marchandise achetée avant d'utiliser Bénef</Text>
             </View>
-            <Switch value={hasStock} onValueChange={setHasStock} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
+            <Switch thumbColor={colors.white} value={hasStock} onValueChange={setHasStock} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
           </View>
           {hasStock ? (
             <>
@@ -100,17 +100,9 @@ export default function NewProductScreen() {
                 unit={unit || 'pièce'}
               />
               <AmountField label="Prix de vente" value={salePrice} onChangeText={setSalePrice} placeholder="0" suffix={currency} />
-              <Text style={styles.hint}>
-                Ce stock est compté à son coût (pour un bénéfice juste à la vente) sans toucher ta caisse : il a été payé
-                avant Bénef.
-              </Text>
+              <Text style={styles.hint}>Déjà payé avant Bénef : ta caisse ne bouge pas.</Text>
             </>
-          ) : (
-            <Text style={styles.hint}>
-              Sinon, le coût d'achat et le prix de vente se règlent au premier réapprovisionnement — l'appli te
-              proposera un prix de vente à partir d'une marge.
-            </Text>
-          )}
+          ) : null}
         </Card>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button label="Créer le produit" onPress={onSubmit} loading={createProduct.isPending} />

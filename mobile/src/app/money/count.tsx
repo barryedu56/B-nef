@@ -97,7 +97,7 @@ export default function CountCashScreen() {
     <Screen edges={['top']}>
       <TopBar title="Vérifier une caisse" back />
       <View style={styles.content}>
-        <Text style={styles.help}>Compte l'argent réellement présent (tiroir, solde Orange Money, relevé de banque) et saisis-le.</Text>
+        <Text style={styles.help}>Compte l'argent réel et écris le total.</Text>
         <Card style={styles.card}>
           {filterAct ? (
             <View style={{ gap: 6 }}>

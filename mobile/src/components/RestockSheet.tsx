@@ -197,7 +197,7 @@ export function RestockSheet({ product, activityId, currency, hasDebts, onClose 
         {hasDebts ? (
           <View style={styles.creditRow}>
             <Text style={styles.label}>Achat à crédit</Text>
-            <Switch value={isCredit} onValueChange={setIsCredit} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
+            <Switch thumbColor={colors.white} value={isCredit} onValueChange={setIsCredit} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
           </View>
         ) : null}
         {hasDebts && isCredit ? (

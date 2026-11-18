@@ -88,10 +88,7 @@ export default function MoneyScreen() {
           <Ionicons name="settings-outline" size={16} color={colors.accent} />
           <Text style={styles.manageText}>Ajouter ou renommer une caisse</Text>
         </Pressable>
-        <Text style={styles.help}>
-          Chaque vente, dépense ou achat payé va dans la caisse choisie comme moyen de paiement (Espèces par défaut).
-          Vérifie tes caisses de temps en temps : compte l'argent réel, Bénef enregistre l'écart.
-        </Text>
+        <Text style={styles.help}>Compte ta caisse de temps en temps.</Text>
       </View>
     </Screen>
   );

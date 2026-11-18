@@ -89,7 +89,7 @@ export default function RegisterScreen() {
           keyboardType="email-address"
           autoComplete="email"
           placeholder="toi@exemple.com"
-          hint="Indispensable pour récupérer ton compte si tu oublies ton mot de passe."
+          hint="Pour retrouver ton compte."
         />
         <TextField label="Mot de passe" icon="lock-closed-outline" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoComplete="new-password" placeholder="8 caractères minimum" />
         <PasswordStrength password={password} />

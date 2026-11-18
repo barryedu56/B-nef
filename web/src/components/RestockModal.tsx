@@ -80,6 +80,10 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
       setError('Indique une quantité et un coût valides.');
       return;
     }
+    if (isCredit && !partyId) {
+      setError('Choisis le fournisseur à payer.');
+      return;
+    }
     if (isCredit && amountPaidNow && paidNowValue > total) {
       setError("Le montant payé maintenant dépasse le total de l'achat.");
       return;
@@ -94,7 +98,7 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
         extra_fees: fees > 0 ? String(fees) : undefined,
         cost_currency: currency,
         payment_method: paymentMethodId ? Number(paymentMethodId) : null,
-        party: isCredit && partyId ? Number(partyId) : null,
+        party: partyId ? Number(partyId) : null,
         is_credit: isCredit,
         amount_paid_now: isCredit && paidNowValue > 0 ? String(paidNowValue) : undefined,
         fee: feeValue > 0 ? String(feeValue) : undefined,
@@ -165,22 +169,17 @@ export function RestockModal({ product, currency, hasDebts, onClose }: RestockMo
           />
         </Field>
 
+        <PartyPicker label="Fournisseur (facultatif)" kind="supplier" value={partyId} onChange={setPartyId} />
+
         {hasDebts ? <Switch checked={isCredit} onChange={setIsCredit} label="Achat à crédit" /> : null}
         {hasDebts && isCredit ? (
-          <>
-            <PartyPicker label="Fournisseur" kind="supplier" value={partyId} onChange={setPartyId} />
-            <Field
-              label="Montant payé maintenant (facultatif)"
-              hint="Laisse à 0 si rien n'est payé tout de suite. Sinon, le reste devient ta dette envers ce fournisseur.">
-              <AmountInput value={amountPaidNow} onChange={setAmountPaidNow} placeholder="0" />
-            </Field>
-          </>
+          <Field label="Déjà payé (facultatif)">
+            <AmountInput value={amountPaidNow} onChange={setAmountPaidNow} placeholder="0" />
+          </Field>
         ) : null}
 
         {showFee ? (
-          <Field
-            label="Frais de transfert (facultatif)"
-            hint="Ce que l'opérateur prend pour payer le fournisseur. Compté comme une dépense, pas dans le coût du produit.">
+          <Field label="Frais de transfert (facultatif)">
             <AmountInput value={fee} onChange={setFee} placeholder="0" />
           </Field>
         ) : null}

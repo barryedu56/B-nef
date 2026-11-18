@@ -62,7 +62,7 @@ export default function PartiesScreen() {
           <EmptyState
             icon="people-outline"
             title="Aucun tiers"
-            description="Un tiers se crée aussi directement depuis une vente ou une opération à crédit."
+            description="Ils s'ajoutent aussi depuis une vente."
             actionLabel="+ Nouveau tiers"
             onAction={() => router.push('/parties/new')}
           />

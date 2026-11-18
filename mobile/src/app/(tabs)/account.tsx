@@ -2,7 +2,7 @@ import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -134,6 +134,18 @@ export default function AccountScreen() {
     }
   };
 
+  const onAvatarPress = () => {
+    if (!user.avatar) {
+      void onPickAvatar();
+      return;
+    }
+    Alert.alert('Photo de profil', undefined, [
+      { text: 'Changer', onPress: () => void onPickAvatar() },
+      { text: 'Retirer', style: 'destructive', onPress: onRemoveAvatar },
+      { text: 'Annuler', style: 'cancel' },
+    ]);
+  };
+
   return (
     <Screen>
       <SyncBanner />
@@ -142,80 +154,33 @@ export default function AccountScreen() {
       </View>
 
       <View style={styles.content}>
-        <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Compte</Text>
-
-          <View style={styles.avatarRow}>
-            <Avatar url={user.avatar} name={user.username} size={56} />
-            <View style={styles.avatarActions}>
-              <Button
-                label={user.avatar ? 'Changer la photo' : 'Ajouter une photo'}
-                variant="secondary"
-                fullWidth={false}
-                onPress={onPickAvatar}
-                loading={avatarBusy}
-              />
-              {user.avatar ? (
-                <Button label="Retirer" variant="secondary" fullWidth={false} onPress={onRemoveAvatar} loading={avatarBusy} />
-              ) : null}
+        <Card style={styles.profile}>
+          <Pressable onPress={onAvatarPress} accessibilityRole="button" accessibilityLabel="Photo de profil" disabled={avatarBusy}>
+            <Avatar url={user.avatar} name={user.username} size={60} />
+            <View style={styles.cameraBadge}>
+              <Ionicons name="camera" size={13} color={colors.white} />
             </View>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Nom d'utilisateur</Text>
-            <Text style={styles.infoValue}>{user.username}</Text>
-          </View>
-          {user.email ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>E-mail</Text>
-              <Text style={styles.infoValue}>{user.email}</Text>
-            </View>
-          ) : null}
-          {user.phone ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Téléphone</Text>
-              <Text style={styles.infoValue}>{user.phone}</Text>
-            </View>
-          ) : null}
-          <Pressable style={styles.linkRow} onPress={() => router.push('/change-password')}>
-            <View style={styles.linkWithIcon}>
-              <Ionicons name="key-outline" size={17} color={colors.accent} />
-              <Text style={styles.linkLabel}>Changer mon mot de passe</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </Pressable>
+          <View style={styles.profileText}>
+            <Text style={styles.profileName} numberOfLines={1}>{user.username}</Text>
+            {user.email ? <Text style={styles.profileMeta} numberOfLines={1}>{user.email}</Text> : null}
+            {user.phone ? <Text style={styles.profileMeta}>{user.phone}</Text> : null}
+          </View>
         </Card>
 
-        <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Activités</Text>
-          <Pressable style={styles.linkRow} onPress={() => router.push('/activity/archived')}>
-            <Text style={styles.linkLabel}>Activités archivées</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-          </Pressable>
-          <Pressable style={styles.linkRow} onPress={() => router.push('/categories')}>
-            <Text style={styles.linkLabel}>Catégories & moyens de paiement</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-          </Pressable>
-          <Pressable style={styles.linkRow} onPress={() => router.push('/budgets')}>
-            <Text style={styles.linkLabel}>Budgets</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-          </Pressable>
-          <Pressable style={styles.linkRow} onPress={() => router.push('/recurring')}>
-            <Text style={styles.linkLabel}>Dépenses fixes (loyer, salaire…)</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-          </Pressable>
-          <Pressable style={styles.linkRow} onPress={() => router.push('/export')}>
-            <Text style={styles.linkLabel}>Export pour le comptable (PDF, Excel)</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-          </Pressable>
-        </Card>
+        <Group>
+          <Row icon="key-outline" color={colors.accent} label="Mot de passe" onPress={() => router.push('/change-password')} last />
+        </Group>
+
+        <Group>
+          <Row icon="pricetags-outline" color={colors.info} label="Catégories et paiements" onPress={() => router.push('/categories')} />
+          <Row icon="pie-chart-outline" color={colors.positive} label="Budgets" onPress={() => router.push('/budgets')} />
+          <Row icon="repeat-outline" color={colors.warning} label="Dépenses fixes" onPress={() => router.push('/recurring')} />
+          <Row icon="download-outline" color={colors.accent} label="Export PDF / Excel" onPress={() => router.push('/export')} />
+          <Row icon="archive-outline" color={colors.textSecondary} label="Activités archivées" onPress={() => router.push('/activity/archived')} last />
+        </Group>
 
         <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Devises</Text>
-          <Text style={styles.hint}>
-            La devise principale sert de référence pour la vue globale. La devise d’affichage — modifiable aussi
-            depuis l’onglet Bilan — reconvertit automatiquement les montants à afficher, sans rien saisir.
-          </Text>
           <PickerField
             label="Devise principale"
             value={user.base_currency}
@@ -234,15 +199,56 @@ export default function AccountScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Button label="Se déconnecter" variant="danger" onPress={confirmSignOut} />
-
-        <Pressable onPress={() => Linking.openURL(`${API_URL.replace(/\/api\/?$/, '')}/confidentialite`)}>
-          <Text style={styles.legalLink}>Politique de confidentialité</Text>
-        </Pressable>
+        <Group>
+          <Row icon="log-out-outline" color={colors.negative} label="Se déconnecter" onPress={confirmSignOut} danger />
+          <Row
+            icon="shield-checkmark-outline"
+            color={colors.textSecondary}
+            label="Confidentialité"
+            onPress={() => Linking.openURL(`${API_URL.replace(/\/api\/?$/, '')}/confidentialite`)}
+            last
+          />
+        </Group>
 
         <DeleteAccountCard onDeleted={() => void signOut()} />
       </View>
     </Screen>
+  );
+}
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
+
+function Group({ children }: { children: ReactNode }) {
+  return <Card style={styles.group}>{children}</Card>;
+}
+
+/** Une ligne de réglage : icône colorée, libellé court, flèche. */
+function Row({
+  icon,
+  color,
+  label,
+  onPress,
+  danger,
+  last,
+}: {
+  icon: IconName;
+  color: string;
+  label: string;
+  onPress: () => void;
+  danger?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.row, !last && styles.rowBorder, pressed && styles.rowPressed]}>
+      <View style={[styles.rowIcon, { backgroundColor: `${color}1a` }]}>
+        <Ionicons name={icon} size={19} color={color} />
+      </View>
+      <Text style={[styles.rowLabel, danger && { color: colors.negative }]}>{label}</Text>
+      {danger ? null : <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />}
+    </Pressable>
   );
 }
 
@@ -269,7 +275,7 @@ function DeleteAccountCard({ onDeleted }: { onDeleted: () => void }) {
   const confirm = () =>
     Alert.alert(
       'Supprimer définitivement ?',
-      'Ton compte et TOUTES tes données (activités, opérations, stock, clients, budgets) seront effacés. Impossible de revenir en arrière.',
+      'Toutes tes données seront effacées.',
       [
         { text: 'Annuler', style: 'cancel' },
         { text: 'Supprimer', style: 'destructive', onPress: () => void run() },
@@ -277,11 +283,10 @@ function DeleteAccountCard({ onDeleted }: { onDeleted: () => void }) {
     );
 
   return (
+    open ? (
     <Card style={styles.dangerCard}>
       <Text style={[styles.sectionTitle, { color: colors.negative }]}>Supprimer mon compte</Text>
-      <Text style={styles.hint}>
-        Efface définitivement ton compte et toutes ses données. Exporte tes chiffres avant si tu veux les garder.
-      </Text>
+      <Text style={styles.hint}>Tout sera effacé, sans retour possible.</Text>
       {open ? (
         <>
           <TextField
@@ -298,29 +303,49 @@ function DeleteAccountCard({ onDeleted }: { onDeleted: () => void }) {
           <Button label="Annuler" variant="secondary" onPress={() => setOpen(false)} />
         </>
       ) : (
-        <Button label="Supprimer mon compte…" variant="secondary" onPress={() => setOpen(true)} />
+        null
       )}
     </Card>
+    ) : (
+      <Text onPress={() => setOpen(true)} style={styles.deleteLink}>
+        Supprimer mon compte
+      </Text>
+    )
   );
 }
 
 const styles = StyleSheet.create({
-  dangerCard: { gap: spacing.md, borderColor: colors.negative, marginTop: spacing.lg },
-  legalLink: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', textDecorationLine: 'underline' },
+  dangerCard: { gap: spacing.md, borderColor: colors.negative, marginTop: spacing.sm },
+  deleteLink: { fontSize: fontSize.sm, color: colors.textTertiary, textAlign: 'center', paddingVertical: spacing.md, marginBottom: spacing.lg },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  cameraBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileText: { flex: 1, gap: 2 },
+  profileName: { fontSize: fontSize.xl, fontWeight: '900', color: colors.textPrimary },
+  profileMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
+  group: { paddingVertical: 0, paddingHorizontal: spacing.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 56 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  rowPressed: { opacity: 0.7 },
+  rowIcon: { width: 36, height: 36, borderRadius: radius.md - 4, alignItems: 'center', justifyContent: 'center' },
+  rowLabel: { flex: 1, fontSize: fontSize.md, fontWeight: '700', color: colors.textPrimary },
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
   title: { fontSize: fontSize.xxl, fontWeight: '700', color: colors.textPrimary },
   content: { paddingHorizontal: spacing.lg, gap: spacing.md },
   card: { gap: spacing.md },
-  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  avatarActions: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   sectionTitle: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.4 },
   hint: { fontSize: fontSize.xs, color: colors.textTertiary, lineHeight: 16 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  infoLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
-  infoValue: { fontSize: fontSize.sm, fontWeight: '600', color: colors.textPrimary },
-  linkWithIcon: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  linkLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
   error: { fontSize: fontSize.sm, color: colors.negative },
 });
 

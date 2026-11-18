@@ -48,10 +48,7 @@ export default function BudgetsScreen() {
     <Screen edges={['top']} onRefresh={() => budgets.refetch()} refreshing={budgets.isRefetching}>
       <TopBar title="Budgets" back />
       <View style={styles.content}>
-        <Text style={styles.help}>
-          Fixe un plafond de dépenses par catégorie (loyer, transport…) ou pour toute une activité. Seules les charges
-          comptent : un réapprovisionnement est du stock, pas une dépense.
-        </Text>
+        <Text style={styles.help}>Un plafond de dépenses par mois.</Text>
 
         {editing ? (
           <BudgetForm
@@ -68,7 +65,7 @@ export default function BudgetsScreen() {
         ) : budgets.isError ? (
           <ErrorView message="Impossible de charger les budgets." onRetry={() => budgets.refetch()} />
         ) : rows.length === 0 ? (
-          <EmptyState icon="pie-chart-outline" title="Aucun budget" description="Crée ton premier budget pour être alerté avant de trop dépenser." />
+          <EmptyState icon="pie-chart-outline" title="Aucun budget" description="Sois prévenu avant de trop dépenser." />
         ) : (
           rows.map((b) => (
             <Card key={b.id} style={styles.card}>

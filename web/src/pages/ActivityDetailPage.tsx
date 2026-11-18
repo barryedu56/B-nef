@@ -14,6 +14,7 @@ import { EmptyState, ErrorBlock, LoadingBlock } from '@/components/ui/QueryState
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { EditActivityModal } from '@/components/EditActivityModal';
 import { NewSaleModal } from '@/components/NewSaleModal';
 import { NewTransactionModal } from '@/components/NewTransactionModal';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
@@ -38,7 +39,7 @@ export function ActivityDetailPage() {
 
   const [period, setPeriod] = useState<Period>('month');
   const [anchor, setAnchor] = useState(todayISO());
-  const [modal, setModal] = useState<'transaction' | 'sale' | null>(null);
+  const [modal, setModal] = useState<'transaction' | 'sale' | 'edit' | null>(null);
   const [openTransactionId, setOpenTransactionId] = useState<number | null>(null);
 
   const activity = useActivity(activityId);
@@ -66,6 +67,9 @@ export function ActivityDetailPage() {
         actions={
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <SegmentedControl options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
+            <Button variant="secondary" onClick={() => setModal('edit')}>
+              Modifier
+            </Button>
             {/* Avec un stock, la vente est l'action du quotidien : bouton principal. */}
             <Button variant={act.has_inventory ? 'secondary' : 'primary'} onClick={() => setModal('transaction')}>
               + Opération
@@ -223,6 +227,7 @@ export function ActivityDetailPage() {
 
       {modal === 'transaction' ? <NewTransactionModal activity={act} onClose={() => setModal(null)} /> : null}
       {modal === 'sale' ? <NewSaleModal activity={act} onClose={() => setModal(null)} /> : null}
+      {modal === 'edit' ? <EditActivityModal activity={act} onClose={() => setModal(null)} /> : null}
       {openTransactionId ? (
         <TransactionDetailModal transactionId={openTransactionId} onClose={() => setOpenTransactionId(null)} />
       ) : null}

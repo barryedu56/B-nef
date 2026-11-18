@@ -105,10 +105,7 @@ export default function TransferScreen() {
           ) : null}
           <TextField label="Note (facultatif)" value={note} onChangeText={setNote} placeholder="ex. dépôt à la banque" />
         </Card>
-        <Text style={styles.help}>
-          Un transfert n'est ni un gain ni une dépense : seule la répartition de ton argent bouge. Seuls les frais comptent comme une
-          dépense, pour l'activité qui envoie.
-        </Text>
+        <Text style={styles.help}>Ni gain ni dépense : l'argent change juste de place.</Text>
         {error ? <Alert message={error} /> : null}
         <Button label="Transférer" icon="swap-horizontal-outline" onPress={onSubmit} loading={transfer.isPending} />
       </View>

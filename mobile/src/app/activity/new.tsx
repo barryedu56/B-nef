@@ -111,7 +111,7 @@ function ModuleRow({
         <Text style={styles.moduleLabel}>{label}</Text>
         <Text style={styles.moduleDescription}>{description}</Text>
       </View>
-      <Switch value={value} onValueChange={onChange} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
+      <Switch thumbColor={colors.white} value={value} onValueChange={onChange} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
     </View>
   );
 }

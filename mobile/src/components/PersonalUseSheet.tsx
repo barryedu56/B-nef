@@ -77,10 +77,7 @@ export function PersonalUseSheet({ product, activityId, currency, onClose }: Per
         ) : null}
         <TextField label="Note (facultatif)" value={note} onChangeText={setNote} placeholder="ex. pour la maison" />
 
-        <Text style={styles.hint}>
-          Ça ne compte ni comme une vente, ni comme une charge — juste une ligne d'info séparée dans le
-          rapport (« Consommé personnellement »). Le stock et sa valeur diminuent, ton Bénéfice net non.
-        </Text>
+        <Text style={styles.hint}>Le stock baisse, ton bénéfice non.</Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 

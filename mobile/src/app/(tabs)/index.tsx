@@ -66,7 +66,7 @@ export default function ActivitiesScreen() {
           <EmptyState
             icon="briefcase-outline"
             title="Aucune activité pour l’instant"
-            description="Une activité peut être une boutique, un salaire, un taxi, un champ, ou les dépenses de la maison."
+            description="Boutique, salaire, taxi, champ ou maison."
             actionLabel="Créer ma première activité"
             onAction={() => router.push('/activity/new')}
           />

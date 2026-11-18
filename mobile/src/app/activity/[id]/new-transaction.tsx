@@ -144,12 +144,10 @@ export default function NewTransactionScreen() {
             <View style={styles.creditText}>
               <Text style={styles.label}>{direction === 'in' ? 'Encaissement à venir (créance)' : 'Paiement à venir (dette)'}</Text>
               <Text style={styles.hint}>
-                {direction === 'in'
-                  ? "L'argent n'est pas encore reçu — compte quand même dans le résultat."
-                  : "L'argent n'est pas encore payé — compte quand même dans le résultat."}
+                {direction === 'in' ? 'Pas encore reçu.' : 'Pas encore payé.'}
               </Text>
             </View>
-            <Switch value={isCredit} onValueChange={setIsCredit} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
+            <Switch thumbColor={colors.white} value={isCredit} onValueChange={setIsCredit} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
           </View>
         ) : null}
 

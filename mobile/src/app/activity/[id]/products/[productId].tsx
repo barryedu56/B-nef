@@ -129,10 +129,7 @@ export default function EditProductScreen() {
         {p.can_edit_initial_stock ? (
           <Card style={styles.card}>
             <Text style={styles.cardTitle}>Stock de départ</Text>
-            <Text style={styles.hint}>
-              Tu t'es trompé en le saisissant ? Corrige-le tant que le produit n'a ni vente ni réapprovisionnement : ni
-              ta caisse ni ton bénéfice ne bougent.
-            </Text>
+            <Text style={styles.hint}>Possible tant qu'il n'y a ni vente ni achat.</Text>
             <TextField
               label={`Quantité en stock (${unit || 'pièce'})`}
               value={stockQty}
@@ -164,22 +161,14 @@ export default function EditProductScreen() {
               unit={unit || 'pièce'}
             />
           </Card>
-        ) : (
-          <Text style={styles.hint}>
-            Le coût d'achat moyen se met à jour tout seul avec les réapprovisionnements. Pour corriger la quantité,
-            fais un inventaire plus bas.
-          </Text>
-        )}
+        ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button label="Enregistrer" onPress={onSave} loading={updateProduct.isPending} />
 
         {!p.can_edit_initial_stock ? (
           <Card style={styles.card}>
             <Text style={styles.cardTitle}>Inventaire</Text>
-            <Text style={styles.hint}>
-              Compte ce que tu as vraiment. Selon Bénef : {Number(p.stock_quantity)} {p.unit}. L'écart (casse, vol,
-              erreur) est enregistré comme une perte ou un surplus, au coût moyen ({formatAmount(p.purchase_price, currency)}).
-            </Text>
+            <Text style={styles.hint}>Selon Bénef : {Number(p.stock_quantity)} {p.unit}.</Text>
             <TextField label={`Quantité comptée (${p.unit})`} value={counted} onChangeText={setCounted} keyboardType="numeric" placeholder="0" />
             {counted !== '' && !Number.isNaN(Number(counted.replace(',', '.'))) ? (
               <Text style={styles.diff}>

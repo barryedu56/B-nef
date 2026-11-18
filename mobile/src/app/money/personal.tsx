@@ -23,13 +23,13 @@ const COPY = {
   contribution: {
     title: 'Apport personnel',
     button: "Enregistrer l'apport",
-    help: "De l'argent que tu ajoutes de ta poche (ou d'un prêt de proche) : il entre dans la caisse, mais ce n'est pas une vente — ton bénéfice ne change pas.",
+    help: "Ton argent ajouté à la caisse. Ce n'est pas une vente.",
     placeholder: 'ex. économies, aide de la famille',
   },
   withdrawal: {
     title: 'Retrait personnel',
     button: 'Enregistrer le retrait',
-    help: "De l'argent que tu prends pour toi (salaire, besoins de la famille) : il sort de la caisse, mais ce n'est pas une dépense de l'activité — ton bénéfice ne change pas.",
+    help: "L'argent que tu prends pour toi. Ce n'est pas une dépense.",
     placeholder: 'ex. dépenses de la famille',
   },
 };

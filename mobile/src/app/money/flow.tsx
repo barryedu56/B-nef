@@ -56,9 +56,6 @@ export default function CashFlowScreen() {
             <Card style={styles.card}>
               <Text style={styles.cardTitle}>Toutes tes caisses</Text>
               <FlowBlock block={flow.data.totals} currency={flow.data.currency} labels={flow.data.labels} />
-              <Text style={styles.note}>
-                Un transfert entre deux de tes caisses apparaît à la fois en entrée et en sortie : il ne change pas ton total.
-              </Text>
             </Card>
 
             <Text style={styles.sectionTitle}>Par caisse</Text>

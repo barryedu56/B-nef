@@ -220,7 +220,7 @@ export default function NewSaleScreen() {
           {act.has_debts ? (
             <View style={styles.creditRow}>
               <Text style={styles.sectionLabel}>Vente à crédit</Text>
-              <Switch value={isCredit} onValueChange={setIsCredit} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
+              <Switch thumbColor={colors.white} value={isCredit} onValueChange={setIsCredit} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
             </View>
           ) : null}
           {act.has_debts && isCredit ? (

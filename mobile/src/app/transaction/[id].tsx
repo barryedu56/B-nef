@@ -24,6 +24,7 @@ import {
 } from '@/hooks/useTransactions';
 import { formatLongDate } from '@/lib/dates';
 import { formatAmount } from '@/lib/money';
+import { formatQty } from '@/components/ProductCard';
 import { colors, fontSize, spacing } from '@/theme';
 
 export default function TransactionDetailScreen() {
@@ -125,7 +126,7 @@ export default function TransactionDetailScreen() {
                   <View style={styles.saleLineInfo}>
                     <Text style={styles.saleLineName}>{line.product_name}</Text>
                     <Text style={styles.saleLineMeta}>
-                      {line.quantity} × {formatAmount(line.unit_price, currency)}
+                      {formatQty(line.quantity)} × {formatAmount(line.unit_price, currency)}
                       {Number(line.discount) > 0 ? ` − ${formatAmount(line.discount, currency)} de remise` : ''}
                     </Text>
                   </View>
@@ -187,10 +188,7 @@ export default function TransactionDetailScreen() {
           {!locked ? <Button label="Enregistrer" variant="secondary" onPress={onSave} loading={updateTxn.isPending} /> : null}
         </Card>
 
-        <Text style={styles.immutableHint}>
-          Le montant, la devise, le sens et la date ne peuvent plus changer une fois l'opération créée — annule et
-          ressaisis si besoin.
-        </Text>
+        {t.kind !== 'sale' ? <Text style={styles.immutableHint}>Montant et date : annule et refais l'opération.</Text> : null}
 
         {!locked ? (
           showVoidForm ? (

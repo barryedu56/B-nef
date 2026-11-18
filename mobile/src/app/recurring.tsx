@@ -73,7 +73,7 @@ export default function RecurringScreen() {
               <EmptyState
                 icon="repeat-outline"
                 title="Aucune dépense fixe"
-                description="Loyer, salaire d'un employé, abonnement… Bénef te rappelle chaque échéance et l'enregistre quand tu confirmes."
+                description="Loyer, salaire, abonnement…"
                 actionLabel="Ajouter une dépense fixe"
                 onAction={() => setEditing('new')}
               />
@@ -100,10 +100,7 @@ export default function RecurringScreen() {
                 </Pressable>
               ))
             )}
-            <Text style={styles.help}>
-              Le jour venu, tu reçois un rappel sur ton téléphone et l'opération apparaît ici et sur l'accueil. Tu confirmes
-              (en changeant le montant ou la caisse si besoin) ou tu passes : rien n'est enregistré sans toi.
-            </Text>
+            <Text style={styles.help}>Bénef te rappelle le jour venu. Rien n'est enregistré sans toi.</Text>
           </>
         )}
       </View>
@@ -298,7 +295,7 @@ function RecurringForm({ item, onDone }: { item: RecurringOperation | null; onDo
       {item ? (
         <View style={styles.switchRow}>
           <Text style={styles.rowTitle}>Active</Text>
-          <Switch value={active} onValueChange={setActive} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
+          <Switch thumbColor={colors.white} value={active} onValueChange={setActive} trackColor={{ true: colors.accent, false: colors.borderStrong }} />
         </View>
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}

@@ -68,6 +68,10 @@ export function NewSaleModal({ activity, onClose }: NewSaleModalProps) {
       setError(`Écris le prix de « ${noPrice.product.name} ».`);
       return;
     }
+    if (isCredit && !partyId) {
+      setError('Choisis le client qui doit payer.');
+      return;
+    }
     if (isCredit && amountPaidNow && paidNowValue > total) {
       setError('Le montant payé maintenant dépasse le total de la vente.');
       return;
@@ -83,7 +87,7 @@ export function NewSaleModal({ activity, onClose }: NewSaleModalProps) {
           ...(line.price !== Number(line.product.sale_price) ? { unit_price: String(line.price) } : {}),
         })),
         payment_method: paymentMethodId ? Number(paymentMethodId) : null,
-        party: isCredit && partyId ? Number(partyId) : null,
+        party: partyId ? Number(partyId) : null,
         is_credit: isCredit,
         amount_paid_now: isCredit && paidNowValue > 0 ? String(paidNowValue) : undefined,
         sale_currency: activity.currency,
@@ -145,16 +149,15 @@ export function NewSaleModal({ activity, onClose }: NewSaleModalProps) {
           />
         </Field>
 
+        <PartyPicker label="Client (facultatif)" kind="client" value={partyId} onChange={setPartyId} />
+
         {activity.has_debts ? (
           <Switch checked={isCredit} onChange={setIsCredit} label="Vente à crédit" />
         ) : null}
         {activity.has_debts && isCredit ? (
-          <>
-            <PartyPicker label="Client" kind="client" value={partyId} onChange={setPartyId} />
-            <Field label="Montant payé maintenant (facultatif)" hint="Laisse à 0 si rien n'est payé tout de suite. Sinon, le reste devient la créance du client.">
-              <AmountInput value={amountPaidNow} onChange={setAmountPaidNow} placeholder="0" />
-            </Field>
-          </>
+          <Field label="Déjà payé (facultatif)">
+            <AmountInput value={amountPaidNow} onChange={setAmountPaidNow} placeholder="0" />
+          </Field>
         ) : null}
 
         {error ? <span className="error-text">{error}</span> : null}

@@ -70,11 +70,7 @@ export default function ExportScreen() {
     <Screen edges={['top']}>
       <TopBar title="Export pour le comptable" back />
       <View style={styles.content}>
-        <Text style={styles.help}>
-          Le compte de résultat et toutes les opérations de la période (annulées comprises, signalées). Le PDF se lit
-          sur n'importe quel téléphone ; Excel et CSV servent au comptable pour refaire ses calculs. Le fichier s'ouvre
-          ensuite dans le menu de partage : WhatsApp, e-mail, Fichiers…
-        </Text>
+        <Text style={styles.help}>PDF pour lire, Excel pour le comptable.</Text>
         <Card style={styles.card}>
           <Text style={styles.label}>Période</Text>
           <View style={styles.chips}>

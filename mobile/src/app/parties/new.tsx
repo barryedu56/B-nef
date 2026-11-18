@@ -109,10 +109,7 @@ export default function NewPartyScreen() {
             <View style={styles.balanceHeader}>
               <View style={styles.balanceText}>
                 <Text style={styles.label}>Ce tiers a-t-il déjà un solde ?</Text>
-                <Text style={styles.hint}>
-                  Une créance ou une dette qui existait déjà avant d'utiliser l'appli (elle ne comptera pas dans le
-                  chiffre d'affaires ni les charges — seulement dans le solde du tiers, jusqu'à son règlement).
-                </Text>
+                <Text style={styles.hint}>Dette d'avant Bénef.</Text>
               </View>
               <Switch
                 value={hasOpeningBalance}
